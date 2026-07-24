@@ -1,0 +1,33 @@
+{
+  "type": "wwcombo-community-index",
+  "version": 1,
+  "updatedAt": 1784909344975,
+  "charts": [
+    {
+      "id": "211aad33-cb68-43c2-a1de-e643ae1de99d",
+      "title": "三火 启动轴2",
+      "author": "unknown",
+      "character": "unknown",
+      "tags": [],
+      "durationMs": 54055,
+      "stepCount": 71,
+      "version": 1,
+      "updatedAt": 1784909344975,
+      "sizeBytes": 65097,
+      "url": "https://novawallace.github.io/wwcombo-repository/published/unknown/unknown-%E4%B8%89%E7%81%AB-%E5%90%AF%E5%8A%A8%E8%BD%B42-unknown-b591303d.wwcombo.json"
+    },
+    {
+      "id": "7c2cb04e-18c9-4598-8c28-9ffbea6de382",
+      "title": "卡夏千2",
+      "author": "unknown",
+      "character": "unknown",
+      "tags": [],
+      "durationMs": 174133,
+      "stepCount": 243,
+      "version": 1,
+      "updatedAt": 1784909344973,
+      "sizeBytes": 165880,
+      "url": "https://novawallace.github.io/wwcombo-repository/published/unknown/unknown-2-unknown-c7f35e78.wwcombo.json"
+    }
+  ]
+}
