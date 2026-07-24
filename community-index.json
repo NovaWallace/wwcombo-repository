@@ -1,7 +1,7 @@
 {
   "type": "wwcombo-community-index",
   "version": 1,
-  "updatedAt": 1784909344975,
+  "updatedAt": 1784909390601,
   "charts": [
     {
       "id": "211aad33-cb68-43c2-a1de-e643ae1de99d",
@@ -12,7 +12,7 @@
       "durationMs": 54055,
       "stepCount": 71,
       "version": 1,
-      "updatedAt": 1784909344975,
+      "updatedAt": 1784909390601,
       "sizeBytes": 65097,
       "url": "https://novawallace.github.io/wwcombo-repository/published/unknown/unknown-%E4%B8%89%E7%81%AB-%E5%90%AF%E5%8A%A8%E8%BD%B42-unknown-b591303d.wwcombo.json"
     },
@@ -25,7 +25,7 @@
       "durationMs": 174133,
       "stepCount": 243,
       "version": 1,
-      "updatedAt": 1784909344973,
+      "updatedAt": 1784909390599,
       "sizeBytes": 165880,
       "url": "https://novawallace.github.io/wwcombo-repository/published/unknown/unknown-2-unknown-c7f35e78.wwcombo.json"
     }
