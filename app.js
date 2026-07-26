@@ -133,8 +133,8 @@ function initHeroSpine() {
   }
   try {
     new window.spine.SpinePlayer(host, {
-      binaryUrl: 'assets/spine/jiabeilina/Portraits_Jiabeilina.skel',
-      atlasUrl: 'assets/spine/jiabeilina/Portraits_Jiabeilina.atlas',
+      binaryUrl: 'assets/spine/luckdraw-jiabeilina/jiabeilina.skel',
+      atlasUrl: 'assets/spine/luckdraw-jiabeilina/jiabeilina.atlas',
       alpha: true,
       backgroundColor: '#00000000',
       premultipliedAlpha: true,
@@ -142,10 +142,10 @@ function initHeroSpine() {
       showControls: false,
       showLoading: false,
       viewport: {
-        padLeft: '6%',
-        padRight: '6%',
-        padTop: '8%',
-        padBottom: '8%'
+        padLeft: '0%',
+        padRight: '0%',
+        padTop: '0%',
+        padBottom: '0%'
       },
       success(player) {
         const animations = player.skeleton?.data?.animations || [];
