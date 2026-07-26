@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="鸣潮连段社区，按标题、角色和标签检索并下载连段谱。" />
+    <title>鸣潮连段社区</title>
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="./" aria-label="鸣潮连段社区首页">
+          <span class="brand-mark" aria-hidden="true">W</span>
+          <span>
+            <strong>鸣潮连段社区</strong>
+            <small>WWCOMBO REPOSITORY</small>
+          </span>
+        </a>
+        <a class="github-link" href="https://github.com/NovaWallace/wwcombo-repository" target="_blank" rel="noreferrer">
+          <i data-lucide="github" aria-hidden="true"></i>
+          <span>开源仓库</span>
+        </a>
+      </div>
+    </header>
+
+    <main>
+      <section class="search-band" aria-labelledby="pageTitle">
+        <div class="content-width">
+          <div class="title-row">
+            <div>
+              <p class="eyebrow">COMMUNITY COMBOS</p>
+              <h1 id="pageTitle">找到适合你的连段轴</h1>
+            </div>
+            <div class="index-status" id="indexStatus" aria-live="polite">
+              <span class="status-dot"></span>
+              <span>正在读取索引</span>
+            </div>
+          </div>
+
+          <form class="search-controls" id="searchForm" role="search">
+            <label class="search-field">
+              <span class="sr-only">按标题搜索</span>
+              <i data-lucide="search" aria-hidden="true"></i>
+              <input id="titleInput" type="search" autocomplete="off" placeholder="搜索连段标题" />
+              <button class="clear-search" id="clearSearchBtn" type="button" title="清空标题" aria-label="清空标题">
+                <i data-lucide="x" aria-hidden="true"></i>
+              </button>
+            </label>
+
+            <label class="select-field">
+              <span>角色</span>
+              <select id="characterSelect">
+                <option value="">全部角色</option>
+              </select>
+            </label>
+
+            <label class="select-field">
+              <span>排序</span>
+              <select id="sortSelect">
+                <option value="updated">最近更新</option>
+                <option value="title">标题顺序</option>
+                <option value="duration">轴长从短到长</option>
+              </select>
+            </label>
+          </form>
+
+          <div class="tag-filter" aria-labelledby="tagFilterLabel">
+            <span id="tagFilterLabel">标签</span>
+            <div id="tagList" class="tag-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="results-band" aria-labelledby="resultsTitle">
+        <div class="content-width">
+          <div class="results-head">
+            <div>
+              <h2 id="resultsTitle">社区连段</h2>
+              <p id="resultCount">0 个结果</p>
+            </div>
+            <button id="resetBtn" class="reset-button" type="button">
+              <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+              重置筛选
+            </button>
+          </div>
+
+          <div id="comboList" class="combo-list" aria-live="polite"></div>
+
+          <div id="emptyState" class="empty-state" hidden>
+            <i data-lucide="file-search" aria-hidden="true"></i>
+            <strong>没有找到对应连段</strong>
+            <span>换一个标题、角色或标签试试。</span>
+            <button id="emptyResetBtn" type="button">清除筛选</button>
+          </div>
+
+          <div id="errorState" class="empty-state error-state" hidden>
+            <i data-lucide="cloud-off" aria-hidden="true"></i>
+            <strong>暂时无法读取社区索引</strong>
+            <span id="errorMessage">请稍后重试。</span>
+            <button id="retryBtn" type="button">重新加载</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <template id="comboTemplate">
+      <article class="combo-card">
+        <div class="combo-accent" aria-hidden="true"></div>
+        <div class="combo-main">
+          <div class="combo-title-row">
+            <div>
+              <h3></h3>
+              <p class="characters"></p>
+            </div>
+            <div class="combo-tags"></div>
+          </div>
+          <p class="description"></p>
+          <dl class="combo-meta">
+            <div><dt>轮次</dt><dd class="rounds"></dd></div>
+            <div><dt>轴长</dt><dd class="duration"></dd></div>
+            <div><dt>操作</dt><dd class="steps"></dd></div>
+            <div><dt>更新</dt><dd class="updated"></dd></div>
+          </dl>
+        </div>
+        <div class="combo-actions">
+          <a class="download-button" download>
+            <i data-lucide="download" aria-hidden="true"></i>
+            下载连段
+          </a>
+          <span class="file-size"></span>
+        </div>
+      </article>
+    </template>
+
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
