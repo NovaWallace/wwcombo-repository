@@ -1,6 +1,9 @@
 const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/icons/character';
 const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
-const BUTTON_ICON_BASE = './assets/botton';
+const BUTTON_ICON_BASES = {
+  english: './assets/button-icons',
+  chinese: './assets/botton'
+};
 const MAX_SELECTED_CHARACTERS = 3;
 const ROLE_COLORS = ['#d84f55', '#44c8c6', '#d7ad52'];
 const AXIS_ICON_SIZE = 31;
@@ -46,7 +49,13 @@ const AXIS_ICON_MAPPINGS = [
   ['iii', '3', 'iii.png', ['iii']],
   ['ii', '2', 'ii.png', ['ii']],
   ['i', '1', 'i.png', ['i']]
-].map(([id, label, filename, triggers]) => ({ id, label, triggers, src: `${BUTTON_ICON_BASE}/${encodeURIComponent(filename)}` }));
+].map(([id, label, filename, triggers]) => ({
+  id,
+  label,
+  triggers,
+  chineseSrc: `${BUTTON_ICON_BASES.chinese}/${encodeURIComponent(filename)}`,
+  englishSrc: `${BUTTON_ICON_BASES.english}/${id}.png`
+}));
 const AXIS_ICON_TRIGGERS = AXIS_ICON_MAPPINGS
   .flatMap((mapping) => mapping.triggers.map((trigger) => ({ trigger, mapping })))
   .sort((left, right) => right.trigger.length - left.trigger.length);
@@ -61,6 +70,7 @@ const state = {
   sort: 'updated',
   detailChart: null,
   detailPackage: null,
+  axisIconSet: 'english',
   chartPackages: new Map()
 };
 
@@ -102,6 +112,7 @@ const els = {
   detailSubmitter: document.getElementById('detailSubmitter'),
   detailSourceLink: document.getElementById('detailSourceLink'),
   detailDownload: document.getElementById('detailDownload'),
+  axisIconSetButtons: [...document.querySelectorAll('[data-icon-set]')],
   axisPreview: document.getElementById('axisPreview'),
   axisPreviewSummary: document.getElementById('axisPreviewSummary')
 };
@@ -484,12 +495,20 @@ function axisActionContent(value) {
     }
     const icon = document.createElement('img');
     icon.className = 'axis-action-icon';
-    icon.src = part.mapping.src;
+    icon.src = state.axisIconSet === 'chinese' ? part.mapping.chineseSrc : part.mapping.englishSrc;
     icon.alt = part.mapping.label;
     icon.title = part.mapping.label;
     action.appendChild(icon);
   }
   return action;
+}
+
+function renderAxisIconSet() {
+  for (const button of els.axisIconSetButtons) {
+    const active = button.dataset.iconSet === state.axisIconSet;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  }
 }
 
 function renderAxisPreview(pack, indexChart) {
@@ -585,6 +604,7 @@ async function loadChartPackage(chart) {
 async function openDetails(chart) {
   state.detailChart = chart;
   state.detailPackage = null;
+  renderAxisIconSet();
   const submitter = submitterFor(chart);
   els.detailTitle.textContent = chart.title || '未命名连段';
   renderDetailCharacters(chart);
@@ -755,6 +775,15 @@ els.tags.addEventListener('click', (event) => {
 });
 els.closeDetail.addEventListener('click', closeDetails);
 els.detailBackdrop.addEventListener('mousedown', (event) => { if (event.target === els.detailBackdrop) closeDetails(); });
+for (const button of els.axisIconSetButtons) {
+  button.addEventListener('click', () => {
+    const next = button.dataset.iconSet;
+    if (!['english', 'chinese'].includes(next) || next === state.axisIconSet) return;
+    state.axisIconSet = next;
+    renderAxisIconSet();
+    if (state.detailChart && state.detailPackage) renderAxisPreview(state.detailPackage, state.detailChart);
+  });
+}
 let axisResizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(axisResizeTimer);
