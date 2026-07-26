@@ -75,6 +75,33 @@ function filenameFor(chart) {
   return `${title}-${chart.id || 'community'}.wwcombo.json`;
 }
 
+async function downloadChart(event, chart) {
+  const link = event.currentTarget;
+  const url = chart.url || '';
+  if (!url) return;
+  event.preventDefault();
+  const previousText = link.lastChild?.textContent;
+  link.setAttribute('aria-busy', 'true');
+  if (link.lastChild) link.lastChild.textContent = ' 下载中';
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blobUrl = URL.createObjectURL(await response.blob());
+    const anchor = document.createElement('a');
+    anchor.href = blobUrl;
+    anchor.download = filenameFor(chart);
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  } catch {
+    location.href = url;
+  } finally {
+    link.removeAttribute('aria-busy');
+    if (link.lastChild && previousText !== undefined) link.lastChild.textContent = previousText;
+  }
+}
+
 function renderFilters() {
   const characters = uniqueSorted(state.charts.flatMap(chartCharacters));
   els.character.replaceChildren(new Option('全部角色', ''));
@@ -139,6 +166,7 @@ function renderCard(chart) {
   download.href = chart.url || '#';
   download.download = filenameFor(chart);
   download.setAttribute('aria-label', `下载 ${chart.title || '连段'}`);
+  download.addEventListener('click', (event) => downloadChart(event, chart));
 
   return card;
 }
