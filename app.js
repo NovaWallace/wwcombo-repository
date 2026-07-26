@@ -1,6 +1,6 @@
 const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/icons/character';
 const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
-const BUTTON_ICON_BASE = './assets/button-icons';
+const BUTTON_ICON_BASE = './assets/botton';
 const MAX_SELECTED_CHARACTERS = 3;
 const ROLE_COLORS = ['#d84f55', '#44c8c6', '#d7ad52'];
 const DEFAULT_MOVE_LABELS = {
@@ -16,29 +16,35 @@ const DEFAULT_MOVE_LABELS = {
   dodge_hold: 'S',
   jump: 'j',
   jump_hold: 'J',
+  tool: 't',
+  finisher: 'f',
+  forward: 'w',
   switch_1: 'i',
   switch_2: 'ii',
   switch_3: 'iii'
 };
 const AXIS_ICON_MAPPINGS = [
-  ['mouse-right-hold', '长按闪避', ['S', 'D', '闪', '长按闪避']],
-  ['mouse-left-hold', '长按普攻', ['z', 'Z', '长按普攻', '重击']],
-  ['skill-hold', '长按技能', ['E', '长按技能']],
-  ['echo-hold', '长按声骸', ['Q', '长按声骸']],
-  ['liberation-hold', '长按解放', ['R', '长按解放', '长按共鸣解放']],
-  ['jump-hold', '长按跳跃', ['J', '长按跳跃']],
-  ['mouse-left', '普攻', ['a', '普攻']],
-  ['skill', '技能', ['e', '技能']],
-  ['echo', '声骸', ['q', '声骸']],
-  ['liberation', '共鸣解放', ['r', '共鸣解放']],
-  ['mouse-right', '闪避', ['s', 'd', '闪避']],
-  ['jump', '跳跃', ['j', '跳跃', '跳']],
-  ['intro', '变奏', ['b', '变奏']],
-  ['outro', '延奏', ['y', '延奏']],
-  ['iii', '3', ['iii']],
-  ['ii', '2', ['ii']],
-  ['i', '1', ['i']]
-].map(([id, label, triggers]) => ({ id, label, triggers, src: `${BUTTON_ICON_BASE}/${id}.png` }));
+  ['mouse-right-hold', '长按闪避', '长按闪避.png', ['S', 'D', '闪', '长按闪避']],
+  ['mouse-left-hold', '重击', '重击.png', ['z', 'Z', '长按普攻', '重击']],
+  ['skill-hold', '长按技能', '长按技能.png', ['E', '长按技能']],
+  ['echo-hold', '长按声骸', '长按声骸.png', ['Q', '长按声骸']],
+  ['liberation-hold', '长按解放', '长按解放.png', ['R', '长按解放', '长按共鸣解放']],
+  ['jump-hold', '长按跳跃', '长按跳跃.png', ['J', '长按跳跃']],
+  ['mouse-left', '普攻', '普攻.png', ['a', '普攻']],
+  ['skill', '技能', '技能.png', ['e', '技能']],
+  ['echo', '声骸', '声骸.png', ['q', '声骸']],
+  ['liberation', '共鸣解放', '解放.png', ['r', '共鸣解放']],
+  ['mouse-right', '闪避', '闪避.png', ['s', 'd', '闪避']],
+  ['jump', '跳跃', '跳跃.png', ['j', '跳跃', '跳']],
+  ['tool', '工具', '工具.png', ['t', '工具']],
+  ['intro', '变奏', '变奏.png', ['b', '变奏']],
+  ['outro', '延奏', '延奏.png', ['y', '延奏']],
+  ['finisher', '处决', '处决.png', ['f', '处决', '终结技']],
+  ['forward', '前走', '前走.png', ['w', '前走']],
+  ['iii', '3', 'iii.png', ['iii']],
+  ['ii', '2', 'ii.png', ['ii']],
+  ['i', '1', 'i.png', ['i']]
+].map(([id, label, filename, triggers]) => ({ id, label, triggers, src: `${BUTTON_ICON_BASE}/${encodeURIComponent(filename)}` }));
 const AXIS_ICON_TRIGGERS = AXIS_ICON_MAPPINGS
   .flatMap((mapping) => mapping.triggers.map((trigger) => ({ trigger, mapping })))
   .sort((left, right) => right.trigger.length - left.trigger.length);
