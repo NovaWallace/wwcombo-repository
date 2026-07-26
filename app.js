@@ -1,16 +1,35 @@
+const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/icons/character';
+const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
+const MAX_SELECTED_CHARACTERS = 3;
+const ROLE_COLORS = ['#d84f55', '#44c8c6', '#d7ad52'];
+
 const state = {
   charts: [],
   title: '',
-  character: '',
+  characters: [],
+  characterQuery: '',
+  characterIcons: new Map(),
   tag: '',
-  sort: 'updated'
+  sort: 'updated',
+  detailChart: null,
+  chartPackages: new Map()
 };
 
 const els = {
   form: document.getElementById('searchForm'),
   title: document.getElementById('titleInput'),
   clearTitle: document.getElementById('clearSearchBtn'),
-  character: document.getElementById('characterSelect'),
+  characterPickerButton: document.getElementById('characterPickerButton'),
+  characterPickerValue: document.getElementById('characterPickerValue'),
+  selectedAvatarStack: document.getElementById('selectedAvatarStack'),
+  characterPickerBackdrop: document.getElementById('characterPickerBackdrop'),
+  closeCharacterPicker: document.getElementById('closeCharacterPickerBtn'),
+  characterSearch: document.getElementById('characterSearchInput'),
+  characterGrid: document.getElementById('characterGrid'),
+  characterPickerHint: document.getElementById('characterPickerHint'),
+  characterSelectedCount: document.getElementById('characterSelectedCount'),
+  clearCharacters: document.getElementById('clearCharactersBtn'),
+  confirmCharacters: document.getElementById('confirmCharactersBtn'),
   sort: document.getElementById('sortSelect'),
   tags: document.getElementById('tagList'),
   status: document.getElementById('indexStatus'),
@@ -22,7 +41,20 @@ const els = {
   reset: document.getElementById('resetBtn'),
   emptyReset: document.getElementById('emptyResetBtn'),
   retry: document.getElementById('retryBtn'),
-  template: document.getElementById('comboTemplate')
+  template: document.getElementById('comboTemplate'),
+  detailBackdrop: document.getElementById('detailBackdrop'),
+  closeDetail: document.getElementById('closeDetailBtn'),
+  detailTitle: document.getElementById('detailTitle'),
+  detailCharacters: document.getElementById('detailCharacters'),
+  detailTags: document.getElementById('detailTags'),
+  detailMeta: document.getElementById('detailMeta'),
+  detailDescriptionSection: document.getElementById('detailDescriptionSection'),
+  detailDescription: document.getElementById('detailDescription'),
+  detailSubmitter: document.getElementById('detailSubmitter'),
+  detailSourceLink: document.getElementById('detailSourceLink'),
+  detailDownload: document.getElementById('detailDownload'),
+  axisPreview: document.getElementById('axisPreview'),
+  axisPreviewSummary: document.getElementById('axisPreviewSummary')
 };
 
 const collator = new Intl.Collator('zh-CN-u-co-pinyin', { sensitivity: 'base', numeric: true });
@@ -52,7 +84,7 @@ function formatDuration(ms) {
 
 function formatBytes(bytes) {
   const size = Number(bytes || 0);
-  if (!size) return '';
+  if (!size) return '未知';
   if (size < 1024) return `${size} B`;
   return `${Math.round(size / 1024)} KB`;
 }
@@ -75,14 +107,44 @@ function filenameFor(chart) {
   return `${title}-${chart.id || 'community'}.wwcombo.json`;
 }
 
+function submitterFor(chart) {
+  const nickname = String(chart.submitter?.nickname || '').trim();
+  const email = String(chart.submitter?.email || '').trim();
+  return {
+    nickname: nickname || '历史投稿',
+    email: email || '未记录邮箱'
+  };
+}
+
+function avatarElement(name, className = 'mini-avatar') {
+  const source = state.characterIcons.get(name);
+  if (!source) {
+    const fallback = document.createElement('span');
+    fallback.className = className === 'mini-avatar' ? 'mini-avatar' : `${className} avatar-fallback`;
+    fallback.textContent = Array.from(name || '?')[0] || '?';
+    fallback.setAttribute('aria-hidden', 'true');
+    return fallback;
+  }
+  const image = document.createElement('img');
+  image.className = className;
+  image.src = source;
+  image.alt = '';
+  image.loading = 'lazy';
+  image.addEventListener('error', () => {
+    const fallback = document.createElement('span');
+    fallback.className = className === 'mini-avatar' ? 'mini-avatar' : `${className} avatar-fallback`;
+    fallback.textContent = Array.from(name || '?')[0] || '?';
+    image.replaceWith(fallback);
+  }, { once: true });
+  return image;
+}
+
 async function downloadChart(event, chart) {
   const link = event.currentTarget;
   const url = chart.url || '';
   if (!url) return;
   event.preventDefault();
-  const previousText = link.lastChild?.textContent;
   link.setAttribute('aria-busy', 'true');
-  if (link.lastChild) link.lastChild.textContent = ' 下载中';
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -98,16 +160,90 @@ async function downloadChart(event, chart) {
     location.href = url;
   } finally {
     link.removeAttribute('aria-busy');
-    if (link.lastChild && previousText !== undefined) link.lastChild.textContent = previousText;
   }
 }
 
-function renderFilters() {
-  const characters = uniqueSorted(state.charts.flatMap(chartCharacters));
-  els.character.replaceChildren(new Option('全部角色', ''));
-  for (const character of characters) els.character.add(new Option(character, character));
-  els.character.value = state.character;
+function availableCharacters() {
+  return uniqueSorted(state.charts.flatMap(chartCharacters));
+}
 
+function renderCharacterTrigger() {
+  els.selectedAvatarStack.replaceChildren(...state.characters.map((name) => avatarElement(name)));
+  els.characterPickerValue.textContent = state.characters.length ? state.characters.join(' / ') : '全部角色';
+  els.characterPickerButton.setAttribute('aria-label', state.characters.length ? `已选择 ${state.characters.join('、')}` : '选择角色');
+}
+
+function setCharacterHint(warning = false) {
+  els.characterPickerHint.textContent = warning
+    ? '最多只能选择 3 名角色。'
+    : '最多选择 3 名角色，选择顺序不影响检索。';
+  els.characterPickerHint.style.color = warning ? '#ff8b90' : '';
+}
+
+function renderCharacterPicker() {
+  const query = normalizeText(state.characterQuery);
+  const characters = availableCharacters().filter((name) => !query || normalizeText(name).includes(query));
+  els.characterGrid.replaceChildren();
+  for (const name of characters) {
+    const selected = state.characters.includes(name);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `character-option${selected ? ' selected' : ''}`;
+    button.dataset.character = name;
+    button.setAttribute('aria-pressed', String(selected));
+    button.appendChild(avatarElement(name, 'character-avatar'));
+    const label = document.createElement('strong');
+    label.textContent = name;
+    button.appendChild(label);
+    const check = document.createElement('span');
+    check.className = 'selected-check';
+    check.innerHTML = '<i data-lucide="check" aria-hidden="true"></i>';
+    button.appendChild(check);
+    els.characterGrid.appendChild(button);
+  }
+  if (!characters.length) {
+    const empty = document.createElement('div');
+    empty.className = 'axis-empty';
+    empty.textContent = '没有找到角色';
+    els.characterGrid.appendChild(empty);
+  }
+  els.characterSelectedCount.textContent = `已选 ${state.characters.length} / ${MAX_SELECTED_CHARACTERS}`;
+  renderCharacterTrigger();
+  window.lucide?.createIcons();
+}
+
+function toggleCharacter(name) {
+  setCharacterHint(false);
+  if (state.characters.includes(name)) state.characters = state.characters.filter((item) => item !== name);
+  else if (state.characters.length < MAX_SELECTED_CHARACTERS) state.characters = [...state.characters, name];
+  else {
+    setCharacterHint(true);
+    return;
+  }
+  renderCharacterPicker();
+  render();
+}
+
+function openCharacterPicker() {
+  state.characterQuery = '';
+  els.characterSearch.value = '';
+  setCharacterHint(false);
+  renderCharacterPicker();
+  els.characterPickerBackdrop.hidden = false;
+  els.characterPickerButton.setAttribute('aria-expanded', 'true');
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => els.characterSearch.focus());
+}
+
+function closeCharacterPicker() {
+  els.characterPickerBackdrop.hidden = true;
+  els.characterPickerButton.setAttribute('aria-expanded', 'false');
+  if (els.detailBackdrop.hidden) document.body.style.overflow = '';
+  els.characterPickerButton.focus();
+}
+
+function renderFilters() {
+  renderCharacterTrigger();
   const tags = uniqueSorted(state.charts.flatMap((chart) => Array.isArray(chart.tags) ? chart.tags : []));
   els.tags.replaceChildren();
   const all = document.createElement('button');
@@ -129,8 +265,9 @@ function renderFilters() {
 function filteredCharts() {
   const titleQuery = normalizeText(state.title);
   const result = state.charts.filter((chart) => {
+    const characters = chartCharacters(chart);
     const titleMatches = !titleQuery || normalizeText(chart.title).includes(titleQuery);
-    const characterMatches = !state.character || chartCharacters(chart).includes(state.character);
+    const characterMatches = state.characters.every((name) => characters.includes(name));
     const tagMatches = !state.tag || (Array.isArray(chart.tags) && chart.tags.includes(state.tag));
     return titleMatches && characterMatches && tagMatches;
   });
@@ -144,19 +281,16 @@ function filteredCharts() {
 function renderCard(chart) {
   const card = els.template.content.firstElementChild.cloneNode(true);
   const tags = Array.isArray(chart.tags) ? chart.tags.filter(Boolean) : [];
+  const submitter = submitterFor(chart);
   card.style.setProperty('--accent', tagAccent(tags));
   card.querySelector('h3').textContent = chart.title || '未命名连段';
   card.querySelector('.characters').textContent = chartCharacters(chart).join(' / ') || '角色未标注';
-  const submitter = card.querySelector('.submitter');
-  const submitterName = String(chart.submitter?.nickname || '').trim();
-  const submitterEmail = String(chart.submitter?.email || '').trim();
-  submitter.textContent = submitterName && submitterEmail ? `投稿者 ${submitterName} · ${submitterEmail}` : '';
-  card.querySelector('.description').textContent = chart.description || '';
   card.querySelector('.rounds').textContent = `${Math.max(1, Number(chart.rounds || 1))} 轮`;
   card.querySelector('.duration').textContent = formatDuration(chart.durationMs);
   card.querySelector('.steps').textContent = `${Number(chart.stepCount || 0)} 步`;
   card.querySelector('.updated').textContent = formatDate(chart.updatedAt);
-  card.querySelector('.file-size').textContent = formatBytes(chart.sizeBytes);
+  card.querySelector('.submitter-name').textContent = submitter.nickname;
+  card.querySelector('.submitter-email').textContent = submitter.email;
 
   const tagContainer = card.querySelector('.combo-tags');
   for (const tag of tags) {
@@ -166,18 +300,191 @@ function renderCard(chart) {
     tagContainer.appendChild(item);
   }
 
-  const download = card.querySelector('.download-button');
-  download.href = chart.url || '#';
-  download.download = filenameFor(chart);
-  download.setAttribute('aria-label', `下载 ${chart.title || '连段'}`);
-  download.addEventListener('click', (event) => downloadChart(event, chart));
-
+  const detailButton = card.querySelector('.detail-button');
+  detailButton.setAttribute('aria-label', `查看 ${chart.title || '连段'} 详情`);
+  detailButton.addEventListener('click', () => openDetails(chart));
   return card;
+}
+
+function detailMetaRow(label, value) {
+  const row = document.createElement('div');
+  const term = document.createElement('dt');
+  const definition = document.createElement('dd');
+  term.textContent = label;
+  definition.textContent = value;
+  row.append(term, definition);
+  return row;
+}
+
+function renderDetailCharacters(chart) {
+  els.detailCharacters.replaceChildren();
+  for (const name of chartCharacters(chart)) {
+    const item = document.createElement('span');
+    item.className = 'detail-character';
+    item.append(avatarElement(name), document.createTextNode(name));
+    els.detailCharacters.appendChild(item);
+  }
+}
+
+function renderDetailTags(chart) {
+  els.detailTags.replaceChildren();
+  for (const tag of Array.isArray(chart.tags) ? chart.tags.filter(Boolean) : []) {
+    const item = document.createElement('span');
+    item.className = 'detail-tag';
+    item.textContent = tag;
+    els.detailTags.appendChild(item);
+  }
+}
+
+function axisPeriodLabel(period, loopCount) {
+  const source = String(period.label || '').trim();
+  if (period.kind === 'startup_axis') return source || '启动轴';
+  if (source) return source;
+  return loopCount > 1 ? `循环轴${period.loopIndex || 1}` : '循环轴';
+}
+
+function renderAxisPreview(pack, indexChart) {
+  const chart = pack?.chart || (Array.isArray(pack?.charts) ? pack.charts[0] : null);
+  if (!chart || !Array.isArray(chart.steps)) throw new Error('连段 JSON 缺少轴数据');
+  const allPeriods = Array.isArray(chart.periods)
+    ? chart.periods.filter((period) => period?.kind === 'startup_axis' || period?.kind === 'loop_axis')
+      .sort((left, right) => Number(left.startMs || 0) - Number(right.startMs || 0))
+    : [];
+  const startup = allPeriods.find((period) => period.kind === 'startup_axis');
+  const loops = allPeriods.filter((period) => period.kind === 'loop_axis');
+  const showAll = (Array.isArray(indexChart.tags) && indexChart.tags.includes('错轮'))
+    || (Array.isArray(chart.community?.tags) && chart.community.tags.includes('错轮'));
+  let periods = showAll ? allPeriods : [startup, loops[0]].filter(Boolean);
+  if (!periods.length) {
+    const endMs = chart.steps.reduce((max, step) => Math.max(max, Number(step.startMax || step.startMin || 0) + Number(step.durationMax || 0)), 0);
+    periods = [{ id: 'full-chart', kind: 'startup_axis', label: '完整连段', startMs: 0, endMs }];
+  }
+
+  const labels = pack.contentLabels && typeof pack.contentLabels === 'object' ? pack.contentLabels : {};
+  const characters = chartCharacters(indexChart);
+  const fragment = document.createDocumentFragment();
+  let visibleStepCount = 0;
+  for (const period of periods) {
+    const start = Number(period.startMs || 0);
+    const end = Number(period.endMs || Number.POSITIVE_INFINITY);
+    const steps = chart.steps
+      .filter((step) => Number(step.startMin || 0) >= start && Number(step.startMin || 0) < end)
+      .sort((left, right) => Number(left.startMin || 0) - Number(right.startMin || 0) || String(left.id || '').localeCompare(String(right.id || '')));
+    visibleStepCount += steps.length;
+    const group = document.createElement('section');
+    group.className = 'axis-group';
+    group.style.setProperty('--axis-color', period.kind === 'startup_axis' ? '#d7ad52' : '#44c8c6');
+    const heading = document.createElement('div');
+    heading.className = 'axis-group-head';
+    const title = document.createElement('strong');
+    title.textContent = axisPeriodLabel(period, loops.length);
+    const range = document.createElement('span');
+    range.textContent = `${formatDuration(start)} - ${formatDuration(Number.isFinite(end) ? end : start)}`;
+    heading.append(title, range);
+    const flow = document.createElement('div');
+    flow.className = 'axis-flow';
+    for (const step of steps) {
+      const slot = Math.max(1, Math.min(3, Number(step.characterSlot || 1)));
+      const character = characters[slot - 1] || `角色 ${slot}`;
+      const chip = document.createElement('div');
+      chip.className = 'axis-step';
+      chip.style.setProperty('--role-color', ROLE_COLORS[slot - 1]);
+      chip.title = `${character} · ${step.label || step.moveId || '操作'} · ${formatDuration(step.startMin)}`;
+      chip.appendChild(avatarElement(character));
+      const text = document.createElement('strong');
+      text.textContent = String(labels[step.id] || step.label || step.moveId || '操作');
+      chip.appendChild(text);
+      flow.appendChild(chip);
+    }
+    if (!steps.length) {
+      const empty = document.createElement('span');
+      empty.className = 'axis-empty';
+      empty.textContent = '该轮没有操作记录';
+      flow.appendChild(empty);
+    }
+    group.append(heading, flow);
+    fragment.appendChild(group);
+  }
+  els.axisPreview.replaceChildren(fragment);
+  const periodText = showAll ? '错轮 · 全部轮次' : periods.map((period) => axisPeriodLabel(period, loops.length)).join(' + ');
+  els.axisPreviewSummary.textContent = `${periodText} · ${visibleStepCount} 步`;
+}
+
+async function loadChartPackage(chart) {
+  if (state.chartPackages.has(chart.url)) return state.chartPackages.get(chart.url);
+  const request = fetch(chart.url, { cache: 'force-cache' }).then(async (response) => {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  });
+  state.chartPackages.set(chart.url, request);
+  try {
+    return await request;
+  } catch (error) {
+    state.chartPackages.delete(chart.url);
+    throw error;
+  }
+}
+
+async function openDetails(chart) {
+  state.detailChart = chart;
+  const submitter = submitterFor(chart);
+  els.detailTitle.textContent = chart.title || '未命名连段';
+  renderDetailCharacters(chart);
+  renderDetailTags(chart);
+  els.detailMeta.replaceChildren(
+    detailMetaRow('轮次', `${Math.max(1, Number(chart.rounds || 1))} 轮`),
+    detailMetaRow('轴长', formatDuration(chart.durationMs)),
+    detailMetaRow('操作', `${Number(chart.stepCount || 0)} 步`),
+    detailMetaRow('更新', formatDate(chart.updatedAt)),
+    detailMetaRow('文件', formatBytes(chart.sizeBytes)),
+    detailMetaRow('存储', chart.repository || 'repository'),
+    detailMetaRow('ID', chart.id || '未知')
+  );
+  els.detailDescription.textContent = chart.description || '';
+  els.detailDescriptionSection.hidden = !chart.description;
+  els.detailSubmitter.textContent = `${submitter.nickname} · ${submitter.email}`;
+  els.detailSourceLink.hidden = !chart.link;
+  els.detailSourceLink.href = chart.link || '#';
+  els.detailDownload.href = chart.url || '#';
+  els.detailDownload.download = filenameFor(chart);
+  els.detailDownload.onclick = (event) => downloadChart(event, chart);
+  els.axisPreviewSummary.textContent = '正在读取连段数据';
+  els.axisPreview.innerHTML = '<div class="axis-loading"><span></span><span></span><span></span></div>';
+  els.detailBackdrop.hidden = false;
+  document.body.style.overflow = 'hidden';
+  window.lucide?.createIcons();
+
+  try {
+    const pack = await loadChartPackage(chart);
+    if (state.detailChart?.id !== chart.id) return;
+    renderAxisPreview(pack, chart);
+  } catch (error) {
+    if (state.detailChart?.id !== chart.id) return;
+    els.axisPreview.innerHTML = '';
+    const failure = document.createElement('div');
+    failure.className = 'axis-error';
+    failure.textContent = `连段图生成失败：${error.message}`;
+    els.axisPreview.appendChild(failure);
+    els.axisPreviewSummary.textContent = '无法读取轴数据';
+  }
+}
+
+function closeDetails() {
+  state.detailChart = null;
+  els.detailBackdrop.hidden = true;
+  if (els.characterPickerBackdrop.hidden) document.body.style.overflow = '';
 }
 
 function syncUrl() {
   const next = new URLSearchParams(location.search);
-  for (const [key, value] of [['q', state.title], ['character', state.character], ['tag', state.tag], ['sort', state.sort === 'updated' ? '' : state.sort]]) {
+  next.delete('character');
+  const values = [
+    ['q', state.title],
+    ['characters', state.characters.join(',')],
+    ['tag', state.tag],
+    ['sort', state.sort === 'updated' ? '' : state.sort]
+  ];
+  for (const [key, value] of values) {
     if (value) next.set(key, value);
     else next.delete(key);
   }
@@ -192,7 +499,7 @@ function render() {
   els.list.hidden = charts.length === 0;
   els.clearTitle.classList.toggle('visible', Boolean(state.title));
   els.sort.value = state.sort;
-  els.character.value = state.character;
+  renderCharacterTrigger();
   for (const button of els.tags.querySelectorAll('.tag-button')) button.classList.toggle('active', button.dataset.tag === state.tag);
   syncUrl();
   window.lucide?.createIcons();
@@ -200,16 +507,39 @@ function render() {
 
 function resetFilters() {
   state.title = '';
-  state.character = '';
+  state.characters = [];
   state.tag = '';
   state.sort = 'updated';
   els.title.value = '';
+  renderCharacterPicker();
   render();
 }
 
 function setStatus(kind, text) {
   els.status.className = `index-status ${kind}`;
   els.status.lastElementChild.textContent = text;
+}
+
+async function loadCharacterIcons() {
+  try {
+    let response = await fetch(CHARACTER_ICON_MANIFEST, { cache: 'no-cache' });
+    if (!response.ok) response = await fetch(CHARACTER_ICON_API, { cache: 'force-cache' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    if (!Array.isArray(payload)) return;
+    const icons = new Map();
+    for (const item of payload) {
+      if (!Array.isArray(item) || typeof item[0] !== 'string' || typeof item[1] !== 'string') continue;
+      const name = item[0].trim();
+      const source = item[1].trim();
+      if (name && /^https?:\/\//i.test(source) && !icons.has(name)) icons.set(name, source);
+    }
+    state.characterIcons = icons;
+    renderCharacterTrigger();
+    if (!els.characterPickerBackdrop.hidden) renderCharacterPicker();
+  } catch {
+    state.characterIcons = new Map();
+  }
 }
 
 async function loadIndex() {
@@ -223,13 +553,15 @@ async function loadIndex() {
     if (data.type !== 'wwcombo-community-index' || !Array.isArray(data.charts)) throw new Error('索引格式不正确');
     state.charts = data.charts;
     state.title = params.get('q') || '';
-    state.character = params.get('character') || '';
+    const characterParam = params.get('characters') || params.get('character') || '';
+    state.characters = uniqueSorted(characterParam.split(',').map((item) => item.trim())).slice(0, MAX_SELECTED_CHARACTERS);
     state.tag = params.get('tag') || '';
     state.sort = ['updated', 'title', 'duration'].includes(params.get('sort')) ? params.get('sort') : 'updated';
     els.title.value = state.title;
     renderFilters();
     render();
     setStatus('ready', `${state.charts.length} 个连段 · ${formatDate(data.updatedAt)} 更新`);
+    void loadCharacterIcons();
   } catch (error) {
     state.charts = [];
     els.list.replaceChildren();
@@ -244,13 +576,29 @@ async function loadIndex() {
 els.form.addEventListener('submit', (event) => event.preventDefault());
 els.title.addEventListener('input', () => { state.title = els.title.value; render(); });
 els.clearTitle.addEventListener('click', () => { state.title = ''; els.title.value = ''; els.title.focus(); render(); });
-els.character.addEventListener('change', () => { state.character = els.character.value; render(); });
+els.characterPickerButton.addEventListener('click', openCharacterPicker);
+els.closeCharacterPicker.addEventListener('click', closeCharacterPicker);
+els.confirmCharacters.addEventListener('click', closeCharacterPicker);
+els.clearCharacters.addEventListener('click', () => { state.characters = []; setCharacterHint(false); renderCharacterPicker(); render(); });
+els.characterSearch.addEventListener('input', () => { state.characterQuery = els.characterSearch.value; renderCharacterPicker(); });
+els.characterGrid.addEventListener('click', (event) => {
+  const button = event.target.closest('.character-option');
+  if (button) toggleCharacter(button.dataset.character || '');
+});
+els.characterPickerBackdrop.addEventListener('mousedown', (event) => { if (event.target === els.characterPickerBackdrop) closeCharacterPicker(); });
 els.sort.addEventListener('change', () => { state.sort = els.sort.value; render(); });
 els.tags.addEventListener('click', (event) => {
   const button = event.target.closest('.tag-button');
   if (!button) return;
   state.tag = button.dataset.tag || '';
   render();
+});
+els.closeDetail.addEventListener('click', closeDetails);
+els.detailBackdrop.addEventListener('mousedown', (event) => { if (event.target === els.detailBackdrop) closeDetails(); });
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  if (!els.detailBackdrop.hidden) closeDetails();
+  else if (!els.characterPickerBackdrop.hidden) closeCharacterPicker();
 });
 els.reset.addEventListener('click', resetFilters);
 els.emptyReset.addEventListener('click', resetFilters);

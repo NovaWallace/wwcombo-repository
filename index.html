@@ -18,10 +18,6 @@
             <small>WWCOMBO REPOSITORY</small>
           </span>
         </a>
-        <a class="github-link" href="https://github.com/NovaWallace/wwcombo-repository" target="_blank" rel="noreferrer">
-          <i data-lucide="github" aria-hidden="true"></i>
-          <span>开源仓库</span>
-        </a>
       </div>
     </header>
 
@@ -49,12 +45,14 @@
               </button>
             </label>
 
-            <label class="select-field">
-              <span>角色</span>
-              <select id="characterSelect">
-                <option value="">全部角色</option>
-              </select>
-            </label>
+            <button class="character-picker-trigger" id="characterPickerButton" type="button" aria-haspopup="dialog" aria-expanded="false">
+              <span class="field-label">角色</span>
+              <span class="character-trigger-value">
+                <span class="selected-avatar-stack" id="selectedAvatarStack"></span>
+                <strong id="characterPickerValue">全部角色</strong>
+              </span>
+              <i data-lucide="chevron-down" aria-hidden="true"></i>
+            </button>
 
             <label class="select-field">
               <span>排序</span>
@@ -113,11 +111,9 @@
             <div>
               <h3></h3>
               <p class="characters"></p>
-              <p class="submitter"></p>
             </div>
             <div class="combo-tags"></div>
           </div>
-          <p class="description"></p>
           <dl class="combo-meta">
             <div><dt>轮次</dt><dd class="rounds"></dd></div>
             <div><dt>轴长</dt><dd class="duration"></dd></div>
@@ -126,14 +122,96 @@
           </dl>
         </div>
         <div class="combo-actions">
-          <a class="download-button" download>
-            <i data-lucide="download" aria-hidden="true"></i>
-            下载连段
-          </a>
-          <span class="file-size"></span>
+          <div class="card-submitter">
+            <span>上传者</span>
+            <strong class="submitter-name"></strong>
+            <small class="submitter-email"></small>
+          </div>
+          <button class="detail-button" type="button">
+            <i data-lucide="panel-right-open" aria-hidden="true"></i>
+            详情
+          </button>
         </div>
       </article>
     </template>
+
+    <div class="modal-backdrop" id="characterPickerBackdrop" hidden>
+      <section class="character-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="characterPickerTitle">
+        <header class="modal-header">
+          <div>
+            <h2 id="characterPickerTitle">选择角色</h2>
+            <p id="characterPickerHint">最多选择 3 名角色，选择顺序不影响检索。</p>
+          </div>
+          <button class="icon-button" id="closeCharacterPickerBtn" type="button" title="关闭" aria-label="关闭角色选择">
+            <i data-lucide="x" aria-hidden="true"></i>
+          </button>
+        </header>
+        <div class="picker-toolbar">
+          <label class="picker-search">
+            <i data-lucide="search" aria-hidden="true"></i>
+            <span class="sr-only">搜索角色</span>
+            <input id="characterSearchInput" type="search" autocomplete="off" placeholder="搜索角色" />
+          </label>
+          <strong id="characterSelectedCount">已选 0 / 3</strong>
+        </div>
+        <div class="character-grid" id="characterGrid"></div>
+        <footer class="modal-footer">
+          <button id="clearCharactersBtn" type="button">清空</button>
+          <button id="confirmCharactersBtn" class="primary-button" type="button">完成</button>
+        </footer>
+      </section>
+    </div>
+
+    <div class="modal-backdrop detail-backdrop" id="detailBackdrop" hidden>
+      <section class="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+        <header class="modal-header detail-header">
+          <div>
+            <p class="eyebrow">COMBO DETAIL</p>
+            <h2 id="detailTitle">连段详情</h2>
+          </div>
+          <button class="icon-button" id="closeDetailBtn" type="button" title="关闭" aria-label="关闭连段详情">
+            <i data-lucide="x" aria-hidden="true"></i>
+          </button>
+        </header>
+        <div class="detail-layout">
+          <aside class="detail-info">
+            <div class="detail-characters" id="detailCharacters"></div>
+            <div class="detail-tags" id="detailTags"></div>
+            <dl class="detail-meta" id="detailMeta"></dl>
+            <section class="detail-section" id="detailDescriptionSection">
+              <h3>简介</h3>
+              <p id="detailDescription"></p>
+            </section>
+            <section class="detail-section">
+              <h3>上传者</h3>
+              <p id="detailSubmitter"></p>
+            </section>
+            <div class="detail-links">
+              <a id="detailSourceLink" class="secondary-button" target="_blank" rel="noreferrer" hidden>
+                <i data-lucide="external-link" aria-hidden="true"></i>
+                演示链接
+              </a>
+              <a id="detailDownload" class="primary-button" download>
+                <i data-lucide="download" aria-hidden="true"></i>
+                下载连段
+              </a>
+            </div>
+          </aside>
+          <section class="axis-preview-panel" aria-labelledby="axisPreviewTitle">
+            <div class="axis-preview-head">
+              <div>
+                <h3 id="axisPreviewTitle">连段图</h3>
+                <p id="axisPreviewSummary">正在读取连段数据</p>
+              </div>
+              <span class="experimental-badge">实验功能</span>
+            </div>
+            <div class="axis-preview" id="axisPreview">
+              <div class="axis-loading"><span></span><span></span><span></span></div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="app.js"></script>
