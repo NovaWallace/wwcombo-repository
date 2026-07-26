@@ -1,0 +1,16 @@
+{
+  "name": "椰果培养仓",
+  "short_name": "椰果培养仓",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#161a1d",
+  "theme_color": "#161a1d",
+  "icons": [
+    {
+      "src": "assets/logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
