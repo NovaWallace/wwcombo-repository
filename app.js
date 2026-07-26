@@ -142,10 +142,10 @@ function initHeroSpine() {
       showControls: false,
       showLoading: false,
       viewport: {
-        padLeft: '-12%',
-        padRight: '-12%',
-        padTop: '-16%',
-        padBottom: '-10%'
+        padLeft: '6%',
+        padRight: '6%',
+        padTop: '8%',
+        padBottom: '8%'
       },
       success(player) {
         const animations = player.skeleton?.data?.animations || [];
