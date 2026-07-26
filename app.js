@@ -1,5 +1,6 @@
 const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/icons/character';
 const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
+const SUBMISSION_EMAIL = '2728756958@qq.com';
 const BUTTON_ICON_BASES = {
   english: './assets/button-icons',
   chinese: './assets/botton'
@@ -76,6 +77,8 @@ const state = {
 };
 
 const els = {
+  submissionButton: document.getElementById('submissionButton'),
+  submissionButtonLabel: document.getElementById('submissionButtonLabel'),
   form: document.getElementById('searchForm'),
   title: document.getElementById('titleInput'),
   clearTitle: document.getElementById('clearSearchBtn'),
@@ -122,6 +125,39 @@ const collator = new Intl.Collator('zh-CN-u-co-pinyin', { sensitivity: 'base', n
 const params = new URLSearchParams(location.search);
 const isLocalPreview = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
 const sourceUrl = params.get('source') || (isLocalPreview ? './demo-index.json' : './community-index.json');
+
+async function copySubmissionEmail() {
+  let copied = false;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(SUBMISSION_EMAIL);
+      copied = true;
+    }
+  } catch {
+    copied = false;
+  }
+
+  if (!copied) {
+    const input = document.createElement('textarea');
+    input.value = SUBMISSION_EMAIL;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.append(input);
+    input.select();
+    copied = document.execCommand('copy');
+    input.remove();
+  }
+
+  if (!els.submissionButton || !els.submissionButtonLabel) return;
+  els.submissionButton.classList.toggle('is-copied', copied);
+  els.submissionButtonLabel.textContent = copied ? '邮箱已复制' : '复制失败';
+  clearTimeout(copySubmissionEmail.feedbackTimer);
+  copySubmissionEmail.feedbackTimer = setTimeout(() => {
+    els.submissionButton.classList.remove('is-copied');
+    els.submissionButtonLabel.textContent = '上传连段';
+  }, 1800);
+}
 
 function initHeroSpine() {
   const layer = document.getElementById('heroSpineLayer');
@@ -844,6 +880,9 @@ document.addEventListener('keydown', (event) => {
 els.reset.addEventListener('click', resetFilters);
 els.emptyReset.addEventListener('click', resetFilters);
 els.retry.addEventListener('click', loadIndex);
+els.submissionButton?.addEventListener('click', () => {
+  void copySubmissionEmail();
+});
 
 window.lucide?.createIcons();
 initHeroSpine();

@@ -33,6 +33,12 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .brand > span:last-child { min-width: 0; display: grid; gap: 2px; }
 .brand strong { font-size: 16px; }
 .brand small { color: var(--muted); font-size: 10px; font-weight: 800; }
+.submission-button { min-width: 112px; height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 15px; border: 1px solid #f2383e; border-radius: 4px; background: var(--red); color: #fff; font-size: 13px; font-weight: 900; text-decoration: none; transition: background .16s ease, border-color .16s ease, transform .16s ease; }
+.submission-button:hover { border-color: #ff5a60; background: var(--red-hover); }
+.submission-button:active { transform: translateY(1px); }
+.submission-button:focus-visible { outline: 2px solid rgba(255, 255, 255, .78); outline-offset: 2px; }
+.submission-button.is-copied { border-color: #63d7aa; background: #238760; }
+.submission-button svg { width: 17px; height: 17px; flex: 0 0 17px; }
 
 .search-band { position: relative; min-height: 408px; padding: 46px 0 30px; border-bottom: 1px solid var(--line); background: #080a0b; overflow: hidden; isolation: isolate; }
 .search-band::before { content: ''; position: absolute; inset: 0; z-index: -1; background: rgba(7, 9, 10, .58); }
@@ -236,6 +242,14 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 }
 
 @media (max-width: 520px) {
+  .header-inner { gap: 10px; }
+  .brand { gap: 9px; }
+  .brand-icon { width: 42px; height: 42px; flex-basis: 42px; }
+  .brand strong { font-size: 14px; }
+  .brand small { font-size: 8px; }
+  .submission-button { min-width: 82px; padding: 0 12px; }
+  .submission-button span { font-size: 0; }
+  .submission-button span::after { content: '投稿'; font-size: 12px; }
   .search-controls { grid-template-columns: 1fr; }
   .search-field { grid-column: auto; }
   .select-field { min-height: 44px; }
