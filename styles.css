@@ -171,27 +171,21 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .axis-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 17px; border-bottom: 1px solid var(--line); background: #121619; }
 .axis-preview-head h3 { margin: 0; font-size: 15px; }
 .axis-preview-head p { margin: 3px 0 0; color: var(--muted); font-size: 10px; }
-.axis-preview-options { display: flex; align-items: center; gap: 8px; }
-.axis-icon-toggle { min-height: 26px; display: inline-flex; align-items: center; gap: 6px; color: #c9ced0; font-size: 10px; font-weight: 800; cursor: pointer; user-select: none; }
-.axis-icon-toggle input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.axis-icon-toggle > span { position: relative; width: 28px; height: 16px; flex: 0 0 28px; border: 1px solid #4d555a; border-radius: 8px; background: #202529; transition: border-color .16s, background .16s; }
-.axis-icon-toggle > span::after { content: ''; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: #858d91; transition: transform .16s, background .16s; }
-.axis-icon-toggle input:checked + span { border-color: #b98c31; background: #4c3b1a; }
-.axis-icon-toggle input:checked + span::after { background: #f1cb75; transform: translateX(12px); }
-.axis-icon-toggle input:focus-visible + span { outline: 2px solid #f1cb75; outline-offset: 2px; }
 .experimental-badge { padding: 4px 7px; border: 1px solid #856322; border-radius: 3px; color: #f1cb75; font-size: 9px; font-weight: 900; }
-.axis-preview { min-width: 0; min-height: 0; display: grid; align-content: start; gap: 16px; padding: 18px; overflow: auto; background-color: #0d1012; background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 24px 24px; }
+.axis-preview { width: 100%; min-width: 0; min-height: 0; display: grid; align-content: start; gap: 18px; padding: 18px; overflow-x: hidden; overflow-y: auto; background-color: #0d1012; background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 24px 24px; }
 .axis-group { min-width: 0; display: grid; gap: 9px; }
 .axis-group-head { display: flex; align-items: center; gap: 8px; }
 .axis-group-head strong { color: #f1cf83; font-size: 12px; }
 .axis-group-head span { color: #737a7f; font-size: 9px; }
-.axis-flow { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 7px 17px; padding: 12px; border: 1px solid #30363a; border-left: 3px solid var(--axis-color, var(--gold)); border-radius: 4px; background: rgba(18,22,25,.94); }
-.axis-step { position: relative; min-width: 58px; min-height: 38px; display: grid; grid-template-columns: 24px minmax(0, auto); align-items: center; gap: 7px; padding: 5px 9px 5px 5px; border: 1px solid color-mix(in srgb, var(--role-color), #fff 25%); border-radius: 4px; background: color-mix(in srgb, var(--role-color), #101315 80%); }
+.axis-flow { width: 100%; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 19px; padding: 14px; border: 1px solid #30363a; border-left: 3px solid var(--axis-color, var(--gold)); border-radius: 4px; background: rgba(18,22,25,.94); }
+.axis-step { position: relative; max-width: 100%; min-width: 70px; min-height: 50px; display: grid; grid-template-columns: 34px minmax(0, auto); align-items: center; gap: 8px; padding: 7px 10px 7px 7px; border: 1px solid color-mix(in srgb, var(--role-color), #fff 25%); border-radius: 4px; background: color-mix(in srgb, var(--role-color), #101315 80%); }
+.axis-move-continuation { min-width: 42px; grid-template-columns: minmax(0, auto); padding-left: 10px; }
 .axis-step:not(:last-child)::after { content: ''; position: absolute; left: calc(100% + 6px); top: 50%; width: 7px; height: 7px; border-top: 1px solid #686e72; border-right: 1px solid #686e72; transform: translateY(-50%) rotate(45deg); }
-.axis-step .mini-avatar { width: 24px; height: 24px; flex-basis: 24px; border: 0; }
-.axis-move-content { max-width: 220px; display: flex; align-items: center; flex-wrap: wrap; gap: 3px 4px; }
-.axis-action { min-width: 16px; min-height: 22px; display: inline-flex; align-items: center; justify-content: center; gap: 1px; color: #f0f2ef; font-size: 10px; font-weight: 900; line-height: 1; white-space: nowrap; }
-.axis-action-icon { width: 22px; height: 22px; display: block; object-fit: contain; }
+.axis-step .mini-avatar { width: 34px; height: 34px; flex-basis: 34px; border: 0; }
+.axis-move-content { min-width: 0; display: flex; align-items: center; flex-wrap: nowrap; gap: 5px; overflow: hidden; }
+.axis-action { min-width: 20px; min-height: 31px; display: inline-flex; align-items: center; justify-content: center; gap: 2px; color: #f0f2ef; font-size: 12px; font-weight: 900; line-height: 1; white-space: nowrap; }
+.axis-action > span { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.axis-action-icon { width: 31px; height: 31px; display: block; object-fit: contain; }
 .axis-empty, .axis-error { min-height: 240px; display: grid; place-items: center; align-content: center; gap: 8px; color: var(--muted); font-size: 12px; text-align: center; }
 .axis-error { color: #ff9b9f; }
 .axis-loading { min-height: 260px; display: flex; align-items: center; justify-content: center; gap: 7px; }

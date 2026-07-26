@@ -3,6 +3,8 @@ const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
 const BUTTON_ICON_BASE = './assets/botton';
 const MAX_SELECTED_CHARACTERS = 3;
 const ROLE_COLORS = ['#d84f55', '#44c8c6', '#d7ad52'];
+const AXIS_ICON_SIZE = 31;
+const AXIS_AVATAR_SIZE = 34;
 const DEFAULT_MOVE_LABELS = {
   basic_attack: 'a',
   heavy_attack: 'z',
@@ -59,7 +61,6 @@ const state = {
   sort: 'updated',
   detailChart: null,
   detailPackage: null,
-  axisIconConversion: true,
   chartPackages: new Map()
 };
 
@@ -101,7 +102,6 @@ const els = {
   detailSubmitter: document.getElementById('detailSubmitter'),
   detailSourceLink: document.getElementById('detailSourceLink'),
   detailDownload: document.getElementById('detailDownload'),
-  axisIconToggle: document.getElementById('axisIconToggle'),
   axisPreview: document.getElementById('axisPreview'),
   axisPreviewSummary: document.getElementById('axisPreviewSummary')
 };
@@ -399,7 +399,7 @@ function axisStepLabel(step, labels) {
 
 function axisIconParts(value) {
   const text = String(value || '');
-  if (!state.axisIconConversion || !text) return text ? [{ kind: 'text', value: text }] : [];
+  if (!text) return [];
   const parts = [];
   let buffer = '';
   let index = 0;
@@ -435,6 +435,41 @@ function groupAxisSteps(steps) {
     current.steps.push(step);
   }
   return groups;
+}
+
+function estimateAxisActionWidth(value) {
+  const parts = axisIconParts(value);
+  const contentWidth = parts.reduce((width, part) => {
+    if (part.kind === 'icon') return width + AXIS_ICON_SIZE;
+    return width + Math.max(14, Array.from(part.value).length * 12);
+  }, 0);
+  return Math.max(20, contentWidth + Math.max(0, parts.length - 1) * 2);
+}
+
+function axisBlockMaxWidth() {
+  return Math.max(220, els.axisPreview.clientWidth - 72);
+}
+
+function splitAxisMoveGroups(groups, labels) {
+  const maxWidth = axisBlockMaxWidth();
+  const chunks = [];
+  for (const group of groups) {
+    let chunk = { slot: group.slot, steps: [], showAvatar: true };
+    let width = 20 + AXIS_AVATAR_SIZE + 8;
+    for (const step of group.steps) {
+      const actionWidth = estimateAxisActionWidth(axisStepLabel(step, labels));
+      const nextWidth = width + (chunk.steps.length ? 5 : 0) + actionWidth;
+      if (chunk.steps.length && nextWidth > maxWidth) {
+        chunks.push(chunk);
+        chunk = { slot: group.slot, steps: [], showAvatar: false };
+        width = 20;
+      }
+      width += (chunk.steps.length ? 5 : 0) + actionWidth;
+      chunk.steps.push(step);
+    }
+    if (chunk.steps.length) chunks.push(chunk);
+  }
+  return chunks;
 }
 
 function axisActionContent(value) {
@@ -486,7 +521,7 @@ function renderAxisPreview(pack, indexChart) {
       .filter((step) => Number(step.startMin || 0) >= start && Number(step.startMin || 0) < end)
       .sort((left, right) => Number(left.startMin || 0) - Number(right.startMin || 0) || String(left.id || '').localeCompare(String(right.id || '')));
     visibleStepCount += steps.length;
-    const moveGroups = groupAxisSteps(steps);
+    const moveGroups = splitAxisMoveGroups(groupAxisSteps(steps), labels);
     visibleBlockCount += moveGroups.length;
     const group = document.createElement('section');
     group.className = 'axis-group';
@@ -504,13 +539,13 @@ function renderAxisPreview(pack, indexChart) {
       const slot = moveGroup.slot;
       const character = characters[slot - 1] || `角色 ${slot}`;
       const chip = document.createElement('div');
-      chip.className = 'axis-step axis-move-block';
+      chip.className = `axis-step axis-move-block${moveGroup.showAvatar ? '' : ' axis-move-continuation'}`;
       chip.style.setProperty('--role-color', ROLE_COLORS[slot - 1]);
       const firstStep = moveGroup.steps[0];
       const lastStep = moveGroup.steps[moveGroup.steps.length - 1];
       const actionLabels = moveGroup.steps.map((step) => axisStepLabel(step, labels));
       chip.title = `${character} · ${actionLabels.join('')} · ${formatDuration(firstStep.startMin)} - ${formatDuration(lastStep.startMin)}`;
-      chip.appendChild(avatarElement(character));
+      if (moveGroup.showAvatar) chip.appendChild(avatarElement(character));
       const content = document.createElement('div');
       content.className = 'axis-move-content';
       content.setAttribute('aria-label', actionLabels.join(''));
@@ -720,9 +755,11 @@ els.tags.addEventListener('click', (event) => {
 });
 els.closeDetail.addEventListener('click', closeDetails);
 els.detailBackdrop.addEventListener('mousedown', (event) => { if (event.target === els.detailBackdrop) closeDetails(); });
-els.axisIconToggle.addEventListener('change', () => {
-  state.axisIconConversion = els.axisIconToggle.checked;
-  if (state.detailChart && state.detailPackage) renderAxisPreview(state.detailPackage, state.detailChart);
+let axisResizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(axisResizeTimer);
+  if (!state.detailChart || !state.detailPackage) return;
+  axisResizeTimer = setTimeout(() => renderAxisPreview(state.detailPackage, state.detailChart), 120);
 });
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
