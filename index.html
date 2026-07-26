@@ -10,7 +10,8 @@
     <link rel="apple-touch-icon" href="assets/logo.png" />
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
-    <link rel="stylesheet" href="styles.css?v=20260726-5" />
+    <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
+    <link rel="stylesheet" href="styles.css?v=20260726-7" />
   </head>
   <body>
     <header class="site-header">
@@ -27,6 +28,9 @@
 
     <main>
       <section class="search-band" aria-labelledby="pageTitle">
+        <div class="hero-spine-layer" id="heroSpineLayer" aria-hidden="true">
+          <div id="heroSpine"></div>
+        </div>
         <div class="content-width">
           <div class="title-row">
             <div>
@@ -68,10 +72,6 @@
             </label>
           </form>
 
-          <div class="tag-filter" aria-labelledby="tagFilterLabel">
-            <span id="tagFilterLabel">标签</span>
-            <div id="tagList" class="tag-list"></div>
-          </div>
         </div>
       </section>
 
@@ -82,10 +82,16 @@
               <h2 id="resultsTitle">社区连段</h2>
               <p id="resultCount">0 个结果</p>
             </div>
-            <button id="resetBtn" class="reset-button" type="button">
-              <i data-lucide="rotate-ccw" aria-hidden="true"></i>
-              重置筛选
-            </button>
+            <div class="results-tools">
+              <div class="tag-filter" aria-labelledby="tagFilterLabel">
+                <span id="tagFilterLabel">标签</span>
+                <div id="tagList" class="tag-list"></div>
+              </div>
+              <button id="resetBtn" class="reset-button" type="button">
+                <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+                重置筛选
+              </button>
+            </div>
           </div>
 
           <div id="comboList" class="combo-list" aria-live="polite"></div>
@@ -224,6 +230,7 @@
     </div>
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=20260726-6"></script>
+    <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
+    <script src="app.js?v=20260726-7"></script>
   </body>
 </html>

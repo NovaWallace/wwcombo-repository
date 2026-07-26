@@ -123,6 +123,45 @@ const params = new URLSearchParams(location.search);
 const isLocalPreview = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
 const sourceUrl = params.get('source') || (isLocalPreview ? './demo-index.json' : './community-index.json');
 
+function initHeroSpine() {
+  const layer = document.getElementById('heroSpineLayer');
+  const host = document.getElementById('heroSpine');
+  if (!layer || !host || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!window.spine?.SpinePlayer) {
+    layer.classList.add('is-fallback');
+    return;
+  }
+  try {
+    new window.spine.SpinePlayer(host, {
+      binaryUrl: 'assets/spine/jiabeilina/Portraits_Jiabeilina.skel',
+      atlasUrl: 'assets/spine/jiabeilina/Portraits_Jiabeilina.atlas',
+      alpha: true,
+      backgroundColor: '#00000000',
+      premultipliedAlpha: true,
+      preserveDrawingBuffer: false,
+      showControls: false,
+      showLoading: false,
+      viewport: {
+        padLeft: '-12%',
+        padRight: '-12%',
+        padTop: '-16%',
+        padBottom: '-10%'
+      },
+      success(player) {
+        const animations = player.skeleton?.data?.animations || [];
+        const idle = animations.find((animation) => animation.name === 'idle') || animations[0];
+        if (idle) player.setAnimation(idle, true);
+        layer.classList.add('is-ready');
+      },
+      error() {
+        layer.classList.add('is-fallback');
+      }
+    });
+  } catch {
+    layer.classList.add('is-fallback');
+  }
+}
+
 function normalizeText(value) {
   return String(value || '').trim().toLocaleLowerCase('zh-CN');
 }
@@ -802,4 +841,5 @@ els.emptyReset.addEventListener('click', resetFilters);
 els.retry.addEventListener('click', loadIndex);
 
 window.lucide?.createIcons();
+initHeroSpine();
 loadIndex();
