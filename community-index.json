@@ -2,7 +2,7 @@
   "type": "wwcombo-community-index",
   "version": 2,
   "gameVersion": "3.5",
-  "updatedAt": 1785071786715,
+  "updatedAt": 1785072680567,
   "charts": [
     {
       "id": "wwc_a1c0be0d-8689-4170-b9aa-318b02c90633",
@@ -20,6 +20,7 @@
         "达妮娅",
         "千咲"
       ],
+      "firstCharacter": "千咲",
       "rounds": 4,
       "uploadVersion": "3.5",
       "description": "没算过dps，我是按自己的肌肉记忆怎么顺手来的\n只能说帮助熟悉合轴手感，4R全局容错高但是上限在那里了，要图伤害和实用还是推荐去找5R15光翼的轴\n1爱在启动轴爆发的时候找个光翼前切成机兵轰一发z再光翼即可",
@@ -46,6 +47,7 @@
         "夏空",
         "千咲"
       ],
+      "firstCharacter": "千咲",
       "rounds": 4,
       "uploadVersion": "3.5",
       "description": "01卡需要在变奏进场后多打一套小卡普攻，在大卡快解锁咖喱棒后再打一个ee再咖喱棒。全01情况下dps是9.5。演示视频里重击打断后摇太快会吞剑，这份里已经删掉了那个打断后摇的跳。",

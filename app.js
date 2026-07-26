@@ -612,7 +612,7 @@ async function openDetails(chart) {
   renderDetailTags(chart);
   els.detailMeta.replaceChildren(
     detailMetaRow('轮次', `${Math.max(1, Number(chart.rounds || 1))} 轮`),
-    detailMetaRow('首发角色', chartCharacters(chart)[0] || '未知'),
+    detailMetaRow('首发角色', chart.firstCharacter || chartCharacters(chart)[0] || '未知'),
     detailMetaRow('操作', `${Number(chart.stepCount || 0)} 步`),
     detailMetaRow('更新', formatDate(chart.updatedAt)),
     detailMetaRow('文件', formatBytes(chart.sizeBytes)),
