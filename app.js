@@ -1,7 +1,47 @@
 const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/icons/character';
 const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
+const BUTTON_ICON_BASE = './assets/button-icons';
 const MAX_SELECTED_CHARACTERS = 3;
 const ROLE_COLORS = ['#d84f55', '#44c8c6', '#d7ad52'];
+const DEFAULT_MOVE_LABELS = {
+  basic_attack: 'a',
+  heavy_attack: 'z',
+  skill: 'e',
+  skill_hold: 'E',
+  echo: 'q',
+  echo_hold: 'Q',
+  liberation: 'r',
+  liberation_hold: 'R',
+  dodge: 's',
+  dodge_hold: 'S',
+  jump: 'j',
+  jump_hold: 'J',
+  switch_1: 'i',
+  switch_2: 'ii',
+  switch_3: 'iii'
+};
+const AXIS_ICON_MAPPINGS = [
+  ['mouse-right-hold', '长按闪避', ['S', 'D', '闪', '长按闪避']],
+  ['mouse-left-hold', '长按普攻', ['z', 'Z', '长按普攻', '重击']],
+  ['skill-hold', '长按技能', ['E', '长按技能']],
+  ['echo-hold', '长按声骸', ['Q', '长按声骸']],
+  ['liberation-hold', '长按解放', ['R', '长按解放', '长按共鸣解放']],
+  ['jump-hold', '长按跳跃', ['J', '长按跳跃']],
+  ['mouse-left', '普攻', ['a', '普攻']],
+  ['skill', '技能', ['e', '技能']],
+  ['echo', '声骸', ['q', '声骸']],
+  ['liberation', '共鸣解放', ['r', '共鸣解放']],
+  ['mouse-right', '闪避', ['s', 'd', '闪避']],
+  ['jump', '跳跃', ['j', '跳跃', '跳']],
+  ['intro', '变奏', ['b', '变奏']],
+  ['outro', '延奏', ['y', '延奏']],
+  ['iii', '3', ['iii']],
+  ['ii', '2', ['ii']],
+  ['i', '1', ['i']]
+].map(([id, label, triggers]) => ({ id, label, triggers, src: `${BUTTON_ICON_BASE}/${id}.png` }));
+const AXIS_ICON_TRIGGERS = AXIS_ICON_MAPPINGS
+  .flatMap((mapping) => mapping.triggers.map((trigger) => ({ trigger, mapping })))
+  .sort((left, right) => right.trigger.length - left.trigger.length);
 
 const state = {
   charts: [],
@@ -12,6 +52,8 @@ const state = {
   tag: '',
   sort: 'updated',
   detailChart: null,
+  detailPackage: null,
+  axisIconConversion: true,
   chartPackages: new Map()
 };
 
@@ -53,6 +95,7 @@ const els = {
   detailSubmitter: document.getElementById('detailSubmitter'),
   detailSourceLink: document.getElementById('detailSourceLink'),
   detailDownload: document.getElementById('detailDownload'),
+  axisIconToggle: document.getElementById('axisIconToggle'),
   axisPreview: document.getElementById('axisPreview'),
   axisPreviewSummary: document.getElementById('axisPreviewSummary')
 };
@@ -343,6 +386,71 @@ function axisPeriodLabel(period, loopCount) {
   return loopCount > 1 ? `循环轴${period.loopIndex || 1}` : '循环轴';
 }
 
+function axisStepLabel(step, labels) {
+  const custom = String(labels[step.id] || '').trim();
+  return custom || DEFAULT_MOVE_LABELS[step.moveId] || String(step.label || step.moveId || '操作');
+}
+
+function axisIconParts(value) {
+  const text = String(value || '');
+  if (!state.axisIconConversion || !text) return text ? [{ kind: 'text', value: text }] : [];
+  const parts = [];
+  let buffer = '';
+  let index = 0;
+  const pushText = () => {
+    if (buffer) parts.push({ kind: 'text', value: buffer });
+    buffer = '';
+  };
+  while (index < text.length) {
+    const match = AXIS_ICON_TRIGGERS.find(({ trigger }) => text.startsWith(trigger, index));
+    if (!match) {
+      buffer += text[index];
+      index += 1;
+      continue;
+    }
+    pushText();
+    parts.push({ kind: 'icon', mapping: match.mapping });
+    index += match.trigger.length;
+  }
+  pushText();
+  return parts;
+}
+
+function groupAxisSteps(steps) {
+  const groups = [];
+  let current = null;
+  for (const step of steps) {
+    const slotFromSwitch = /^switch_([123])$/.exec(String(step.moveId || ''));
+    const slot = Math.max(1, Math.min(3, Number(step.characterSlot || slotFromSwitch?.[1] || 1)));
+    if (!current || slotFromSwitch) {
+      current = { slot, steps: [] };
+      groups.push(current);
+    }
+    current.steps.push(step);
+  }
+  return groups;
+}
+
+function axisActionContent(value) {
+  const action = document.createElement('span');
+  action.className = 'axis-action';
+  for (const part of axisIconParts(value)) {
+    if (part.kind === 'text') {
+      const text = document.createElement('span');
+      text.textContent = part.value;
+      action.appendChild(text);
+      continue;
+    }
+    const icon = document.createElement('img');
+    icon.className = 'axis-action-icon';
+    icon.src = part.mapping.src;
+    icon.alt = part.mapping.label;
+    icon.title = part.mapping.label;
+    action.appendChild(icon);
+  }
+  return action;
+}
+
 function renderAxisPreview(pack, indexChart) {
   const chart = pack?.chart || (Array.isArray(pack?.charts) ? pack.charts[0] : null);
   if (!chart || !Array.isArray(chart.steps)) throw new Error('连段 JSON 缺少轴数据');
@@ -364,6 +472,7 @@ function renderAxisPreview(pack, indexChart) {
   const characters = chartCharacters(indexChart);
   const fragment = document.createDocumentFragment();
   let visibleStepCount = 0;
+  let visibleBlockCount = 0;
   for (const period of periods) {
     const start = Number(period.startMs || 0);
     const end = Number(period.endMs || Number.POSITIVE_INFINITY);
@@ -371,6 +480,8 @@ function renderAxisPreview(pack, indexChart) {
       .filter((step) => Number(step.startMin || 0) >= start && Number(step.startMin || 0) < end)
       .sort((left, right) => Number(left.startMin || 0) - Number(right.startMin || 0) || String(left.id || '').localeCompare(String(right.id || '')));
     visibleStepCount += steps.length;
+    const moveGroups = groupAxisSteps(steps);
+    visibleBlockCount += moveGroups.length;
     const group = document.createElement('section');
     group.className = 'axis-group';
     group.style.setProperty('--axis-color', period.kind === 'startup_axis' ? '#d7ad52' : '#44c8c6');
@@ -383,17 +494,22 @@ function renderAxisPreview(pack, indexChart) {
     heading.append(title, range);
     const flow = document.createElement('div');
     flow.className = 'axis-flow';
-    for (const step of steps) {
-      const slot = Math.max(1, Math.min(3, Number(step.characterSlot || 1)));
+    for (const moveGroup of moveGroups) {
+      const slot = moveGroup.slot;
       const character = characters[slot - 1] || `角色 ${slot}`;
       const chip = document.createElement('div');
-      chip.className = 'axis-step';
+      chip.className = 'axis-step axis-move-block';
       chip.style.setProperty('--role-color', ROLE_COLORS[slot - 1]);
-      chip.title = `${character} · ${step.label || step.moveId || '操作'} · ${formatDuration(step.startMin)}`;
+      const firstStep = moveGroup.steps[0];
+      const lastStep = moveGroup.steps[moveGroup.steps.length - 1];
+      const actionLabels = moveGroup.steps.map((step) => axisStepLabel(step, labels));
+      chip.title = `${character} · ${actionLabels.join('')} · ${formatDuration(firstStep.startMin)} - ${formatDuration(lastStep.startMin)}`;
       chip.appendChild(avatarElement(character));
-      const text = document.createElement('strong');
-      text.textContent = String(labels[step.id] || step.label || step.moveId || '操作');
-      chip.appendChild(text);
+      const content = document.createElement('div');
+      content.className = 'axis-move-content';
+      content.setAttribute('aria-label', actionLabels.join(''));
+      for (const actionLabel of actionLabels) content.appendChild(axisActionContent(actionLabel));
+      chip.appendChild(content);
       flow.appendChild(chip);
     }
     if (!steps.length) {
@@ -407,7 +523,7 @@ function renderAxisPreview(pack, indexChart) {
   }
   els.axisPreview.replaceChildren(fragment);
   const periodText = showAll ? '错轮 · 全部轮次' : periods.map((period) => axisPeriodLabel(period, loops.length)).join(' + ');
-  els.axisPreviewSummary.textContent = `${periodText} · ${visibleStepCount} 步`;
+  els.axisPreviewSummary.textContent = `${periodText} · ${visibleStepCount} 步 · ${visibleBlockCount} 招式块`;
 }
 
 async function loadChartPackage(chart) {
@@ -427,6 +543,7 @@ async function loadChartPackage(chart) {
 
 async function openDetails(chart) {
   state.detailChart = chart;
+  state.detailPackage = null;
   const submitter = submitterFor(chart);
   els.detailTitle.textContent = chart.title || '未命名连段';
   renderDetailCharacters(chart);
@@ -457,6 +574,7 @@ async function openDetails(chart) {
   try {
     const pack = await loadChartPackage(chart);
     if (state.detailChart?.id !== chart.id) return;
+    state.detailPackage = pack;
     renderAxisPreview(pack, chart);
   } catch (error) {
     if (state.detailChart?.id !== chart.id) return;
@@ -471,6 +589,7 @@ async function openDetails(chart) {
 
 function closeDetails() {
   state.detailChart = null;
+  state.detailPackage = null;
   els.detailBackdrop.hidden = true;
   if (els.characterPickerBackdrop.hidden) document.body.style.overflow = '';
 }
@@ -595,6 +714,10 @@ els.tags.addEventListener('click', (event) => {
 });
 els.closeDetail.addEventListener('click', closeDetails);
 els.detailBackdrop.addEventListener('mousedown', (event) => { if (event.target === els.detailBackdrop) closeDetails(); });
+els.axisIconToggle.addEventListener('change', () => {
+  state.axisIconConversion = els.axisIconToggle.checked;
+  if (state.detailChart && state.detailPackage) renderAxisPreview(state.detailPackage, state.detailChart);
+});
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
   if (!els.detailBackdrop.hidden) closeDetails();
