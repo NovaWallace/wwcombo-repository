@@ -138,15 +138,19 @@ async function copySubmissionEmail() {
   }
 
   if (!copied) {
-    const input = document.createElement('textarea');
-    input.value = SUBMISSION_EMAIL;
-    input.setAttribute('readonly', '');
-    input.style.position = 'fixed';
-    input.style.opacity = '0';
-    document.body.append(input);
-    input.select();
-    copied = document.execCommand('copy');
-    input.remove();
+    try {
+      const input = document.createElement('textarea');
+      input.value = SUBMISSION_EMAIL;
+      input.setAttribute('readonly', '');
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.append(input);
+      input.select();
+      copied = document.execCommand('copy');
+      input.remove();
+    } catch {
+      copied = false;
+    }
   }
 
   if (!els.submissionButton || !els.submissionButtonLabel) return;
@@ -173,7 +177,7 @@ function initHeroSpine() {
       atlasUrl: 'assets/spine/luckdraw-jiabeilina/jiabeilina.atlas',
       alpha: true,
       backgroundColor: '#00000000',
-      premultipliedAlpha: true,
+      premultipliedAlpha: false,
       preserveDrawingBuffer: false,
       showControls: false,
       showLoading: false,
