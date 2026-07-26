@@ -147,6 +147,10 @@ function renderCard(chart) {
   card.style.setProperty('--accent', tagAccent(tags));
   card.querySelector('h3').textContent = chart.title || '未命名连段';
   card.querySelector('.characters').textContent = chartCharacters(chart).join(' / ') || '角色未标注';
+  const submitter = card.querySelector('.submitter');
+  const submitterName = String(chart.submitter?.nickname || '').trim();
+  const submitterEmail = String(chart.submitter?.email || '').trim();
+  submitter.textContent = submitterName && submitterEmail ? `投稿者 ${submitterName} · ${submitterEmail}` : '';
   card.querySelector('.description').textContent = chart.description || '';
   card.querySelector('.rounds').textContent = `${Math.max(1, Number(chart.rounds || 1))} 轮`;
   card.querySelector('.duration').textContent = formatDuration(chart.durationMs);
