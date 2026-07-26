@@ -437,6 +437,15 @@ function renderCard(chart) {
   card.querySelector('.submitter-name').textContent = submitter.nickname;
   card.querySelector('.submitter-email').textContent = submitter.email;
 
+  const characters = chartCharacters(chart).slice(0, MAX_SELECTED_CHARACTERS);
+  const characterContainer = card.querySelector('.card-characters');
+  characterContainer.setAttribute('aria-label', characters.length ? `所用角色：${characters.join('、')}` : '角色未标注');
+  for (const name of characters) {
+    const avatar = avatarElement(name, 'card-character-avatar');
+    avatar.title = name;
+    characterContainer.appendChild(avatar);
+  }
+
   const tagContainer = card.querySelector('.combo-tags');
   for (const tag of tags) {
     const item = document.createElement('span');
