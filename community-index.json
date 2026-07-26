@@ -1,7 +1,7 @@
 {
   "type": "wwcombo-community-index",
   "version": 2,
-  "updatedAt": 1785040324607,
+  "updatedAt": 1785040361705,
   "charts": [
     {
       "id": "0e19ac9a-5cd9-42ea-9479-eaf231322f4c",
@@ -18,7 +18,7 @@
       "durationMs": 178715,
       "stepCount": 261,
       "version": 1,
-      "updatedAt": 1785040324607,
+      "updatedAt": 1785040361704,
       "sizeBytes": 198315,
       "repository": "deta1",
       "url": "https://novawallace.github.io/wwcombo-deta1/published/unknown/unknown-%E7%88%B1%E8%BE%BE%E5%8D%83-%E6%89%8B%E8%B0%83-unknown-ac7cb1bb.wwcombo.json"
@@ -38,7 +38,7 @@
       "durationMs": 175969,
       "stepCount": 259,
       "version": 1,
-      "updatedAt": 1785040324606,
+      "updatedAt": 1785040361703,
       "sizeBytes": 182829,
       "repository": "deta1",
       "url": "https://novawallace.github.io/wwcombo-deta1/published/unknown/unknown-%E4%BA%8C%E9%93%BE-%E5%8D%A1%E5%A4%8F%E5%8D%83-25%E7%A7%92%E5%8F%8C%E4%B8%8B%E8%90%BD-%E4%BF%AE%E6%94%B9-unknown-306f3356.wwcombo.json"
@@ -58,7 +58,7 @@
       "durationMs": 54055,
       "stepCount": 71,
       "version": 1,
-      "updatedAt": 1785040324604,
+      "updatedAt": 1785040361701,
       "sizeBytes": 67437,
       "repository": "deta1",
       "url": "https://novawallace.github.io/wwcombo-deta1/published/unknown/unknown-%E4%B8%89%E7%81%AB-%E5%90%AF%E5%8A%A8%E8%BD%B42-unknown-b591303d.wwcombo.json"
@@ -78,7 +78,7 @@
       "durationMs": 174133,
       "stepCount": 243,
       "version": 1,
-      "updatedAt": 1785040324602,
+      "updatedAt": 1785040361700,
       "sizeBytes": 172201,
       "repository": "deta1",
       "url": "https://novawallace.github.io/wwcombo-deta1/published/unknown/unknown-2-unknown-c7f35e78.wwcombo.json"
