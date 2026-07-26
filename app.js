@@ -809,7 +809,7 @@ async function loadCharacterIcons() {
       if (name && /^https?:\/\//i.test(source) && !icons.has(name)) icons.set(name, source);
     }
     state.characterIcons = icons;
-    renderCharacterTrigger();
+    render();
     if (!els.characterPickerBackdrop.hidden) renderCharacterPicker();
   } catch {
     state.characterIcons = new Map();
