@@ -126,7 +126,7 @@ const sourceUrl = params.get('source') || (isLocalPreview ? './demo-index.json' 
 function initHeroSpine() {
   const layer = document.getElementById('heroSpineLayer');
   const host = document.getElementById('heroSpine');
-  if (!layer || !host || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!layer || !host) return;
   if (!window.spine?.SpinePlayer) {
     layer.classList.add('is-fallback');
     return;
