@@ -1,12 +1,11 @@
 {
   "type": "wwcombo-community-index",
   "version": 2,
-  "updatedAt": 1785064301640,
+  "updatedAt": 1785065015730,
   "charts": [
     {
       "id": "wwc_a1c0be0d-8689-4170-b9aa-318b02c90633",
       "title": "爱达千 4R12光翼 自用轴",
-      "author": "unknown",
       "submitter": {
         "nickname": "灵*****",
         "email": "hl***@foxmail.com"
@@ -29,36 +28,11 @@
       "updatedAt": 1785064301622,
       "sizeBytes": 190289,
       "repository": "deta1",
-      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E7%88%B1%E5%BC%A5%E6%96%AF/%E7%88%B1%E5%BC%A5%E6%96%AF-4r12-unknown-c73b446f.wwcombo.json"
-    },
-    {
-      "id": "0e19ac9a-5cd9-42ea-9479-eaf231322f4c",
-      "title": "爱达千 手调",
-      "author": "unknown",
-      "submitter": {
-        "nickname": "灵*****",
-        "email": "hl***@foxmail.com"
-      },
-      "character": "unknown",
-      "tags": [],
-      "characters": [
-        "unknown"
-      ],
-      "rounds": 1,
-      "description": "",
-      "link": "",
-      "durationMs": 178715,
-      "stepCount": 261,
-      "version": 1,
-      "updatedAt": 1785063420347,
-      "sizeBytes": 191821,
-      "repository": "deta1",
-      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/unknown/unknown-%E7%88%B1%E8%BE%BE%E5%8D%83-%E6%89%8B%E8%B0%83-unknown-ac7cb1bb.wwcombo.json"
+      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E7%88%B1%E5%BC%A5%E6%96%AF/%E7%88%B1%E5%BC%A5%E6%96%AF-%E7%88%B1%E8%BE%BE%E5%8D%83-4r12%E5%85%89%E7%BF%BC-%E8%87%AA%E7%94%A8%E8%BD%B4-c73b446f.wwcombo.json"
     },
     {
       "id": "wwc_a4f3074e-6563-4a39-b1af-f54befe699d4",
       "title": "卡夏千 二链 25秒双下落",
-      "author": "unknown",
       "submitter": {
         "nickname": "灵*****",
         "email": "hl***@foxmail.com"
@@ -79,7 +53,7 @@
       "updatedAt": 1785063420340,
       "sizeBytes": 174368,
       "repository": "deta1",
-      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E5%8D%A1%E6%8F%90%E5%B8%8C%E5%A8%85/%E5%8D%A1%E6%8F%90%E5%B8%8C%E5%A8%85-%E5%8D%A1%E5%A4%8F%E5%8D%83-%E4%BA%8C%E9%93%BE-25%E7%A7%92%E5%8F%8C%E4%B8%8B%E8%90%BD-unknown-4ac17991.wwcombo.json"
+      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E5%8D%A1%E6%8F%90%E5%B8%8C%E5%A8%85/%E5%8D%A1%E6%8F%90%E5%B8%8C%E5%A8%85-%E5%8D%A1%E5%A4%8F%E5%8D%83-%E4%BA%8C%E9%93%BE-25%E7%A7%92%E5%8F%8C%E4%B8%8B%E8%90%BD-4ac17991.wwcombo.json"
     }
   ]
 }
