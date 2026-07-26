@@ -62,6 +62,7 @@ const AXIS_ICON_TRIGGERS = AXIS_ICON_MAPPINGS
 
 const state = {
   charts: [],
+  gameVersion: '3.5',
   title: '',
   characters: [],
   characterQuery: '',
@@ -611,11 +612,11 @@ async function openDetails(chart) {
   renderDetailTags(chart);
   els.detailMeta.replaceChildren(
     detailMetaRow('轮次', `${Math.max(1, Number(chart.rounds || 1))} 轮`),
-    detailMetaRow('轴长', formatDuration(chart.durationMs)),
+    detailMetaRow('首发角色', chartCharacters(chart)[0] || '未知'),
     detailMetaRow('操作', `${Number(chart.stepCount || 0)} 步`),
     detailMetaRow('更新', formatDate(chart.updatedAt)),
     detailMetaRow('文件', formatBytes(chart.sizeBytes)),
-    detailMetaRow('存储', chart.repository || 'repository'),
+    detailMetaRow('上传版本', chart.uploadVersion || state.gameVersion),
     detailMetaRow('ID', chart.id || '未知')
   );
   els.detailDescription.textContent = chart.description || '';
@@ -732,6 +733,7 @@ async function loadIndex() {
     const data = await response.json();
     if (data.type !== 'wwcombo-community-index' || !Array.isArray(data.charts)) throw new Error('索引格式不正确');
     state.charts = data.charts;
+    state.gameVersion = /^\d+\.\d+$/.test(String(data.gameVersion || '')) ? String(data.gameVersion) : '3.5';
     state.title = params.get('q') || '';
     const characterParam = params.get('characters') || params.get('character') || '';
     state.characters = uniqueSorted(characterParam.split(',').map((item) => item.trim())).slice(0, MAX_SELECTED_CHARACTERS);
