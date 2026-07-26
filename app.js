@@ -150,7 +150,12 @@ function initHeroSpine() {
       success(player) {
         const animations = player.skeleton?.data?.animations || [];
         const idle = animations.find((animation) => animation.name === 'idle') || animations[0];
-        if (idle) player.setAnimation(idle, true);
+        if (idle) {
+          player.setAnimation(idle, true);
+          player.play();
+          host.dataset.animation = idle.name;
+          host.dataset.animationDuration = String(idle.duration || 0);
+        }
         layer.classList.add('is-ready');
       },
       error() {

@@ -41,7 +41,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .hero-spine-layer { position: absolute; inset: 0; z-index: -2; background: #0c0e0f url('assets/community-bg.jpg') center 42% / cover no-repeat; opacity: .78; transition: opacity .3s ease; pointer-events: none; }
 .hero-spine-layer.is-ready { background: #080a0b; opacity: .92; }
 #heroSpine { position: absolute; inset: -4% 2% -4% 48%; }
-#heroSpine, #heroSpine .spine-player, #heroSpine canvas { width: 100% !important; height: 100% !important; }
+#heroSpine .spine-player, #heroSpine canvas { width: 100% !important; height: 100% !important; }
 #heroSpine .spine-player { background: transparent !important; }
 #heroSpine .spine-player-controls, #heroSpine .spine-player-progress { display: none !important; }
 .title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 0; }
