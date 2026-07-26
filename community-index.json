@@ -1,87 +1,53 @@
 {
   "type": "wwcombo-community-index",
   "version": 2,
-  "updatedAt": 1785041038175,
+  "updatedAt": 1785044525206,
   "charts": [
     {
-      "id": "0e19ac9a-5cd9-42ea-9479-eaf231322f4c",
-      "title": "爱达千 手调",
+      "id": "wwc_a1c0be0d-8689-4170-b9aa-318b02c90633",
+      "title": "爱达千 4R12光翼 自用轴",
       "author": "unknown",
-      "character": "unknown",
-      "tags": [],
-      "characters": [
-        "unknown"
+      "character": "爱弥斯",
+      "tags": [
+        "进阶"
       ],
-      "rounds": 1,
-      "description": "",
-      "link": "",
+      "characters": [
+        "爱弥斯",
+        "达妮娅",
+        "千咲"
+      ],
+      "rounds": 4,
+      "description": "没算过dps，我是按自己的肌肉记忆怎么顺手来的\n只能说帮助熟悉合轴手感，4R全局容错高但是上限在那里了，要图伤害和实用还是推荐去找5R15光翼的轴\n1爱在启动轴爆发的时候找个光翼前切成机兵轰一发z再光翼即可",
+      "link": "https://www.bilibili.com/video/BV1UAKn6pEhq/?share_source=copy_web&vd_source=4fe0d6f8958dad8181fec938e100dbef",
       "durationMs": 178715,
-      "stepCount": 261,
+      "stepCount": 251,
       "version": 1,
-      "updatedAt": 1785041038175,
-      "sizeBytes": 198315,
+      "updatedAt": 1785044525204,
+      "sizeBytes": 191976,
       "repository": "deta1",
-      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/unknown/unknown-%E7%88%B1%E8%BE%BE%E5%8D%83-%E6%89%8B%E8%B0%83-unknown-ac7cb1bb.wwcombo.json"
+      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E7%88%B1%E8%BE%BE%E5%8D%83%204R12%E5%85%89%E7%BF%BC%20%E8%87%AA%E7%94%A8%E8%BD%B4-wwc_a1c0be0d-8689-4170-b9aa-318b02c90633.wwcombo.json"
     },
     {
-      "id": "236bcea4-a63c-4a6c-bd95-32920adc9e02",
-      "title": "二链 卡夏千 25秒双下落 修改",
+      "id": "wwc_a4f3074e-6563-4a39-b1af-f54befe699d4",
+      "title": "卡夏千 二链 25秒双下落",
       "author": "unknown",
-      "character": "unknown",
+      "character": "卡提希娅",
       "tags": [],
       "characters": [
-        "unknown"
+        "卡提希娅",
+        "夏空",
+        "千咲"
       ],
-      "rounds": 1,
-      "description": "",
-      "link": "",
+      "rounds": 4,
+      "description": "01卡需要在变奏进场后多打一套小卡普攻，在大卡快解锁咖喱棒后再打一个ee再咖喱棒。全01情况下dps是9.5。演示视频里重击打断后摇太快会吞剑，这份里已经删掉了那个打断后摇的跳。",
+      "link": "https://www.bilibili.com/video/BV1QnKY6bEGM/?share_source=copy_web&vd_source=4fe0d6f8958dad8181fec938e100dbef",
       "durationMs": 175969,
-      "stepCount": 259,
+      "stepCount": 255,
       "version": 1,
-      "updatedAt": 1785041038173,
-      "sizeBytes": 182829,
+      "updatedAt": 1785044525202,
+      "sizeBytes": 176092,
       "repository": "deta1",
-      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/unknown/unknown-%E4%BA%8C%E9%93%BE-%E5%8D%A1%E5%A4%8F%E5%8D%83-25%E7%A7%92%E5%8F%8C%E4%B8%8B%E8%90%BD-%E4%BF%AE%E6%94%B9-unknown-306f3356.wwcombo.json"
-    },
-    {
-      "id": "211aad33-cb68-43c2-a1de-e643ae1de99d",
-      "title": "三火 启动轴2",
-      "author": "unknown",
-      "character": "unknown",
-      "tags": [],
-      "characters": [
-        "unknown"
-      ],
-      "rounds": 1,
-      "description": "",
-      "link": "",
-      "durationMs": 54055,
-      "stepCount": 71,
-      "version": 1,
-      "updatedAt": 1785041038171,
-      "sizeBytes": 67437,
-      "repository": "deta1",
-      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/unknown/unknown-%E4%B8%89%E7%81%AB-%E5%90%AF%E5%8A%A8%E8%BD%B42-unknown-b591303d.wwcombo.json"
-    },
-    {
-      "id": "7c2cb04e-18c9-4598-8c28-9ffbea6de382",
-      "title": "卡夏千2",
-      "author": "unknown",
-      "character": "unknown",
-      "tags": [],
-      "characters": [
-        "unknown"
-      ],
-      "rounds": 1,
-      "description": "",
-      "link": "",
-      "durationMs": 174133,
-      "stepCount": 243,
-      "version": 1,
-      "updatedAt": 1785041038169,
-      "sizeBytes": 172201,
-      "repository": "deta1",
-      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/unknown/unknown-2-unknown-c7f35e78.wwcombo.json"
+      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E5%8D%A1%E5%A4%8F%E5%8D%83%20%E4%BA%8C%E9%93%BE%2025%E7%A7%92%E5%8F%8C%E4%B8%8B%E8%90%BD-wwc_a4f3074e-6563-4a39-b1af-f54befe699d4.wwcombo.json"
     }
   ]
 }

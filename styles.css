@@ -29,7 +29,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .site-header { border-bottom: 1px solid var(--line-soft); background: rgba(8, 9, 10, .96); }
 .header-inner { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .brand { min-width: 0; display: inline-flex; align-items: center; gap: 12px; color: var(--text); text-decoration: none; }
-.brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #ff5960; background: var(--red); color: #fff; font-size: 21px; font-weight: 950; transform: skewX(-8deg); }
+.brand-icon { width: 46px; height: 46px; flex: 0 0 46px; object-fit: contain; border-radius: 50%; }
 .brand > span:last-child { min-width: 0; display: grid; gap: 2px; }
 .brand strong { font-size: 16px; }
 .brand small { color: var(--muted); font-size: 10px; font-weight: 800; }
@@ -38,7 +38,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .github-link svg { width: 17px; height: 17px; }
 
 .search-band { position: relative; padding: 46px 0 28px; border-bottom: 1px solid var(--line); background: #0c0e0f url('assets/community-bg.jpg') center 42% / cover no-repeat; overflow: hidden; }
-.search-band::before { content: ''; position: absolute; inset: 0; background: rgba(7, 9, 10, .84); }
+.search-band::before { content: ''; position: absolute; inset: 0; background: rgba(7, 9, 10, .68); }
 .search-band::after { content: ''; position: absolute; left: 0; bottom: 0; width: 34%; height: 3px; background: var(--red); }
 .search-band > .content-width { position: relative; z-index: 1; }
 .title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
