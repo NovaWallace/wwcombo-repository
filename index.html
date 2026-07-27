@@ -6,12 +6,19 @@
     <meta name="description" content="鸣潮连段社区，按标题、角色和标签检索并下载连段谱。" />
     <meta name="theme-color" content="#161a1d" />
     <title>椰果培养仓</title>
+    <script>
+      try {
+        document.documentElement.dataset.theme = localStorage.getItem('wwcombo-theme') === 'day' ? 'day' : 'night';
+      } catch {
+        document.documentElement.dataset.theme = 'night';
+      }
+    </script>
     <link rel="icon" type="image/png" href="assets/logo.png" />
     <link rel="apple-touch-icon" href="assets/logo.png" />
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260728-20" />
+    <link rel="stylesheet" href="styles.css?v=20260728-21" />
   </head>
   <body>
     <header class="site-header">
@@ -24,6 +31,9 @@
           </span>
         </a>
         <div class="header-actions">
+          <button class="theme-toggle" id="themeToggle" type="button" aria-label="切换到白天模式" title="切换到白天模式">
+            <i data-lucide="sun" aria-hidden="true"></i>
+          </button>
           <div class="submission-help">
             <button class="submission-help-button" type="button" aria-label="查看投稿说明" aria-describedby="submissionHelpTooltip">
               <i data-lucide="circle-help" aria-hidden="true"></i>
@@ -260,6 +270,6 @@
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
-    <script src="app.js?v=20260727-19"></script>
+    <script src="app.js?v=20260728-21"></script>
   </body>
 </html>

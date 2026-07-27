@@ -2,6 +2,16 @@ const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/icons/chara
 const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
 const UNKNOWN_CHARACTER_ICON = './assets/unknown-character.jpg';
 const SUBMISSION_EMAIL = '2728756958@qq.com';
+const HERO_SPINE_ASSETS = {
+  night: {
+    binaryUrl: 'assets/spine/luckdraw-jiabeilina/jiabeilina.skel',
+    atlasUrl: 'assets/spine/luckdraw-jiabeilina/jiabeilina.atlas'
+  },
+  day: {
+    binaryUrl: 'assets/spine/luckdraw-feibi/feibi.skel',
+    atlasUrl: 'assets/spine/luckdraw-feibi/feibi.atlas'
+  }
+};
 const BUTTON_ICON_BASES = {
   english: './assets/button-icons',
   chinese: './assets/botton'
@@ -65,6 +75,7 @@ const AXIS_ICON_TRIGGERS = AXIS_ICON_MAPPINGS
 
 const state = {
   charts: [],
+  theme: document.documentElement.dataset.theme === 'day' ? 'day' : 'night',
   gameVersion: '3.5',
   title: '',
   characters: [],
@@ -80,6 +91,7 @@ const state = {
 };
 
 const els = {
+  themeToggle: document.getElementById('themeToggle'),
   submissionButton: document.getElementById('submissionButton'),
   submissionButtonLabel: document.getElementById('submissionButtonLabel'),
   form: document.getElementById('searchForm'),
@@ -168,18 +180,59 @@ async function copySubmissionEmail() {
   }, 1800);
 }
 
+let heroSpinePlayer = null;
+let heroSpineGeneration = 0;
+
+function updateThemeControl() {
+  if (!els.themeToggle) return;
+  const isDay = state.theme === 'day';
+  const label = isDay ? '切换到夜间模式' : '切换到白天模式';
+  const icon = document.createElement('i');
+  icon.dataset.lucide = isDay ? 'moon' : 'sun';
+  icon.setAttribute('aria-hidden', 'true');
+  els.themeToggle.replaceChildren(icon);
+  els.themeToggle.setAttribute('aria-label', label);
+  els.themeToggle.title = label;
+  window.lucide?.createIcons();
+}
+
+function setTheme(theme, persist = true) {
+  state.theme = theme === 'day' ? 'day' : 'night';
+  document.documentElement.dataset.theme = state.theme;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', state.theme === 'day' ? '#edf3f4' : '#161a1d');
+  if (persist) {
+    try {
+      localStorage.setItem('wwcombo-theme', state.theme);
+    } catch {
+      // Theme persistence is optional when storage is unavailable.
+    }
+  }
+  updateThemeControl();
+  initHeroSpine();
+}
+
 function initHeroSpine() {
   const layer = document.getElementById('heroSpineLayer');
   const host = document.getElementById('heroSpine');
   if (!layer || !host) return;
+  const theme = state.theme;
+  const assets = HERO_SPINE_ASSETS[theme];
+  const generation = ++heroSpineGeneration;
+  heroSpinePlayer?.dispose?.();
+  heroSpinePlayer = null;
+  host.replaceChildren();
+  delete host.dataset.animation;
+  delete host.dataset.animationDuration;
+  layer.dataset.theme = theme;
+  layer.classList.remove('is-ready', 'is-fallback');
   if (!window.spine?.SpinePlayer) {
     layer.classList.add('is-fallback');
     return;
   }
   try {
-    new window.spine.SpinePlayer(host, {
-      binaryUrl: 'assets/spine/luckdraw-jiabeilina/jiabeilina.skel',
-      atlasUrl: 'assets/spine/luckdraw-jiabeilina/jiabeilina.atlas',
+    const player = new window.spine.SpinePlayer(host, {
+      binaryUrl: assets.binaryUrl,
+      atlasUrl: assets.atlasUrl,
       alpha: true,
       backgroundColor: '#00000000',
       premultipliedAlpha: false,
@@ -193,6 +246,10 @@ function initHeroSpine() {
         padBottom: '0%'
       },
       success(player) {
+        if (generation !== heroSpineGeneration || state.theme !== theme) {
+          player.dispose?.();
+          return;
+        }
         const animations = player.skeleton?.data?.animations || [];
         const idle = animations.find((animation) => animation.name === 'idle') || animations[0];
         if (idle) {
@@ -204,9 +261,10 @@ function initHeroSpine() {
         layer.classList.add('is-ready');
       },
       error() {
-        layer.classList.add('is-fallback');
+        if (generation === heroSpineGeneration) layer.classList.add('is-fallback');
       }
     });
+    heroSpinePlayer = player;
   } catch {
     layer.classList.add('is-fallback');
   }
@@ -925,10 +983,14 @@ document.addEventListener('keydown', (event) => {
 els.reset.addEventListener('click', resetFilters);
 els.emptyReset.addEventListener('click', resetFilters);
 els.retry.addEventListener('click', loadIndex);
+els.themeToggle?.addEventListener('click', () => {
+  setTheme(state.theme === 'day' ? 'night' : 'day');
+});
 els.submissionButton?.addEventListener('click', () => {
   void copySubmissionEmail();
 });
 
+updateThemeControl();
 window.lucide?.createIcons();
 initHeroSpine();
 loadIndex();
