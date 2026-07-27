@@ -2,8 +2,60 @@
   "type": "wwcombo-community-index",
   "version": 2,
   "gameVersion": "3.5",
-  "updatedAt": 1785072680567,
+  "updatedAt": 1785158405776,
   "charts": [
+    {
+      "id": "0e19ac9a-5cd9-42ea-9479-eaf231322f4c",
+      "title": "爱达千 手调",
+      "submitter": {
+        "nickname": "灵*****",
+        "email": "hl***@foxmail.com"
+      },
+      "character": "unknown",
+      "tags": [],
+      "characters": [
+        "unknown"
+      ],
+      "firstCharacter": "unknown",
+      "rounds": 1,
+      "uploadVersion": "3.5",
+      "description": "",
+      "link": "",
+      "durationMs": 178715,
+      "stepCount": 261,
+      "version": 1,
+      "updatedAt": 1785158405715,
+      "sizeBytes": 191851,
+      "repository": "deta1",
+      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/unknown/unknown-%E7%88%B1%E8%BE%BE%E5%8D%83-%E6%89%8B%E8%B0%83-ac7cb1bb.wwcombo.json"
+    },
+    {
+      "id": "wwc_a4f3074e-6563-4a39-b1af-f54befe699d4",
+      "title": "卡夏千 二链 25秒双下落",
+      "submitter": {
+        "nickname": "灵*****",
+        "email": "hl***@foxmail.com"
+      },
+      "character": "卡提希娅",
+      "tags": [],
+      "characters": [
+        "卡提希娅",
+        "夏空",
+        "千咲"
+      ],
+      "firstCharacter": "千咲",
+      "rounds": 4,
+      "uploadVersion": "3.5",
+      "description": "01卡需要在变奏进场后多打一套小卡普攻，在大卡快解锁咖喱棒后再打一个ee再咖喱棒。全01情况下dps是9.5。演示视频里重击打断后摇太快会吞剑，这份里已经删掉了那个打断后摇的跳。",
+      "link": "https://www.bilibili.com/video/BV1QnKY6bEGM/?share_source=copy_web&vd_source=4fe0d6f8958dad8181fec938e100dbef",
+      "durationMs": 175969,
+      "stepCount": 255,
+      "version": 1,
+      "updatedAt": 1785158405707,
+      "sizeBytes": 174398,
+      "repository": "deta1",
+      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E5%8D%A1%E6%8F%90%E5%B8%8C%E5%A8%85/%E5%8D%A1%E6%8F%90%E5%B8%8C%E5%A8%85-%E5%8D%A1%E5%A4%8F%E5%8D%83-%E4%BA%8C%E9%93%BE-25%E7%A7%92%E5%8F%8C%E4%B8%8B%E8%90%BD-4ac17991.wwcombo.json"
+    },
     {
       "id": "wwc_a1c0be0d-8689-4170-b9aa-318b02c90633",
       "title": "爱达千 4R12光翼 自用轴",
@@ -32,33 +84,6 @@
       "sizeBytes": 190319,
       "repository": "deta1",
       "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E7%88%B1%E5%BC%A5%E6%96%AF/%E7%88%B1%E5%BC%A5%E6%96%AF-%E7%88%B1%E8%BE%BE%E5%8D%83-4r12%E5%85%89%E7%BF%BC-%E8%87%AA%E7%94%A8%E8%BD%B4-c73b446f.wwcombo.json"
-    },
-    {
-      "id": "wwc_a4f3074e-6563-4a39-b1af-f54befe699d4",
-      "title": "卡夏千 二链 25秒双下落",
-      "submitter": {
-        "nickname": "灵*****",
-        "email": "hl***@foxmail.com"
-      },
-      "character": "卡提希娅",
-      "tags": [],
-      "characters": [
-        "卡提希娅",
-        "夏空",
-        "千咲"
-      ],
-      "firstCharacter": "千咲",
-      "rounds": 4,
-      "uploadVersion": "3.5",
-      "description": "01卡需要在变奏进场后多打一套小卡普攻，在大卡快解锁咖喱棒后再打一个ee再咖喱棒。全01情况下dps是9.5。演示视频里重击打断后摇太快会吞剑，这份里已经删掉了那个打断后摇的跳。",
-      "link": "https://www.bilibili.com/video/BV1QnKY6bEGM/?share_source=copy_web&vd_source=4fe0d6f8958dad8181fec938e100dbef",
-      "durationMs": 175969,
-      "stepCount": 255,
-      "version": 1,
-      "updatedAt": 1785063420340,
-      "sizeBytes": 174398,
-      "repository": "deta1",
-      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E5%8D%A1%E6%8F%90%E5%B8%8C%E5%A8%85/%E5%8D%A1%E6%8F%90%E5%B8%8C%E5%A8%85-%E5%8D%A1%E5%A4%8F%E5%8D%83-%E4%BA%8C%E9%93%BE-25%E7%A7%92%E5%8F%8C%E4%B8%8B%E8%90%BD-4ac17991.wwcombo.json"
     }
   ]
 }
