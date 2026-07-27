@@ -353,7 +353,7 @@ html[data-theme='day'] .search-band { border-color: #aebfc4; background: #dce8eb
 html[data-theme='day'] .search-band::before { background: rgba(238, 246, 247, .28); }
 html[data-theme='day'] .hero-spine-layer,
 html[data-theme='day'] .hero-spine-layer.is-ready { background: #dce8eb url('assets/day-hero.webp') center 46% / min(900px, 82vw) auto no-repeat; opacity: .9; }
-html[data-theme='day'] #heroSpine { inset: -86% -4% -114%; }
+html[data-theme='day'] #heroSpine { inset: -86% -4% -114%; transform: translateY(-4%); }
 html[data-theme='day'] h1 { color: #142a31; text-shadow: 0 1px 5px rgba(255,255,255,.95); }
 html[data-theme='day'] .eyebrow { color: #b52d37; }
 html[data-theme='day'] .index-status { color: #40575f; text-shadow: 0 1px 4px rgba(255,255,255,.9); }
@@ -437,7 +437,7 @@ html[data-theme='day'] .axis-empty { color: #60757c; }
 html[data-theme='day'] .empty-state { border-color: #aebec2; color: #63777e; }
 
 @media (max-width: 520px) {
-  html[data-theme='day'] #heroSpine { inset: -40% -72% -34%; }
+  html[data-theme='day'] #heroSpine { inset: -40% -72% -34%; transform: translateY(-3%); }
   html[data-theme='day'] .hero-spine-layer,
   html[data-theme='day'] .hero-spine-layer.is-ready { background-size: 150% auto; opacity: .82; }
 }
