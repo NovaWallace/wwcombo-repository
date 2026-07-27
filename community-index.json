@@ -2,7 +2,7 @@
   "type": "wwcombo-community-index",
   "version": 2,
   "gameVersion": "3.5",
-  "updatedAt": 1785166629086,
+  "updatedAt": 1785167228256,
   "charts": [
     {
       "id": "wwc_d80b10a4-1618-4611-b311-d046979822e1",
@@ -32,31 +32,6 @@
       "sizeBytes": 155250,
       "repository": "deta1",
       "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E7%88%B1%E5%BC%A5%E6%96%AF/%E7%88%B1%E5%BC%A5%E6%96%AF-5r14-2cb7632b.wwcombo.json"
-    },
-    {
-      "id": "0e19ac9a-5cd9-42ea-9479-eaf231322f4c",
-      "title": "爱达千 手调",
-      "submitter": {
-        "nickname": "灵*****",
-        "email": "hl***@foxmail.com"
-      },
-      "character": "unknown",
-      "tags": [],
-      "characters": [
-        "unknown"
-      ],
-      "firstCharacter": "unknown",
-      "rounds": 1,
-      "uploadVersion": "3.5",
-      "description": "",
-      "link": "",
-      "durationMs": 178715,
-      "stepCount": 261,
-      "version": 1,
-      "updatedAt": 1785158405715,
-      "sizeBytes": 191851,
-      "repository": "deta1",
-      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/unknown/unknown-%E7%88%B1%E8%BE%BE%E5%8D%83-%E6%89%8B%E8%B0%83-ac7cb1bb.wwcombo.json"
     },
     {
       "id": "wwc_a4f3074e-6563-4a39-b1af-f54befe699d4",
