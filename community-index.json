@@ -2,8 +2,37 @@
   "type": "wwcombo-community-index",
   "version": 2,
   "gameVersion": "3.5",
-  "updatedAt": 1785158405776,
+  "updatedAt": 1785166629086,
   "charts": [
+    {
+      "id": "wwc_d80b10a4-1618-4611-b311-d046979822e1",
+      "title": "爱达千 5R14光翼",
+      "submitter": {
+        "nickname": "灵*****",
+        "email": "hl***@foxmail.com"
+      },
+      "character": "爱弥斯",
+      "tags": [
+        "全局"
+      ],
+      "characters": [
+        "爱弥斯",
+        "达妮娅",
+        "千咲"
+      ],
+      "firstCharacter": "千咲",
+      "rounds": 5,
+      "uploadVersion": "3.5",
+      "description": "来自南边，我不会",
+      "link": "https://www.bilibili.com/video/BV17MGb6CENn/?share_source=copy_web&vd_source=4fe0d6f8958dad8181fec938e100dbef",
+      "durationMs": 258075,
+      "stepCount": 293,
+      "version": 1,
+      "updatedAt": 1785166629049,
+      "sizeBytes": 155250,
+      "repository": "deta1",
+      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E7%88%B1%E5%BC%A5%E6%96%AF/%E7%88%B1%E5%BC%A5%E6%96%AF-5r14-2cb7632b.wwcombo.json"
+    },
     {
       "id": "0e19ac9a-5cd9-42ea-9479-eaf231322f4c",
       "title": "爱达千 手调",
