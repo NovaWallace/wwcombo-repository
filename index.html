@@ -11,7 +11,7 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260727-18" />
+    <link rel="stylesheet" href="styles.css?v=20260727-19" />
   </head>
   <body>
     <header class="site-header">
@@ -23,17 +23,30 @@
             <small>WWCOMBO REPOSITORY</small>
           </span>
         </a>
-        <a
-          class="submission-button"
-          id="submissionButton"
-          href="https://mail.qq.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="复制投稿邮箱并打开 QQ 邮箱"
-        >
-          <i data-lucide="upload" aria-hidden="true"></i>
-          <span id="submissionButtonLabel" aria-live="polite">上传连段</span>
-        </a>
+        <div class="header-actions">
+          <div class="submission-help">
+            <button class="submission-help-button" type="button" aria-label="查看投稿说明" aria-describedby="submissionHelpTooltip">
+              <i data-lucide="circle-help" aria-hidden="true"></i>
+            </button>
+            <div class="submission-help-tooltip" id="submissionHelpTooltip" role="tooltip">
+              <strong>投稿与处理说明</strong>
+              <p>将 <code>.wwcombo.json</code> 文件作为附件发送到 <b>2728756958@qq.com</b>。系统每 10 分钟自动收取并检查格式，格式正确后直接发布，无需人工审核。</p>
+              <p>需要撤回时，请使用投稿邮箱发信，主题写“撤回”，正文填写连段 ID；身份核对成功后会自动删除，无法核对的申请会转为人工处理。</p>
+              <p>需要投诉时，主题写“投诉”，正文填写连段 ID，维护者会在控制台处理。</p>
+            </div>
+          </div>
+          <a
+            class="submission-button"
+            id="submissionButton"
+            href="https://mail.qq.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="复制投稿邮箱并打开 QQ 邮箱"
+          >
+            <i data-lucide="upload" aria-hidden="true"></i>
+            <span id="submissionButtonLabel" aria-live="polite">上传连段</span>
+          </a>
+        </div>
       </div>
     </header>
 
@@ -76,9 +89,8 @@
             <label class="select-field">
               <span>排序</span>
               <select id="sortSelect">
-                <option value="updated">最近更新</option>
-                <option value="title">标题顺序</option>
-                <option value="duration">轴长从短到长</option>
+                <option value="version">版本顺序（新的优先）</option>
+                <option value="difficulty">难度（从难到易）</option>
               </select>
             </label>
           </form>
@@ -226,6 +238,11 @@
                 <p id="axisPreviewSummary">正在读取连段数据</p>
               </div>
               <div class="axis-preview-options">
+                <label class="axis-zoom-control" for="axisZoom">
+                  <i data-lucide="zoom-in" aria-hidden="true"></i>
+                  <input id="axisZoom" type="range" min="80" max="180" step="10" value="100" />
+                  <output id="axisZoomValue" for="axisZoom">100%</output>
+                </label>
                 <div class="axis-icon-set" role="group" aria-label="招式图标样式">
                   <button class="active" type="button" data-icon-set="english" aria-pressed="true">字母</button>
                   <button type="button" data-icon-set="chinese" aria-pressed="false">中文</button>
@@ -243,6 +260,6 @@
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
-    <script src="app.js?v=20260727-18"></script>
+    <script src="app.js?v=20260727-19"></script>
   </body>
 </html>

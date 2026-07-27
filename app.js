@@ -1,11 +1,13 @@
 const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/icons/character';
 const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
+const UNKNOWN_CHARACTER_ICON = './assets/unknown-character.jpg';
 const SUBMISSION_EMAIL = '2728756958@qq.com';
 const BUTTON_ICON_BASES = {
   english: './assets/button-icons',
   chinese: './assets/botton'
 };
 const MAX_SELECTED_CHARACTERS = 3;
+const DIFFICULTY_ORDER = ['冒烟', '进阶', '基础', '轮椅'];
 const ROLE_COLORS = ['#d84f55', '#44c8c6', '#d7ad52'];
 const AXIS_ICON_SIZE = 31;
 const AXIS_AVATAR_SIZE = 34;
@@ -69,10 +71,11 @@ const state = {
   characterQuery: '',
   characterIcons: new Map(),
   tag: '',
-  sort: 'updated',
+  sort: 'version',
   detailChart: null,
   detailPackage: null,
   axisIconSet: 'english',
+  axisScale: 1,
   chartPackages: new Map()
 };
 
@@ -117,6 +120,8 @@ const els = {
   detailSourceLink: document.getElementById('detailSourceLink'),
   detailDownload: document.getElementById('detailDownload'),
   axisIconSetButtons: [...document.querySelectorAll('[data-icon-set]')],
+  axisZoom: document.getElementById('axisZoom'),
+  axisZoomValue: document.getElementById('axisZoomValue'),
   axisPreview: document.getElementById('axisPreview'),
   axisPreviewSummary: document.getElementById('axisPreviewSummary')
 };
@@ -227,16 +232,26 @@ function formatDuration(ms) {
   return minutes ? `${minutes}:${String(remainder).padStart(2, '0')}` : `${remainder} 秒`;
 }
 
-function formatBytes(bytes) {
-  const size = Number(bytes || 0);
-  if (!size) return '未知';
-  if (size < 1024) return `${size} B`;
-  return `${Math.round(size / 1024)} KB`;
-}
-
 function formatDate(timestamp) {
   if (!Number(timestamp)) return '未知';
   return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Number(timestamp)));
+}
+
+function compareVersions(left, right) {
+  const leftParts = String(left || '0').split('.').map((part) => Number(part) || 0);
+  const rightParts = String(right || '0').split('.').map((part) => Number(part) || 0);
+  const length = Math.max(leftParts.length, rightParts.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = (rightParts[index] || 0) - (leftParts[index] || 0);
+    if (difference) return difference;
+  }
+  return 0;
+}
+
+function chartDifficulty(chart) {
+  const tags = Array.isArray(chart.tags) ? chart.tags : [];
+  const rank = DIFFICULTY_ORDER.findIndex((tag) => tags.includes(tag));
+  return rank === -1 ? DIFFICULTY_ORDER.length : rank;
 }
 
 function tagAccent(tags) {
@@ -264,10 +279,11 @@ function submitterFor(chart) {
 function avatarElement(name, className = 'mini-avatar') {
   const source = state.characterIcons.get(name);
   if (!source) {
-    const fallback = document.createElement('span');
-    fallback.className = className === 'mini-avatar' ? 'mini-avatar' : `${className} avatar-fallback`;
-    fallback.textContent = Array.from(name || '?')[0] || '?';
-    fallback.setAttribute('aria-hidden', 'true');
+    const fallback = document.createElement('img');
+    fallback.className = `${className} unknown-avatar`;
+    fallback.src = UNKNOWN_CHARACTER_ICON;
+    fallback.alt = '';
+    fallback.loading = 'lazy';
     return fallback;
   }
   const image = document.createElement('img');
@@ -276,9 +292,10 @@ function avatarElement(name, className = 'mini-avatar') {
   image.alt = '';
   image.loading = 'lazy';
   image.addEventListener('error', () => {
-    const fallback = document.createElement('span');
-    fallback.className = className === 'mini-avatar' ? 'mini-avatar' : `${className} avatar-fallback`;
-    fallback.textContent = Array.from(name || '?')[0] || '?';
+    const fallback = document.createElement('img');
+    fallback.className = `${className} unknown-avatar`;
+    fallback.src = UNKNOWN_CHARACTER_ICON;
+    fallback.alt = '';
     image.replaceWith(fallback);
   }, { once: true });
   return image;
@@ -309,7 +326,7 @@ async function downloadChart(event, chart) {
 }
 
 function availableCharacters() {
-  return uniqueSorted(state.charts.flatMap(chartCharacters));
+  return uniqueSorted([...state.characterIcons.keys(), ...state.charts.flatMap(chartCharacters)]);
 }
 
 function renderCharacterTrigger() {
@@ -417,9 +434,14 @@ function filteredCharts() {
     return titleMatches && characterMatches && tagMatches;
   });
   return result.sort((left, right) => {
-    if (state.sort === 'title') return collator.compare(left.title || '', right.title || '');
-    if (state.sort === 'duration') return Number(left.durationMs || 0) - Number(right.durationMs || 0) || collator.compare(left.title || '', right.title || '');
-    return Number(right.updatedAt || 0) - Number(left.updatedAt || 0);
+    if (state.sort === 'difficulty') {
+      return chartDifficulty(left) - chartDifficulty(right)
+        || compareVersions(left.uploadVersion, right.uploadVersion)
+        || Number(right.updatedAt || 0) - Number(left.updatedAt || 0);
+    }
+    return compareVersions(left.uploadVersion, right.uploadVersion)
+      || Number(right.updatedAt || 0) - Number(left.updatedAt || 0)
+      || collator.compare(left.title || '', right.title || '');
   });
 }
 
@@ -557,19 +579,20 @@ function axisBlockMaxWidth() {
 
 function splitAxisMoveGroups(groups, labels) {
   const maxWidth = axisBlockMaxWidth();
+  const scale = state.axisScale;
   const chunks = [];
   for (const group of groups) {
     let chunk = { slot: group.slot, steps: [], showAvatar: true };
-    let width = 20 + AXIS_AVATAR_SIZE + 8;
+    let width = (20 + AXIS_AVATAR_SIZE + 8) * scale;
     for (const step of group.steps) {
-      const actionWidth = estimateAxisActionWidth(axisStepLabel(step, labels));
-      const nextWidth = width + (chunk.steps.length ? 5 : 0) + actionWidth;
+      const actionWidth = estimateAxisActionWidth(axisStepLabel(step, labels)) * scale;
+      const nextWidth = width + (chunk.steps.length ? 5 * scale : 0) + actionWidth;
       if (chunk.steps.length && nextWidth > maxWidth) {
         chunks.push(chunk);
         chunk = { slot: group.slot, steps: [], showAvatar: false };
-        width = 20;
+        width = 20 * scale;
       }
-      width += (chunk.steps.length ? 5 : 0) + actionWidth;
+      width += (chunk.steps.length ? 5 * scale : 0) + actionWidth;
       chunk.steps.push(step);
     }
     if (chunk.steps.length) chunks.push(chunk);
@@ -614,8 +637,12 @@ function renderAxisPreview(pack, indexChart) {
     : [];
   const startup = allPeriods.find((period) => period.kind === 'startup_axis');
   const loops = allPeriods.filter((period) => period.kind === 'loop_axis');
-  const showAll = (Array.isArray(indexChart.tags) && indexChart.tags.includes('错轮'))
-    || (Array.isArray(chart.community?.tags) && chart.community.tags.includes('错轮'));
+  const previewTags = new Set([
+    ...(Array.isArray(indexChart.tags) ? indexChart.tags : []),
+    ...(Array.isArray(chart.community?.tags) ? chart.community.tags : [])
+  ]);
+  const showAllReasons = ['错轮', '全局'].filter((tag) => previewTags.has(tag));
+  const showAll = showAllReasons.length > 0;
   let periods = showAll ? allPeriods : [startup, loops[0]].filter(Boolean);
   if (!periods.length) {
     const endMs = chart.steps.reduce((max, step) => Math.max(max, Number(step.startMax || step.startMin || 0) + Number(step.durationMax || 0)), 0);
@@ -638,6 +665,7 @@ function renderAxisPreview(pack, indexChart) {
     visibleBlockCount += moveGroups.length;
     const group = document.createElement('section');
     group.className = 'axis-group';
+    group.style.setProperty('--axis-scale', String(state.axisScale));
     group.style.setProperty('--axis-color', period.kind === 'startup_axis' ? '#d7ad52' : '#44c8c6');
     const heading = document.createElement('div');
     heading.className = 'axis-group-head';
@@ -676,7 +704,7 @@ function renderAxisPreview(pack, indexChart) {
     fragment.appendChild(group);
   }
   els.axisPreview.replaceChildren(fragment);
-  const periodText = showAll ? '错轮 · 全部轮次' : periods.map((period) => axisPeriodLabel(period, loops.length)).join(' + ');
+  const periodText = showAll ? `${showAllReasons.join(' / ')} · 全部轮次` : periods.map((period) => axisPeriodLabel(period, loops.length)).join(' + ');
   els.axisPreviewSummary.textContent = `${periodText} · ${visibleStepCount} 步 · ${visibleBlockCount} 招式块`;
 }
 
@@ -708,7 +736,6 @@ async function openDetails(chart) {
     detailMetaRow('首发角色', chart.firstCharacter || chartCharacters(chart)[0] || '未知'),
     detailMetaRow('操作', `${Number(chart.stepCount || 0)} 步`),
     detailMetaRow('更新', formatDate(chart.updatedAt)),
-    detailMetaRow('文件', formatBytes(chart.sizeBytes)),
     detailMetaRow('上传版本', chart.uploadVersion || state.gameVersion),
     detailMetaRow('ID', chart.id || '未知')
   );
@@ -756,7 +783,7 @@ function syncUrl() {
     ['q', state.title],
     ['characters', state.characters.join(',')],
     ['tag', state.tag],
-    ['sort', state.sort === 'updated' ? '' : state.sort]
+    ['sort', state.sort === 'version' ? '' : state.sort]
   ];
   for (const [key, value] of values) {
     if (value) next.set(key, value);
@@ -783,7 +810,7 @@ function resetFilters() {
   state.title = '';
   state.characters = [];
   state.tag = '';
-  state.sort = 'updated';
+  state.sort = 'version';
   els.title.value = '';
   renderCharacterPicker();
   render();
@@ -831,7 +858,7 @@ async function loadIndex() {
     const characterParam = params.get('characters') || params.get('character') || '';
     state.characters = uniqueSorted(characterParam.split(',').map((item) => item.trim())).slice(0, MAX_SELECTED_CHARACTERS);
     state.tag = params.get('tag') || '';
-    state.sort = ['updated', 'title', 'duration'].includes(params.get('sort')) ? params.get('sort') : 'updated';
+    state.sort = ['version', 'difficulty'].includes(params.get('sort')) ? params.get('sort') : 'version';
     els.title.value = state.title;
     renderFilters();
     render();
@@ -879,6 +906,11 @@ for (const button of els.axisIconSetButtons) {
     if (state.detailChart && state.detailPackage) renderAxisPreview(state.detailPackage, state.detailChart);
   });
 }
+els.axisZoom?.addEventListener('input', () => {
+  state.axisScale = Math.max(0.8, Math.min(1.8, Number(els.axisZoom.value || 100) / 100));
+  els.axisZoomValue.value = `${Math.round(state.axisScale * 100)}%`;
+  if (state.detailChart && state.detailPackage) renderAxisPreview(state.detailPackage, state.detailChart);
+});
 let axisResizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(axisResizeTimer);
