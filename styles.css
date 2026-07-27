@@ -41,8 +41,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .submission-help-tooltip { position: absolute; top: calc(100% + 12px); right: 0; z-index: 30; width: min(390px, calc(100vw - 28px)); display: grid; gap: 9px; padding: 15px 16px; border: 1px solid #565d62; border-radius: 5px; background: #171b1e; color: var(--muted-strong); box-shadow: 0 18px 48px rgba(0,0,0,.6); opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity .15s ease, transform .15s ease, visibility .15s ease; pointer-events: none; }
 .submission-help-tooltip::before { content: ''; position: absolute; top: -6px; right: 13px; width: 10px; height: 10px; border-top: 1px solid #565d62; border-left: 1px solid #565d62; background: #171b1e; transform: rotate(45deg); }
 .submission-help:hover .submission-help-tooltip, .submission-help:focus-within .submission-help-tooltip { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; }
-.submission-help-tooltip strong { color: #fff; font-size: 13px; }
-.submission-help-tooltip p { margin: 0; font-size: 11px; line-height: 1.65; }
+.submission-help-tooltip strong { color: #fff; font-size: 15px; }
+.submission-help-tooltip p { margin: 0; font-size: 13px; line-height: 1.7; }
 .submission-help-tooltip code, .submission-help-tooltip b { color: #f2d18b; font-weight: 850; }
 .submission-button { min-width: 112px; height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 15px; border: 1px solid #f2383e; border-radius: 4px; background: var(--red); color: #fff; font-size: 13px; font-weight: 900; text-decoration: none; transition: background .16s ease, border-color .16s ease, transform .16s ease; }
 .submission-button:hover { border-color: #ff5a60; background: var(--red-hover); }
