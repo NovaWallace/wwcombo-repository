@@ -167,9 +167,18 @@ function gamepadIconSource(code, iconSet) {
   return gamepadSvgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} 128">${glyphs}${plus}</svg>`);
 }
 
+function savedHeroMotionEnabled() {
+  try {
+    return localStorage.getItem('wwcombo-hero-motion') === 'enabled';
+  } catch {
+    return false;
+  }
+}
+
 const state = {
   charts: [],
   theme: document.documentElement.dataset.theme === 'day' ? 'day' : 'night',
+  heroMotionEnabled: savedHeroMotionEnabled(),
   gameVersion: '3.5',
   title: '',
   characters: [],
@@ -185,6 +194,7 @@ const state = {
 };
 
 const els = {
+  motionToggle: document.getElementById('motionToggle'),
   themeToggle: document.getElementById('themeToggle'),
   submissionButton: document.getElementById('submissionButton'),
   submissionButtonLabel: document.getElementById('submissionButtonLabel'),
@@ -277,6 +287,33 @@ async function copySubmissionEmail() {
 let heroSpinePlayer = null;
 let heroSpineGeneration = 0;
 
+function updateMotionControl() {
+  if (!els.motionToggle) return;
+  const enabled = state.heroMotionEnabled;
+  const label = enabled ? '关闭动态背景' : '开启动态背景';
+  const icon = document.createElement('i');
+  icon.dataset.lucide = enabled ? 'pause' : 'play';
+  icon.setAttribute('aria-hidden', 'true');
+  els.motionToggle.replaceChildren(icon);
+  els.motionToggle.setAttribute('aria-checked', String(enabled));
+  els.motionToggle.setAttribute('aria-label', label);
+  els.motionToggle.title = label;
+  window.lucide?.createIcons();
+}
+
+function setHeroMotionEnabled(enabled, persist = true) {
+  state.heroMotionEnabled = Boolean(enabled);
+  if (persist) {
+    try {
+      localStorage.setItem('wwcombo-hero-motion', state.heroMotionEnabled ? 'enabled' : 'disabled');
+    } catch {
+      // Motion preference remains active for the current page.
+    }
+  }
+  updateMotionControl();
+  initHeroSpine();
+}
+
 function updateThemeControl() {
   if (!els.themeToggle) return;
   const isDay = state.theme === 'day';
@@ -319,6 +356,7 @@ function initHeroSpine() {
   delete host.dataset.animationDuration;
   layer.dataset.theme = theme;
   layer.classList.remove('is-ready', 'is-fallback');
+  if (!state.heroMotionEnabled) return;
   if (!window.spine?.SpinePlayer) {
     layer.classList.add('is-fallback');
     return;
@@ -340,7 +378,7 @@ function initHeroSpine() {
         padBottom: '0%'
       },
       success(player) {
-        if (generation !== heroSpineGeneration || state.theme !== theme) {
+        if (generation !== heroSpineGeneration || state.theme !== theme || !state.heroMotionEnabled) {
           player.dispose?.();
           return;
         }
@@ -1086,11 +1124,15 @@ els.retry.addEventListener('click', loadIndex);
 els.themeToggle?.addEventListener('click', () => {
   setTheme(state.theme === 'day' ? 'night' : 'day');
 });
+els.motionToggle?.addEventListener('click', () => {
+  setHeroMotionEnabled(!state.heroMotionEnabled);
+});
 els.submissionButton?.addEventListener('click', () => {
   void copySubmissionEmail();
 });
 
 updateThemeControl();
+updateMotionControl();
 window.lucide?.createIcons();
 initHeroSpine();
 loadIndex();

@@ -18,7 +18,7 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260728-23" />
+    <link rel="stylesheet" href="styles.css?v=20260728-24" />
   </head>
   <body>
     <header class="site-header">
@@ -31,6 +31,9 @@
           </span>
         </a>
         <div class="header-actions">
+          <button class="motion-toggle" id="motionToggle" type="button" role="switch" aria-checked="false" aria-label="开启动态背景" title="开启动态背景">
+            <i data-lucide="play" aria-hidden="true"></i>
+          </button>
           <button class="theme-toggle" id="themeToggle" type="button" aria-label="切换到白天模式" title="切换到白天模式">
             <i data-lucide="sun" aria-hidden="true"></i>
           </button>
@@ -272,6 +275,6 @@
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
-    <script src="app.js?v=20260728-23"></script>
+    <script src="app.js?v=20260728-24"></script>
   </body>
 </html>

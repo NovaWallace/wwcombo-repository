@@ -34,9 +34,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .brand strong { font-size: 16px; }
 .brand small { color: var(--muted); font-size: 10px; font-weight: 800; }
 .header-actions { display: flex; align-items: center; gap: 8px; }
-.theme-toggle { width: 38px; height: 38px; display: grid; place-items: center; padding: 0; border: 1px solid #4a5054; border-radius: 50%; background: #171a1d; color: var(--muted-strong); cursor: pointer; }
-.theme-toggle:hover, .theme-toggle:focus-visible { border-color: #858c91; background: #23272a; color: #fff; outline: 0; }
-.theme-toggle svg { width: 19px; height: 19px; }
+.theme-toggle, .motion-toggle { width: 38px; height: 38px; display: grid; place-items: center; padding: 0; border: 1px solid #4a5054; border-radius: 50%; background: #171a1d; color: var(--muted-strong); cursor: pointer; }
+.theme-toggle:hover, .theme-toggle:focus-visible, .motion-toggle:hover, .motion-toggle:focus-visible { border-color: #858c91; background: #23272a; color: #fff; outline: 0; }
+.theme-toggle svg, .motion-toggle svg { width: 19px; height: 19px; }
+.motion-toggle[aria-checked='true'] { border-color: #b8944b; background: #2b2417; color: #f1cf83; }
 .submission-help { position: relative; }
 .submission-help-button { width: 38px; height: 38px; display: grid; place-items: center; padding: 0; border: 1px solid #4a5054; border-radius: 50%; background: #171a1d; color: var(--muted-strong); cursor: help; }
 .submission-help-button:hover, .submission-help-button:focus-visible { border-color: #858c91; background: #23272a; color: #fff; outline: 0; }
@@ -339,11 +340,15 @@ html[data-theme='day'] .site-header { border-color: #cedadd; background: rgba(24
 html[data-theme='day'] .brand { color: #17282d; }
 html[data-theme='day'] .brand small { color: #65787f; }
 html[data-theme='day'] .theme-toggle,
+html[data-theme='day'] .motion-toggle,
 html[data-theme='day'] .submission-help-button { border-color: #a8b8bd; background: #f7fafb; color: #425b63; }
 html[data-theme='day'] .theme-toggle:hover,
 html[data-theme='day'] .theme-toggle:focus-visible,
+html[data-theme='day'] .motion-toggle:hover,
+html[data-theme='day'] .motion-toggle:focus-visible,
 html[data-theme='day'] .submission-help-button:hover,
 html[data-theme='day'] .submission-help-button:focus-visible { border-color: #698087; background: #e7eff1; color: #15272d; }
+html[data-theme='day'] .motion-toggle[aria-checked='true'] { border-color: #9b722c; background: #fff4d8; color: #7f5714; }
 html[data-theme='day'] .submission-help-tooltip { border-color: #9dafb4; background: #ffffff; color: #40565d; box-shadow: 0 18px 48px rgba(45, 69, 76, .24); }
 html[data-theme='day'] .submission-help-tooltip::before { border-color: #9dafb4; background: #ffffff; }
 html[data-theme='day'] .submission-help-tooltip strong { color: #17282d; }
