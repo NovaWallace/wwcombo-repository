@@ -837,7 +837,7 @@ function renderAxisPreview(pack, indexChart) {
     ...(Array.isArray(indexChart.tags) ? indexChart.tags : []),
     ...(Array.isArray(chart.community?.tags) ? chart.community.tags : [])
   ]);
-  const showAllReasons = ['错轮', '全局'].filter((tag) => previewTags.has(tag));
+  const showAllReasons = ['错轮'].filter((tag) => previewTags.has(tag));
   const showAll = showAllReasons.length > 0;
   let periods = showAll ? allPeriods : [startup, loops[0]].filter(Boolean);
   if (!periods.length) {
