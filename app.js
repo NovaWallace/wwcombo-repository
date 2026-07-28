@@ -2,6 +2,9 @@ const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/icons/chara
 const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
 const UNKNOWN_CHARACTER_ICON = './assets/unknown-character.jpg';
 const SUBMISSION_EMAIL = '2728756958@qq.com';
+const i18n = window.wwcomboI18n;
+if (!i18n) throw new Error('Community i18n runtime is unavailable.');
+const t = (key, values) => i18n.t(key, values);
 const HERO_SPINE_ASSETS = {
   night: {
     binaryUrl: 'assets/spine/luckdraw-jiabeilina/jiabeilina.skel',
@@ -180,6 +183,8 @@ const state = {
   theme: document.documentElement.dataset.theme === 'day' ? 'day' : 'night',
   heroMotionEnabled: savedHeroMotionEnabled(),
   gameVersion: '3.5',
+  indexUpdatedAt: 0,
+  indexLoadState: 'loading',
   title: '',
   characters: [],
   characterQuery: '',
@@ -194,6 +199,7 @@ const state = {
 };
 
 const els = {
+  languageSelect: document.getElementById('languageSelect'),
   motionToggle: document.getElementById('motionToggle'),
   themeToggle: document.getElementById('themeToggle'),
   submissionButton: document.getElementById('submissionButton'),
@@ -276,11 +282,11 @@ async function copySubmissionEmail() {
 
   if (!els.submissionButton || !els.submissionButtonLabel) return;
   els.submissionButton.classList.toggle('is-copied', copied);
-  els.submissionButtonLabel.textContent = copied ? '邮箱已复制' : '复制失败';
+  els.submissionButtonLabel.textContent = copied ? t('submission.copied') : t('submission.copyFailed');
   clearTimeout(copySubmissionEmail.feedbackTimer);
   copySubmissionEmail.feedbackTimer = setTimeout(() => {
     els.submissionButton.classList.remove('is-copied');
-    els.submissionButtonLabel.textContent = '上传连段';
+    els.submissionButtonLabel.textContent = t('submission.button');
   }, 1800);
 }
 
@@ -290,7 +296,7 @@ let heroSpineGeneration = 0;
 function updateMotionControl() {
   if (!els.motionToggle) return;
   const enabled = state.heroMotionEnabled;
-  const label = enabled ? '关闭动态背景' : '开启动态背景';
+  const label = enabled ? t('motion.disable') : t('motion.enable');
   const icon = document.createElement('i');
   icon.dataset.lucide = enabled ? 'pause' : 'play';
   icon.setAttribute('aria-hidden', 'true');
@@ -317,7 +323,7 @@ function setHeroMotionEnabled(enabled, persist = true) {
 function updateThemeControl() {
   if (!els.themeToggle) return;
   const isDay = state.theme === 'day';
-  const label = isDay ? '切换到夜间模式' : '切换到白天模式';
+  const label = isDay ? t('theme.night') : t('theme.day');
   const icon = document.createElement('i');
   icon.dataset.lucide = isDay ? 'moon' : 'sun';
   icon.setAttribute('aria-hidden', 'true');
@@ -419,12 +425,12 @@ function formatDuration(ms) {
   const seconds = Math.max(0, Math.round(Number(ms || 0) / 1000));
   const minutes = Math.floor(seconds / 60);
   const remainder = seconds % 60;
-  return minutes ? `${minutes}:${String(remainder).padStart(2, '0')}` : `${remainder} 秒`;
+  return minutes ? `${minutes}:${String(remainder).padStart(2, '0')}` : t('unit.seconds', { count: remainder });
 }
 
 function formatDate(timestamp) {
-  if (!Number(timestamp)) return '未知';
-  return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Number(timestamp)));
+  if (!Number(timestamp)) return t('common.unknown');
+  return new Intl.DateTimeFormat(i18n.language, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Number(timestamp)));
 }
 
 function compareVersions(left, right) {
@@ -461,8 +467,8 @@ function submitterFor(chart) {
   const nickname = String(chart.submitter?.nickname || '').trim();
   const email = String(chart.submitter?.email || '').trim();
   return {
-    nickname: nickname || '历史投稿',
-    email: email || '未记录邮箱'
+    nickname: nickname || t('submitter.historical'),
+    email: email || t('submitter.noEmail')
   };
 }
 
@@ -521,14 +527,14 @@ function availableCharacters() {
 
 function renderCharacterTrigger() {
   els.selectedAvatarStack.replaceChildren(...state.characters.map((name) => avatarElement(name)));
-  els.characterPickerValue.textContent = state.characters.length ? state.characters.join(' / ') : '全部角色';
-  els.characterPickerButton.setAttribute('aria-label', state.characters.length ? `已选择 ${state.characters.join('、')}` : '选择角色');
+  els.characterPickerValue.textContent = state.characters.length ? state.characters.join(' / ') : t('character.all');
+  els.characterPickerButton.setAttribute('aria-label', state.characters.length ? t('character.selectedAria', { names: state.characters.join(', ') }) : t('character.select'));
 }
 
 function setCharacterHint(warning = false) {
   els.characterPickerHint.textContent = warning
-    ? '最多只能选择 3 名角色。'
-    : '最多选择 3 名角色，选择顺序不影响检索。';
+    ? t('character.max')
+    : t('character.hint');
   els.characterPickerHint.style.color = warning ? '#ff8b90' : '';
 }
 
@@ -556,10 +562,10 @@ function renderCharacterPicker() {
   if (!characters.length) {
     const empty = document.createElement('div');
     empty.className = 'axis-empty';
-    empty.textContent = '没有找到角色';
+    empty.textContent = t('character.none');
     els.characterGrid.appendChild(empty);
   }
-  els.characterSelectedCount.textContent = `已选 ${state.characters.length} / ${MAX_SELECTED_CHARACTERS}`;
+  els.characterSelectedCount.textContent = t('character.selected', { count: state.characters.length, max: MAX_SELECTED_CHARACTERS });
   renderCharacterTrigger();
   window.lucide?.createIcons();
 }
@@ -601,14 +607,14 @@ function renderFilters() {
   const all = document.createElement('button');
   all.type = 'button';
   all.className = `tag-button${state.tag ? '' : ' active'}`;
-  all.textContent = '全部';
+  all.textContent = t('common.all');
   all.dataset.tag = '';
   els.tags.appendChild(all);
   for (const tag of tags) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = `tag-button${state.tag === tag ? ' active' : ''}`;
-    button.textContent = tag;
+    button.textContent = i18n.localizeTag(tag);
     button.dataset.tag = tag;
     els.tags.appendChild(button);
   }
@@ -637,21 +643,22 @@ function filteredCharts() {
 
 function renderCard(chart) {
   const card = els.template.content.firstElementChild.cloneNode(true);
+  i18n.apply(card);
   const tags = Array.isArray(chart.tags) ? chart.tags.filter(Boolean) : [];
   const submitter = submitterFor(chart);
   card.style.setProperty('--accent', tagAccent(tags));
-  card.querySelector('h3').textContent = chart.title || '未命名连段';
-  card.querySelector('.characters').textContent = chartCharacters(chart).join(' / ') || '角色未标注';
-  card.querySelector('.rounds').textContent = `${Math.max(1, Number(chart.rounds || 1))} 轮`;
+  card.querySelector('h3').textContent = chart.title || t('card.untitled');
+  card.querySelector('.characters').textContent = chartCharacters(chart).join(' / ') || t('card.charactersMissing');
+  card.querySelector('.rounds').textContent = t('unit.rounds', { count: Math.max(1, Number(chart.rounds || 1)) });
   card.querySelector('.duration').textContent = formatDuration(chart.durationMs);
-  card.querySelector('.steps').textContent = `${Number(chart.stepCount || 0)} 步`;
+  card.querySelector('.steps').textContent = t('unit.actions', { count: Number(chart.stepCount || 0) });
   card.querySelector('.updated').textContent = formatDate(chart.updatedAt);
   card.querySelector('.submitter-name').textContent = submitter.nickname;
   card.querySelector('.submitter-email').textContent = submitter.email;
 
   const characters = chartCharacters(chart).slice(0, MAX_SELECTED_CHARACTERS);
   const characterContainer = card.querySelector('.card-characters');
-  characterContainer.setAttribute('aria-label', characters.length ? `所用角色：${characters.join('、')}` : '角色未标注');
+  characterContainer.setAttribute('aria-label', characters.length ? t('character.usedAria', { names: characters.join(', ') }) : t('card.charactersMissing'));
   for (const name of characters) {
     const avatar = avatarElement(name, 'card-character-avatar');
     avatar.title = name;
@@ -662,12 +669,12 @@ function renderCard(chart) {
   for (const tag of tags) {
     const item = document.createElement('span');
     item.className = 'combo-tag';
-    item.textContent = tag;
+    item.textContent = i18n.localizeTag(tag);
     tagContainer.appendChild(item);
   }
 
   const detailButton = card.querySelector('.detail-button');
-  detailButton.setAttribute('aria-label', `查看 ${chart.title || '连段'} 详情`);
+  detailButton.setAttribute('aria-label', `${t('card.details')}: ${chart.title || t('card.untitled')}`);
   detailButton.addEventListener('click', () => openDetails(chart));
   return card;
 }
@@ -697,21 +704,21 @@ function renderDetailTags(chart) {
   for (const tag of Array.isArray(chart.tags) ? chart.tags.filter(Boolean) : []) {
     const item = document.createElement('span');
     item.className = 'detail-tag';
-    item.textContent = tag;
+    item.textContent = i18n.localizeTag(tag);
     els.detailTags.appendChild(item);
   }
 }
 
 function axisPeriodLabel(period, loopCount) {
   const source = String(period.label || '').trim();
-  if (period.kind === 'startup_axis') return source || '启动轴';
-  if (source) return source;
-  return loopCount > 1 ? `循环轴${period.loopIndex || 1}` : '循环轴';
+  if (period.kind === 'startup_axis') return source && source !== '启动轴' && source !== '完整连段' ? source : t(source === '完整连段' ? 'axis.full' : 'axis.startup');
+  if (source && !/^循环轴\d*$/.test(source)) return source;
+  return loopCount > 1 ? t('axis.loopNumber', { number: period.loopIndex || 1 }) : t('axis.loop');
 }
 
 function axisStepLabel(step, labels) {
   const custom = String(labels[step.id] || '').trim();
-  return custom || DEFAULT_MOVE_LABELS[step.moveId] || String(step.label || step.moveId || '操作');
+  return custom || DEFAULT_MOVE_LABELS[step.moveId] || String(step.label || step.moveId || t('meta.actions'));
 }
 
 function axisIconParts(value) {
@@ -809,8 +816,8 @@ function axisActionContent(value) {
     if (['xbox', 'playstation'].includes(state.axisIconSet) && part.mapping.gamepadCode?.includes('+')) {
       icon.classList.add('is-wide');
     }
-    icon.alt = part.mapping.label;
-    icon.title = part.mapping.label;
+    icon.alt = i18n.localizeMove(part.mapping.label);
+    icon.title = i18n.localizeMove(part.mapping.label);
     action.appendChild(icon);
   }
   return action;
@@ -826,7 +833,7 @@ function renderAxisIconSet() {
 
 function renderAxisPreview(pack, indexChart) {
   const chart = pack?.chart || (Array.isArray(pack?.charts) ? pack.charts[0] : null);
-  if (!chart || !Array.isArray(chart.steps)) throw new Error('连段 JSON 缺少轴数据');
+  if (!chart || !Array.isArray(chart.steps)) throw new Error(t('axis.invalid'));
   const allPeriods = Array.isArray(chart.periods)
     ? chart.periods.filter((period) => period?.kind === 'startup_axis' || period?.kind === 'loop_axis')
       .sort((left, right) => Number(left.startMs || 0) - Number(right.startMs || 0))
@@ -874,7 +881,7 @@ function renderAxisPreview(pack, indexChart) {
     flow.className = 'axis-flow';
     for (const moveGroup of moveGroups) {
       const slot = moveGroup.slot;
-      const character = characters[slot - 1] || `角色 ${slot}`;
+      const character = characters[slot - 1] || t('axis.role', { number: slot });
       const chip = document.createElement('div');
       chip.className = `axis-step axis-move-block${moveGroup.showAvatar ? '' : ' axis-move-continuation'}`;
       chip.style.setProperty('--role-color', ROLE_COLORS[slot - 1]);
@@ -893,15 +900,17 @@ function renderAxisPreview(pack, indexChart) {
     if (!steps.length) {
       const empty = document.createElement('span');
       empty.className = 'axis-empty';
-      empty.textContent = '该轮没有操作记录';
+      empty.textContent = t('axis.noActions');
       flow.appendChild(empty);
     }
     group.append(heading, flow);
     fragment.appendChild(group);
   }
   els.axisPreview.replaceChildren(fragment);
-  const periodText = showAll ? `${showAllReasons.join(' / ')} · 全部轮次` : periods.map((period) => axisPeriodLabel(period, loops.length)).join(' + ');
-  els.axisPreviewSummary.textContent = `${periodText} · ${visibleStepCount} 步 · ${visibleBlockCount} 招式块`;
+  const periodText = showAll
+    ? `${showAllReasons.map((tag) => i18n.localizeTag(tag)).join(' / ')} · ${t('axis.allRounds')}`
+    : periods.map((period) => axisPeriodLabel(period, loops.length)).join(' + ');
+  els.axisPreviewSummary.textContent = t('axis.summary', { periods: periodText, steps: visibleStepCount, blocks: visibleBlockCount });
 }
 
 async function loadChartPackage(chart) {
@@ -924,16 +933,16 @@ async function openDetails(chart) {
   state.detailPackage = null;
   renderAxisIconSet();
   const submitter = submitterFor(chart);
-  els.detailTitle.textContent = chart.title || '未命名连段';
+  els.detailTitle.textContent = chart.title || t('card.untitled');
   renderDetailCharacters(chart);
   renderDetailTags(chart);
   els.detailMeta.replaceChildren(
-    detailMetaRow('轮次', `${Math.max(1, Number(chart.rounds || 1))} 轮`),
-    detailMetaRow('首发角色', chart.firstCharacter || chartCharacters(chart)[0] || '未知'),
-    detailMetaRow('操作', `${Number(chart.stepCount || 0)} 步`),
-    detailMetaRow('更新', formatDate(chart.updatedAt)),
-    detailMetaRow('上传版本', chart.uploadVersion || state.gameVersion),
-    detailMetaRow('ID', chart.id || '未知')
+    detailMetaRow(t('meta.rounds'), t('unit.rounds', { count: Math.max(1, Number(chart.rounds || 1)) })),
+    detailMetaRow(t('meta.firstCharacter'), chart.firstCharacter || chartCharacters(chart)[0] || t('common.unknown')),
+    detailMetaRow(t('meta.actions'), t('unit.actions', { count: Number(chart.stepCount || 0) })),
+    detailMetaRow(t('meta.updated'), formatDate(chart.updatedAt)),
+    detailMetaRow(t('meta.uploadVersion'), chart.uploadVersion || state.gameVersion),
+    detailMetaRow('ID', chart.id || t('common.unknown'))
   );
   els.detailDescription.textContent = chart.description || '';
   els.detailDescriptionSection.hidden = !chart.description;
@@ -943,7 +952,7 @@ async function openDetails(chart) {
   els.detailDownload.href = chart.url || '#';
   els.detailDownload.download = filenameFor(chart);
   els.detailDownload.onclick = (event) => downloadChart(event, chart);
-  els.axisPreviewSummary.textContent = '正在读取连段数据';
+  els.axisPreviewSummary.textContent = t('axis.loading');
   els.axisPreview.innerHTML = '<div class="axis-loading"><span></span><span></span><span></span></div>';
   els.detailBackdrop.hidden = false;
   document.body.style.overflow = 'hidden';
@@ -959,9 +968,9 @@ async function openDetails(chart) {
     els.axisPreview.innerHTML = '';
     const failure = document.createElement('div');
     failure.className = 'axis-error';
-    failure.textContent = `连段图生成失败：${error.message}`;
+    failure.textContent = t('axis.failed', { error: error.message });
     els.axisPreview.appendChild(failure);
-    els.axisPreviewSummary.textContent = '无法读取轴数据';
+    els.axisPreviewSummary.textContent = t('axis.unavailable');
   }
 }
 
@@ -991,7 +1000,7 @@ function syncUrl() {
 function render() {
   const charts = filteredCharts();
   els.list.replaceChildren(...charts.map(renderCard));
-  els.count.textContent = `${charts.length} 个结果`;
+  els.count.textContent = t('unit.results', { count: charts.length });
   els.empty.hidden = charts.length > 0;
   els.list.hidden = charts.length === 0;
   els.clearTitle.classList.toggle('visible', Boolean(state.title));
@@ -1015,6 +1024,22 @@ function resetFilters() {
 function setStatus(kind, text) {
   els.status.className = `index-status ${kind}`;
   els.status.lastElementChild.textContent = text;
+}
+
+function refreshLocalizedView() {
+  updateThemeControl();
+  updateMotionControl();
+  renderFilters();
+  render();
+  if (!els.characterPickerBackdrop.hidden) {
+    setCharacterHint(false);
+    renderCharacterPicker();
+  }
+  if (state.detailChart) void openDetails(state.detailChart);
+  if (state.indexLoadState === 'loading') setStatus('', t('status.loading'));
+  else if (state.indexLoadState === 'ready') setStatus('ready', t('status.ready', { count: state.charts.length, date: formatDate(state.indexUpdatedAt) }));
+  else setStatus('error', t('status.indexFailed'));
+  window.lucide?.createIcons();
 }
 
 async function loadCharacterIcons() {
@@ -1042,14 +1067,17 @@ async function loadCharacterIcons() {
 async function loadIndex() {
   els.error.hidden = true;
   els.list.hidden = false;
-  setStatus('', '正在读取索引');
+  state.indexLoadState = 'loading';
+  setStatus('', t('status.loading'));
   try {
     const response = await fetch(sourceUrl, { cache: 'no-cache' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    if (data.type !== 'wwcombo-community-index' || !Array.isArray(data.charts)) throw new Error('索引格式不正确');
+    if (data.type !== 'wwcombo-community-index' || !Array.isArray(data.charts)) throw new Error(t('status.invalidIndex'));
     state.charts = data.charts;
     state.gameVersion = /^\d+\.\d+$/.test(String(data.gameVersion || '')) ? String(data.gameVersion) : '3.5';
+    state.indexUpdatedAt = Number(data.updatedAt || 0);
+    state.indexLoadState = 'ready';
     state.title = params.get('q') || '';
     const characterParam = params.get('characters') || params.get('character') || '';
     state.characters = uniqueSorted(characterParam.split(',').map((item) => item.trim())).slice(0, MAX_SELECTED_CHARACTERS);
@@ -1058,20 +1086,23 @@ async function loadIndex() {
     els.title.value = state.title;
     renderFilters();
     render();
-    setStatus('ready', `${state.charts.length} 个连段 · ${formatDate(data.updatedAt)} 更新`);
+    setStatus('ready', t('status.ready', { count: state.charts.length, date: formatDate(data.updatedAt) }));
     void loadCharacterIcons();
   } catch (error) {
     state.charts = [];
+    state.indexLoadState = 'error';
     els.list.replaceChildren();
     els.list.hidden = true;
     els.empty.hidden = true;
     els.error.hidden = false;
-    els.errorMessage.textContent = `读取 ${sourceUrl} 失败：${error.message}`;
-    setStatus('error', '索引读取失败');
+    els.errorMessage.textContent = t('status.readFailed', { source: sourceUrl, error: error.message });
+    setStatus('error', t('status.indexFailed'));
   }
 }
 
 els.form.addEventListener('submit', (event) => event.preventDefault());
+els.languageSelect?.addEventListener('change', () => i18n.setLanguage(els.languageSelect.value));
+window.addEventListener('wwcombo-languagechange', refreshLocalizedView);
 els.title.addEventListener('input', () => { state.title = els.title.value; render(); });
 els.clearTitle.addEventListener('click', () => { state.title = ''; els.title.value = ''; els.title.focus(); render(); });
 els.characterPickerButton.addEventListener('click', openCharacterPicker);
@@ -1133,6 +1164,7 @@ els.submissionButton?.addEventListener('click', () => {
 
 updateThemeControl();
 updateMotionControl();
+els.languageSelect.value = i18n.language;
 window.lucide?.createIcons();
 initHeroSpine();
 loadIndex();
