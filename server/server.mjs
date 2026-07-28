@@ -17,7 +17,7 @@ const TRUST_PROXY = process.env.WWCOMBO_TRUST_PROXY === '1';
 const SESSION_SECONDS = 12 * 60 * 60;
 const LOGIN_WINDOW_MS = 60 * 1000;
 const MAX_LOGIN_FAILURES = 5;
-const PUBLIC_ROOT_FILES = new Set(['/index.html', '/app.js', '/styles.css', '/site.webmanifest', '/build-info.json']);
+const PUBLIC_ROOT_FILES = new Set(['/index.html', '/app.js', '/i18n.js', '/styles.css', '/site.webmanifest', '/build-info.json']);
 const CONTENT_TYPES = new Map([
   ['.html', 'text/html; charset=utf-8'],
   ['.css', 'text/css; charset=utf-8'],
