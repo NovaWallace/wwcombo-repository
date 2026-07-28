@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>椰果朋克2077服务器管理</title>
+    <link rel="stylesheet" href="/admin/styles.css" />
+  </head>
+  <body>
+    <main class="admin-shell">
+      <header class="admin-header">
+        <div>
+          <p>WWCOMBO SERVER</p>
+          <h1>椰果朋克2077服务器管理</h1>
+        </div>
+        <a href="/" target="_blank" rel="noopener noreferrer">打开网站</a>
+      </header>
+
+      <section class="login-panel" id="loginPanel">
+        <form id="loginForm">
+          <label for="passwordInput">管理员密码</label>
+          <div class="login-row">
+            <input id="passwordInput" type="password" autocomplete="current-password" required />
+            <button type="submit">登录</button>
+          </div>
+          <p class="message" id="loginMessage" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="dashboard" id="dashboard" hidden>
+        <div class="dashboard-actions">
+          <div>
+            <span class="status-dot" id="statusDot"></span>
+            <strong id="serviceStatus">服务运行中</strong>
+          </div>
+          <div class="button-row">
+            <button class="secondary" id="logoutBtn" type="button">退出</button>
+            <button class="primary" id="updateBtn" type="button">从 GitHub 更新并重启</button>
+          </div>
+        </div>
+
+        <dl class="metrics">
+          <div><dt>当前版本</dt><dd id="releaseId">-</dd></div>
+          <div><dt>上线时间</dt><dd id="releaseTime">-</dd></div>
+          <div><dt>连段数量</dt><dd id="chartCount">-</dd></div>
+          <div><dt>监听地址</dt><dd id="listenAddress">-</dd></div>
+        </dl>
+
+        <section class="repository-status">
+          <h2>仓库版本</h2>
+          <dl>
+            <div><dt>repository</dt><dd id="mainCommit">-</dd></div>
+            <div><dt>deta1</dt><dd id="data1Commit">-</dd></div>
+            <div><dt>deta2</dt><dd id="data2Commit">-</dd></div>
+          </dl>
+        </section>
+
+        <section class="task-output">
+          <div class="section-heading">
+            <h2>更新状态</h2>
+            <span id="updateStatus">等待操作</span>
+          </div>
+          <pre id="outputBox">尚未执行更新。</pre>
+        </section>
+      </section>
+    </main>
+    <script src="/admin/app.js"></script>
+  </body>
+</html>
