@@ -67,7 +67,8 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable --now wwcombo.service
+systemctl enable wwcombo.service
+systemctl restart wwcombo.service
 echo "服务已启动：${PUBLIC_URL%/}/"
 echo "管理后台：${PUBLIC_URL%/}/admin/"
 echo "监听地址：$HOST:$PORT"
