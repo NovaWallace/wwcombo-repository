@@ -22,6 +22,24 @@ const PURE_GRAPHIC_ICON_IDS = new Set([
   'liberation-hold', 'liberation', 'mouse-left-hold', 'mouse-left',
   'mouse-right-hold', 'mouse-right', 'skill-hold', 'skill', 'tool'
 ]);
+const GAMEPAD_ICON_CODES = {
+  'mouse-left': 'GamepadX',
+  'mouse-left-hold': 'GamepadXHold',
+  skill: 'GamepadY',
+  'skill-hold': 'GamepadYHold',
+  echo: 'GamepadLT',
+  'echo-hold': 'GamepadLTHold',
+  liberation: 'GamepadRB',
+  'liberation-hold': 'GamepadRBHold',
+  'mouse-right': 'GamepadRT',
+  'mouse-right-hold': 'GamepadRTHold',
+  jump: 'GamepadA',
+  'jump-hold': 'GamepadAHold',
+  tool: 'GamepadLB+GamepadX',
+  i: 'GamepadDPadUp',
+  ii: 'GamepadDPadRight',
+  iii: 'GamepadDPadDown'
+};
 const MAX_SELECTED_CHARACTERS = 3;
 const DIFFICULTY_ORDER = ['冒烟', '进阶', '基础', '轮椅'];
 const ROLE_COLORS = ['#d84f55', '#44c8c6', '#d7ad52'];
@@ -68,18 +86,86 @@ const AXIS_ICON_MAPPINGS = [
   ['iii', '3', 'iii.png', ['iii']],
   ['ii', '2', 'ii.png', ['ii']],
   ['i', '1', 'i.png', ['i']]
-].map(([id, label, filename, triggers]) => ({
-  id,
-  label,
-  triggers,
-  graphicSrc: PURE_GRAPHIC_ICON_IDS.has(id)
+].map(([id, label, filename, triggers]) => {
+  const graphicSrc = PURE_GRAPHIC_ICON_IDS.has(id)
     ? `${BUTTON_ICON_BASES.graphic}/${id}.png`
-    : `${BUTTON_ICON_BASES.chinese}/${encodeURIComponent(filename)}`,
-  englishSrc: `${BUTTON_ICON_BASES.english}/${id}.png`
-}));
+    : `${BUTTON_ICON_BASES.chinese}/${encodeURIComponent(filename)}`;
+  const gamepadCode = GAMEPAD_ICON_CODES[id];
+  return {
+    id,
+    label,
+    triggers,
+    gamepadCode,
+    graphicSrc,
+    englishSrc: `${BUTTON_ICON_BASES.english}/${id}.png`,
+    xboxSrc: gamepadCode ? gamepadIconSource(gamepadCode, 'xbox') : graphicSrc,
+    playstationSrc: gamepadCode ? gamepadIconSource(gamepadCode, 'playstation') : graphicSrc
+  };
+});
 const AXIS_ICON_TRIGGERS = AXIS_ICON_MAPPINGS
   .flatMap((mapping) => mapping.triggers.map((trigger) => ({ trigger, mapping })))
   .sort((left, right) => right.trigger.length - left.trigger.length);
+
+function gamepadSvgDataUri(svg) {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function gamepadFaceGlyph(core, iconSet) {
+  const xboxColors = { A: '#67b843', B: '#df4b43', X: '#36a9db', Y: '#f2c443' };
+  if (!(core in xboxColors)) return null;
+  if (iconSet === 'xbox') {
+    return `<circle cx="64" cy="64" r="45" fill="${xboxColors[core]}" stroke="#fff" stroke-width="7"/><circle cx="64" cy="64" r="51" fill="none" stroke="#15191c" stroke-width="4"/><text x="64" y="78" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="42" font-weight="900" fill="#171b1e">${core}</text>`;
+  }
+  const symbolColors = { A: '#5ba9e6', B: '#e35d6a', X: '#dd75c4', Y: '#62c99b' };
+  const symbol = core === 'A'
+    ? '<path d="M45 45L83 83M83 45L45 83"/>'
+    : core === 'B'
+      ? '<circle cx="64" cy="64" r="22"/>'
+      : core === 'X'
+        ? '<rect x="43" y="43" width="42" height="42" rx="2"/>'
+        : '<path d="M64 39L88 82H40Z"/>';
+  return `<circle cx="64" cy="64" r="50" fill="#252a2e" stroke="#fff" stroke-width="7"/><g fill="none" stroke="${symbolColors[core]}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">${symbol}</g>`;
+}
+
+function gamepadShoulderGlyph(core, iconSet) {
+  const labels = iconSet === 'playstation'
+    ? { LB: 'L1', RB: 'R1', LT: 'L2', RT: 'R2' }
+    : { LB: 'LB', RB: 'RB', LT: 'LT', RT: 'RT' };
+  const label = labels[core];
+  if (!label) return null;
+  const trigger = core === 'LT' || core === 'RT';
+  const path = trigger ? 'M25 88L31 38Q33 25 47 23H81Q95 25 97 38L103 88Z' : 'M22 38Q22 25 35 25H93Q106 25 106 38V91H22Z';
+  return `<path d="${path}" fill="#252a2e" stroke="#fff" stroke-width="7" stroke-linejoin="round"/><text x="64" y="73" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="34" font-weight="900" fill="#fff">${label}</text>`;
+}
+
+function gamepadDpadGlyph(core, iconSet) {
+  if (!core.startsWith('DPad')) return null;
+  const rotations = { Up: 0, Right: 90, Down: 180, Left: 270 };
+  const direction = core.slice(4);
+  if (!(direction in rotations)) return null;
+  const accent = iconSet === 'playstation' ? '#5ba9e6' : '#df4b43';
+  return `<path d="M49 17H79V47H109V81H79V111H49V81H19V47H49Z" fill="#252a2e" stroke="#fff" stroke-width="7" stroke-linejoin="round"/><g transform="rotate(${rotations[direction]} 64 64)"><path d="M50 48L64 29L78 48Z" fill="${accent}"/><rect x="51" y="46" width="26" height="20" rx="3" fill="${accent}"/></g>`;
+}
+
+function gamepadSingleGlyph(core, iconSet) {
+  return gamepadFaceGlyph(core, iconSet) ?? gamepadShoulderGlyph(core, iconSet) ?? gamepadDpadGlyph(core, iconSet);
+}
+
+function gamepadIconSource(code, iconSet) {
+  const parts = code.split('+').map((part) => {
+    const body = part.replace(/^Gamepad/, '');
+    const hold = body.endsWith('Hold');
+    return { core: hold ? body.slice(0, -4) : body, hold };
+  });
+  if (!parts.length || parts.some(({ core }) => !gamepadSingleGlyph(core, iconSet))) return undefined;
+  const isCombo = parts.length > 1;
+  const width = isCombo ? 210 : 128;
+  const glyphs = isCombo
+    ? parts.slice(0, 2).map((part, index) => `<g transform="translate(${index * 90 + 3} 19) scale(.7)">${gamepadSingleGlyph(part.core, iconSet)}${part.hold ? '<circle cx="64" cy="64" r="57" fill="none" stroke="#ffd43b" stroke-width="6" stroke-dasharray="62 18"/>' : ''}</g>`).join('')
+    : `${gamepadSingleGlyph(parts[0].core, iconSet)}${parts[0].hold ? '<circle cx="64" cy="64" r="57" fill="none" stroke="#ffd43b" stroke-width="6" stroke-dasharray="62 18"/>' : ''}`;
+  const plus = isCombo ? '<path d="M105 49V79M90 64H120" stroke="#fff" stroke-width="8" stroke-linecap="round"/><path d="M105 49V79M90 64H120" stroke="#171b1e" stroke-width="3" stroke-linecap="round"/>' : '';
+  return gamepadSvgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} 128">${glyphs}${plus}</svg>`);
+}
 
 const state = {
   charts: [],
@@ -633,7 +719,10 @@ function groupAxisSteps(steps) {
 function estimateAxisActionWidth(value) {
   const parts = axisIconParts(value);
   const contentWidth = parts.reduce((width, part) => {
-    if (part.kind === 'icon') return width + AXIS_ICON_SIZE;
+    if (part.kind === 'icon') {
+      const wideGamepadIcon = ['xbox', 'playstation'].includes(state.axisIconSet) && part.mapping.gamepadCode?.includes('+');
+      return width + (wideGamepadIcon ? 49 : AXIS_ICON_SIZE);
+    }
     return width + Math.max(14, Array.from(part.value).length * 12);
   }, 0);
   return Math.max(20, contentWidth + Math.max(0, parts.length - 1) * 2);
@@ -678,7 +767,10 @@ function axisActionContent(value) {
     }
     const icon = document.createElement('img');
     icon.className = 'axis-action-icon';
-    icon.src = state.axisIconSet === 'graphic' ? part.mapping.graphicSrc : part.mapping.englishSrc;
+    icon.src = part.mapping[`${state.axisIconSet}Src`] || part.mapping.englishSrc;
+    if (['xbox', 'playstation'].includes(state.axisIconSet) && part.mapping.gamepadCode?.includes('+')) {
+      icon.classList.add('is-wide');
+    }
     icon.alt = part.mapping.label;
     icon.title = part.mapping.label;
     action.appendChild(icon);
@@ -966,7 +1058,7 @@ els.detailBackdrop.addEventListener('mousedown', (event) => { if (event.target =
 for (const button of els.axisIconSetButtons) {
   button.addEventListener('click', () => {
     const next = button.dataset.iconSet;
-    if (!['english', 'graphic'].includes(next) || next === state.axisIconSet) return;
+    if (!['english', 'graphic', 'xbox', 'playstation'].includes(next) || next === state.axisIconSet) return;
     state.axisIconSet = next;
     renderAxisIconSet();
     if (state.detailChart && state.detailPackage) renderAxisPreview(state.detailPackage, state.detailChart);

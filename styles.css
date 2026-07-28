@@ -207,7 +207,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .axis-zoom-control svg { width: 14px; height: 14px; }
 .axis-zoom-control input { width: 100%; accent-color: var(--red-hover); cursor: pointer; }
 .axis-zoom-control output { color: var(--muted-strong); font-size: 9px; font-weight: 900; font-variant-numeric: tabular-nums; text-align: right; }
-.axis-icon-set { height: 26px; display: grid; grid-template-columns: 1fr 1fr; padding: 2px; border: 1px solid #42494d; border-radius: 4px; background: #0b0e10; }
+.axis-icon-set { height: 26px; display: grid; grid-template-columns: repeat(4, 1fr); padding: 2px; border: 1px solid #42494d; border-radius: 4px; background: #0b0e10; }
 .axis-icon-set button { min-width: 42px; height: 20px; padding: 0 7px; border: 0; border-radius: 2px; background: transparent; color: #7f878b; font-size: 9px; font-weight: 900; }
 .axis-icon-set button:hover { color: #d8dcde; }
 .axis-icon-set button.active { background: #343a3e; color: #fff; }
@@ -227,6 +227,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .axis-action { min-width: calc(20px * var(--axis-scale, 1)); min-height: calc(31px * var(--axis-scale, 1)); display: inline-flex; align-items: center; justify-content: center; gap: calc(2px * var(--axis-scale, 1)); color: #f0f2ef; font-size: calc(12px * var(--axis-scale, 1)); font-weight: 900; line-height: 1; white-space: nowrap; }
 .axis-action > span { max-width: calc(180px * var(--axis-scale, 1)); overflow: hidden; text-overflow: ellipsis; }
 .axis-action-icon { width: calc(31px * var(--axis-scale, 1)); height: calc(31px * var(--axis-scale, 1)); display: block; object-fit: contain; }
+.axis-action-icon.is-wide { width: calc(49px * var(--axis-scale, 1)); }
 .axis-empty, .axis-error { min-height: 240px; display: grid; place-items: center; align-content: center; gap: 8px; color: var(--muted); font-size: 12px; text-align: center; }
 .axis-error { color: #ff9b9f; }
 .axis-loading { min-height: 260px; display: flex; align-items: center; justify-content: center; gap: 7px; }
