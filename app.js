@@ -14,8 +14,14 @@ const HERO_SPINE_ASSETS = {
 };
 const BUTTON_ICON_BASES = {
   english: './assets/button-icons',
+  graphic: './assets/graphic-icons',
   chinese: './assets/botton'
 };
+const PURE_GRAPHIC_ICON_IDS = new Set([
+  'echo-hold', 'echo', 'finisher', 'jump-hold', 'jump',
+  'liberation-hold', 'liberation', 'mouse-left-hold', 'mouse-left',
+  'mouse-right-hold', 'mouse-right', 'skill-hold', 'skill', 'tool'
+]);
 const MAX_SELECTED_CHARACTERS = 3;
 const DIFFICULTY_ORDER = ['冒烟', '进阶', '基础', '轮椅'];
 const ROLE_COLORS = ['#d84f55', '#44c8c6', '#d7ad52'];
@@ -66,7 +72,9 @@ const AXIS_ICON_MAPPINGS = [
   id,
   label,
   triggers,
-  chineseSrc: `${BUTTON_ICON_BASES.chinese}/${encodeURIComponent(filename)}`,
+  graphicSrc: PURE_GRAPHIC_ICON_IDS.has(id)
+    ? `${BUTTON_ICON_BASES.graphic}/${id}.png`
+    : `${BUTTON_ICON_BASES.chinese}/${encodeURIComponent(filename)}`,
   englishSrc: `${BUTTON_ICON_BASES.english}/${id}.png`
 }));
 const AXIS_ICON_TRIGGERS = AXIS_ICON_MAPPINGS
@@ -670,7 +678,7 @@ function axisActionContent(value) {
     }
     const icon = document.createElement('img');
     icon.className = 'axis-action-icon';
-    icon.src = state.axisIconSet === 'chinese' ? part.mapping.chineseSrc : part.mapping.englishSrc;
+    icon.src = state.axisIconSet === 'graphic' ? part.mapping.graphicSrc : part.mapping.englishSrc;
     icon.alt = part.mapping.label;
     icon.title = part.mapping.label;
     action.appendChild(icon);
@@ -958,7 +966,7 @@ els.detailBackdrop.addEventListener('mousedown', (event) => { if (event.target =
 for (const button of els.axisIconSetButtons) {
   button.addEventListener('click', () => {
     const next = button.dataset.iconSet;
-    if (!['english', 'chinese'].includes(next) || next === state.axisIconSet) return;
+    if (!['english', 'graphic'].includes(next) || next === state.axisIconSet) return;
     state.axisIconSet = next;
     renderAxisIconSet();
     if (state.detailChart && state.detailPackage) renderAxisPreview(state.detailPackage, state.detailChart);
