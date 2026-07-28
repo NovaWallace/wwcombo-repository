@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="鸣潮连段社区，按标题、角色和标签检索并下载连段谱。" />
+    <meta name="description" content="鸣潮连段社区，按标题、角色和标签检索并下载连段谱。" data-i18n-content="meta.description" />
     <meta name="theme-color" content="#161a1d" />
     <title>椰果朋克2077</title>
     <script>
@@ -18,12 +18,12 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260728-24" />
+    <link rel="stylesheet" href="styles.css?v=20260728-25" />
   </head>
   <body>
     <header class="site-header">
       <div class="header-inner">
-        <a class="brand" href="./" aria-label="椰果朋克2077首页">
+        <a class="brand" href="./" aria-label="椰果朋克2077首页" data-i18n-aria-label="brand.home">
           <img class="brand-icon" src="assets/logo.png" alt="" />
           <span>
             <strong>椰果朋克2077</strong>
@@ -31,6 +31,16 @@
           </span>
         </a>
         <div class="header-actions">
+          <label class="language-control" title="切换语言" data-i18n-title="language.switch">
+            <i data-lucide="languages" aria-hidden="true"></i>
+            <span class="sr-only" data-i18n="language.label">语言</span>
+            <select id="languageSelect" aria-label="语言" data-i18n-aria-label="language.label">
+              <option value="zh-CN">中文</option>
+              <option value="en-US">English</option>
+              <option value="ja-JP">日本語</option>
+              <option value="ko-KR">한국어</option>
+            </select>
+          </label>
           <button class="motion-toggle" id="motionToggle" type="button" role="switch" aria-checked="false" aria-label="开启动态背景" title="开启动态背景">
             <i data-lucide="play" aria-hidden="true"></i>
           </button>
@@ -38,14 +48,14 @@
             <i data-lucide="sun" aria-hidden="true"></i>
           </button>
           <div class="submission-help">
-            <button class="submission-help-button" type="button" aria-label="查看投稿说明" aria-describedby="submissionHelpTooltip">
+            <button class="submission-help-button" type="button" aria-label="查看投稿说明" data-i18n-aria-label="submission.helpAria" aria-describedby="submissionHelpTooltip">
               <i data-lucide="circle-help" aria-hidden="true"></i>
             </button>
             <div class="submission-help-tooltip" id="submissionHelpTooltip" role="tooltip">
-              <strong>投稿与处理说明</strong>
-              <p>将 <code>.wwcombo.json</code> 文件作为附件发送到 <b>2728756958@qq.com</b>。系统每 10 分钟自动收取并检查格式，格式正确后直接发布，无需人工审核。</p>
-              <p>需要撤回时，请使用投稿邮箱发信，主题写“撤回”，正文填写连段 ID；身份核对成功后会自动删除，无法核对的申请会转为人工处理。</p>
-              <p>需要投诉时，主题写“投诉”，正文填写连段 ID，维护者会在控制台处理。</p>
+              <strong data-i18n="submission.helpTitle">投稿与处理说明</strong>
+              <p data-i18n="submission.helpSubmit">将 .wwcombo.json 文件作为附件发送到 2728756958@qq.com。系统每 10 分钟自动收取并检查格式，格式正确后直接发布，无需人工审核。</p>
+              <p data-i18n="submission.helpWithdraw">需要撤回时，请使用投稿邮箱发信，主题写“撤回”，正文填写连段 ID；身份核对成功后会自动删除，无法核对的申请会转为人工处理。</p>
+              <p data-i18n="submission.helpReport">需要投诉时，主题写“投诉”，正文填写连段 ID，维护者会在控制台处理。</p>
             </div>
           </div>
           <a
@@ -55,9 +65,10 @@
             target="_blank"
             rel="noopener noreferrer"
             title="复制投稿邮箱并打开 QQ 邮箱"
+            data-i18n-title="submission.buttonTitle"
           >
             <i data-lucide="upload" aria-hidden="true"></i>
-            <span id="submissionButtonLabel" aria-live="polite">上传连段</span>
+            <span id="submissionButtonLabel" aria-live="polite" data-i18n="submission.button">上传连段</span>
           </a>
         </div>
       </div>
@@ -72,38 +83,38 @@
           <div class="title-row">
             <div>
               <p class="eyebrow">COMMUNITY COMBOS</p>
-              <h1 id="pageTitle">早上好~椰之城——</h1>
+              <h1 id="pageTitle" data-i18n="hero.title">早上好~椰之城——</h1>
             </div>
             <div class="index-status" id="indexStatus" aria-live="polite">
               <span class="status-dot"></span>
-              <span>正在读取索引</span>
+              <span data-i18n="status.loading">正在读取索引</span>
             </div>
           </div>
 
           <form class="search-controls" id="searchForm" role="search">
             <label class="search-field">
-              <span class="sr-only">按标题搜索</span>
+              <span class="sr-only" data-i18n="search.titleLabel">按标题搜索</span>
               <i data-lucide="search" aria-hidden="true"></i>
-              <input id="titleInput" type="search" autocomplete="off" placeholder="搜索连段标题" />
-              <button class="clear-search" id="clearSearchBtn" type="button" title="清空标题" aria-label="清空标题">
+              <input id="titleInput" type="search" autocomplete="off" placeholder="搜索连段标题" data-i18n-placeholder="search.titlePlaceholder" />
+              <button class="clear-search" id="clearSearchBtn" type="button" title="清空标题" aria-label="清空标题" data-i18n-title="search.clearTitle" data-i18n-aria-label="search.clearTitle">
                 <i data-lucide="x" aria-hidden="true"></i>
               </button>
             </label>
 
             <button class="character-picker-trigger" id="characterPickerButton" type="button" aria-haspopup="dialog" aria-expanded="false">
-              <span class="field-label">角色</span>
+              <span class="field-label" data-i18n="field.character">角色</span>
               <span class="character-trigger-value">
                 <span class="selected-avatar-stack" id="selectedAvatarStack"></span>
-                <strong id="characterPickerValue">全部角色</strong>
+                <strong id="characterPickerValue" data-i18n="character.all">全部角色</strong>
               </span>
               <i data-lucide="chevron-down" aria-hidden="true"></i>
             </button>
 
             <label class="select-field">
-              <span>排序</span>
+              <span data-i18n="field.sort">排序</span>
               <select id="sortSelect">
-                <option value="version">版本顺序（新的优先）</option>
-                <option value="difficulty">难度（从难到易）</option>
+                <option value="version" data-i18n="sort.version">版本顺序（新的优先）</option>
+                <option value="difficulty" data-i18n="sort.difficulty">难度（从难到易）</option>
               </select>
             </label>
           </form>
@@ -115,17 +126,17 @@
         <div class="content-width">
           <div class="results-head">
             <div>
-              <h2 id="resultsTitle">社区连段</h2>
+              <h2 id="resultsTitle" data-i18n="results.title">社区连段</h2>
               <p id="resultCount">0 个结果</p>
             </div>
             <div class="results-tools">
               <div class="tag-filter" aria-labelledby="tagFilterLabel">
-                <span id="tagFilterLabel">标签</span>
+                <span id="tagFilterLabel" data-i18n="field.tag">标签</span>
                 <div id="tagList" class="tag-list"></div>
               </div>
               <button id="resetBtn" class="reset-button" type="button">
                 <i data-lucide="rotate-ccw" aria-hidden="true"></i>
-                重置筛选
+                <span data-i18n="filters.reset">重置筛选</span>
               </button>
             </div>
           </div>
@@ -134,16 +145,16 @@
 
           <div id="emptyState" class="empty-state" hidden>
             <i data-lucide="file-search" aria-hidden="true"></i>
-            <strong>没有找到对应连段</strong>
-            <span>换一个标题、角色或标签试试。</span>
-            <button id="emptyResetBtn" type="button">清除筛选</button>
+            <strong data-i18n="empty.title">没有找到对应连段</strong>
+            <span data-i18n="empty.body">换一个标题、角色或标签试试。</span>
+            <button id="emptyResetBtn" type="button" data-i18n="filters.clear">清除筛选</button>
           </div>
 
           <div id="errorState" class="empty-state error-state" hidden>
             <i data-lucide="cloud-off" aria-hidden="true"></i>
-            <strong>暂时无法读取社区索引</strong>
-            <span id="errorMessage">请稍后重试。</span>
-            <button id="retryBtn" type="button">重新加载</button>
+            <strong data-i18n="error.title">暂时无法读取社区索引</strong>
+            <span id="errorMessage" data-i18n="error.later">请稍后重试。</span>
+            <button id="retryBtn" type="button" data-i18n="error.reload">重新加载</button>
           </div>
         </div>
       </section>
@@ -161,22 +172,22 @@
             <div class="combo-tags"></div>
           </div>
           <dl class="combo-meta">
-            <div><dt>轮次</dt><dd class="rounds"></dd></div>
-            <div><dt>轴长</dt><dd class="duration"></dd></div>
-            <div><dt>操作</dt><dd class="steps"></dd></div>
-            <div><dt>更新</dt><dd class="updated"></dd></div>
+            <div><dt data-i18n="meta.rounds">轮次</dt><dd class="rounds"></dd></div>
+            <div><dt data-i18n="meta.duration">轴长</dt><dd class="duration"></dd></div>
+            <div><dt data-i18n="meta.actions">操作</dt><dd class="steps"></dd></div>
+            <div><dt data-i18n="meta.updated">更新</dt><dd class="updated"></dd></div>
           </dl>
         </div>
         <div class="combo-actions">
           <div class="card-characters"></div>
           <div class="card-submitter">
-            <span>上传者</span>
+            <span data-i18n="meta.uploader">上传者</span>
             <strong class="submitter-name"></strong>
             <small class="submitter-email"></small>
           </div>
           <button class="detail-button" type="button">
             <i data-lucide="panel-right-open" aria-hidden="true"></i>
-            详情
+            <span data-i18n="card.details">详情</span>
           </button>
         </div>
       </article>
@@ -186,25 +197,25 @@
       <section class="character-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="characterPickerTitle">
         <header class="modal-header">
           <div>
-            <h2 id="characterPickerTitle">选择角色</h2>
-            <p id="characterPickerHint">最多选择 3 名角色，选择顺序不影响检索。</p>
+            <h2 id="characterPickerTitle" data-i18n="character.select">选择角色</h2>
+            <p id="characterPickerHint" data-i18n="character.hint">最多选择 3 名角色，选择顺序不影响检索。</p>
           </div>
-          <button class="icon-button" id="closeCharacterPickerBtn" type="button" title="关闭" aria-label="关闭角色选择">
+          <button class="icon-button" id="closeCharacterPickerBtn" type="button" title="关闭" aria-label="关闭角色选择" data-i18n-title="common.close" data-i18n-aria-label="character.close">
             <i data-lucide="x" aria-hidden="true"></i>
           </button>
         </header>
         <div class="picker-toolbar">
           <label class="picker-search">
             <i data-lucide="search" aria-hidden="true"></i>
-            <span class="sr-only">搜索角色</span>
-            <input id="characterSearchInput" type="search" autocomplete="off" placeholder="搜索角色" />
+            <span class="sr-only" data-i18n="character.search">搜索角色</span>
+            <input id="characterSearchInput" type="search" autocomplete="off" placeholder="搜索角色" data-i18n-placeholder="character.search" />
           </label>
           <strong id="characterSelectedCount">已选 0 / 3</strong>
         </div>
         <div class="character-grid" id="characterGrid"></div>
         <footer class="modal-footer">
-          <button id="clearCharactersBtn" type="button">清空</button>
-          <button id="confirmCharactersBtn" class="primary-button" type="button">完成</button>
+          <button id="clearCharactersBtn" type="button" data-i18n="common.clear">清空</button>
+          <button id="confirmCharactersBtn" class="primary-button" type="button" data-i18n="common.done">完成</button>
         </footer>
       </section>
     </div>
@@ -214,9 +225,9 @@
         <header class="modal-header detail-header">
           <div>
             <p class="eyebrow">COMBO DETAIL</p>
-            <h2 id="detailTitle">连段详情</h2>
+            <h2 id="detailTitle" data-i18n="detail.title">连段详情</h2>
           </div>
-          <button class="icon-button" id="closeDetailBtn" type="button" title="关闭" aria-label="关闭连段详情">
+          <button class="icon-button" id="closeDetailBtn" type="button" title="关闭" aria-label="关闭连段详情" data-i18n-title="common.close" data-i18n-aria-label="detail.close">
             <i data-lucide="x" aria-hidden="true"></i>
           </button>
         </header>
@@ -226,29 +237,29 @@
             <div class="detail-tags" id="detailTags"></div>
             <dl class="detail-meta" id="detailMeta"></dl>
             <section class="detail-section" id="detailDescriptionSection">
-              <h3>简介</h3>
+              <h3 data-i18n="detail.description">简介</h3>
               <p id="detailDescription"></p>
             </section>
             <section class="detail-section">
-              <h3>上传者</h3>
+              <h3 data-i18n="meta.uploader">上传者</h3>
               <p id="detailSubmitter"></p>
             </section>
             <div class="detail-links">
               <a id="detailSourceLink" class="secondary-button" target="_blank" rel="noreferrer" hidden>
                 <i data-lucide="external-link" aria-hidden="true"></i>
-                演示链接
+                <span data-i18n="detail.demo">演示链接</span>
               </a>
               <a id="detailDownload" class="primary-button" download>
                 <i data-lucide="download" aria-hidden="true"></i>
-                下载连段
+                <span data-i18n="detail.download">下载连段</span>
               </a>
             </div>
           </aside>
           <section class="axis-preview-panel" aria-labelledby="axisPreviewTitle">
             <div class="axis-preview-head">
               <div>
-                <h3 id="axisPreviewTitle">连段图</h3>
-                <p id="axisPreviewSummary">正在读取连段数据</p>
+                <h3 id="axisPreviewTitle" data-i18n="axis.title">连段图</h3>
+                <p id="axisPreviewSummary" data-i18n="axis.loading">正在读取连段数据</p>
               </div>
               <div class="axis-preview-options">
                 <label class="axis-zoom-control" for="axisZoom">
@@ -256,13 +267,13 @@
                   <input id="axisZoom" type="range" min="80" max="180" step="10" value="100" />
                   <output id="axisZoomValue" for="axisZoom">100%</output>
                 </label>
-                <div class="axis-icon-set" role="group" aria-label="招式图标样式">
-                  <button class="active" type="button" data-icon-set="english" aria-pressed="true">字母</button>
-                  <button type="button" data-icon-set="graphic" aria-pressed="false">图形</button>
+                <div class="axis-icon-set" role="group" aria-label="招式图标样式" data-i18n-aria-label="axis.iconStyle">
+                  <button class="active" type="button" data-icon-set="english" aria-pressed="true" data-i18n="axis.letters">字母</button>
+                  <button type="button" data-icon-set="graphic" aria-pressed="false" data-i18n="axis.graphics">图形</button>
                   <button type="button" data-icon-set="xbox" aria-pressed="false">Xbox</button>
                   <button type="button" data-icon-set="playstation" aria-pressed="false">PS</button>
                 </div>
-                <span class="experimental-badge">实验功能</span>
+                <span class="experimental-badge" data-i18n="axis.experimental">实验功能</span>
               </div>
             </div>
             <div class="axis-preview" id="axisPreview">
@@ -275,6 +286,7 @@
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
-    <script src="app.js?v=20260728-24"></script>
+    <script src="i18n.js?v=20260728-25"></script>
+    <script src="app.js?v=20260728-25"></script>
   </body>
 </html>
