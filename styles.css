@@ -268,15 +268,15 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 }
 
 @media (max-width: 520px) {
-  .header-inner { gap: 10px; }
-  .brand { gap: 9px; }
-  .brand-icon { width: 42px; height: 42px; flex-basis: 42px; }
-  .brand strong { font-size: 14px; }
-  .brand small { font-size: 8px; }
-  .submission-button { min-width: 82px; padding: 0 12px; }
-  .submission-button span { font-size: 0; }
-  .submission-button span::after { content: '投稿'; font-size: 12px; }
-  .submission-help-button { width: 36px; height: 36px; }
+  .header-inner { gap: 6px; }
+  .header-actions { gap: 4px; }
+  .brand { gap: 6px; }
+  .brand-icon { width: 38px; height: 38px; flex-basis: 38px; }
+  .brand strong { font-size: 13px; }
+  .brand small { display: none; }
+  .theme-toggle, .motion-toggle, .submission-help-button { width: 34px; height: 34px; }
+  .submission-button { width: 36px; min-width: 36px; height: 36px; padding: 0; }
+  .submission-button span { display: none; }
   .submission-help-tooltip { position: fixed; top: 66px; right: 14px; left: 14px; width: auto; }
   .search-controls { grid-template-columns: 1fr; }
   .search-field { grid-column: auto; }
