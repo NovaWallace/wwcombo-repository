@@ -10,7 +10,7 @@ import { currentRelease, updateRepositoriesAndBuild } from './release.mjs';
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const MAIN_ROOT = path.dirname(SERVER_DIR);
 const RUNTIME_ROOT = path.resolve(process.env.WWCOMBO_RUNTIME_ROOT || path.join(path.dirname(MAIN_ROOT), 'wwcombo-server-runtime'));
-const HOST = process.env.WWCOMBO_HOST || '0.0.0.0';
+const HOST = String(process.env.WWCOMBO_HOST || '').trim() || '0.0.0.0';
 const PORT = Number(process.env.WWCOMBO_PORT || 9881);
 const PUBLIC_URL = String(process.env.WWCOMBO_PUBLIC_URL || 'https://Nova.fb520.site').replace(/\/+$/, '');
 const TRUST_PROXY = process.env.WWCOMBO_TRUST_PROXY === '1';

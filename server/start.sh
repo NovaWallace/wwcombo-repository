@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 SERVER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPOSITORY_DIR="$(cd "$SERVER_DIR/.." && pwd)"
-HOST="0.0.0.0"
+HOST="${WWCOMBO_HOST:-0.0.0.0}"
 PORT="9881"
 RUNTIME_ROOT="$(cd "$REPOSITORY_DIR/.." && pwd)/wwcombo-server-runtime"
 ADMIN_PASSWORD=""

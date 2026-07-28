@@ -54,6 +54,8 @@ Type=simple
 User=$RUN_USER
 Group=$RUN_GROUP
 WorkingDirectory=$REPOSITORY_DIR
+Environment=WWCOMBO_HOST=$HOST
+Environment=WWCOMBO_PORT=$PORT
 ExecStart=/bin/bash $SERVER_DIR/start.sh --host $HOST --port $PORT --runtime $RUNTIME_ROOT --public-url $PUBLIC_URL$(if [[ "$TRUST_PROXY" == "1" ]]; then printf ' --trust-proxy'; fi)
 Restart=on-failure
 RestartSec=3

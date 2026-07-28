@@ -15,6 +15,8 @@ cd wwcombo-repository
 sudo bash server/install-service.sh --public-url https://Nova.fb520.site --trust-proxy
 ```
 
+安装脚本会在 systemd 服务参数和环境变量中同时写入 `0.0.0.0:9881`。旧安装更新代码后，应重新执行上面的安装命令，使现有 `wwcombo.service` 同步新的监听配置。
+
 安装程序会：
 
 1. 创建独立运行目录 `/var/lib/wwcombo`。
