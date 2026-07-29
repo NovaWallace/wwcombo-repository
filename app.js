@@ -156,6 +156,7 @@ function gamepadSingleGlyph(core, iconSet) {
 }
 
 function gamepadIconSource(code, iconSet) {
+  if (window.WWComboInputIcons) return window.WWComboInputIcons.gamepadIconSource(code, iconSet);
   const parts = code.split('+').map((part) => {
     const body = part.replace(/^Gamepad/, '');
     const hold = body.endsWith('Hold');
@@ -184,6 +185,7 @@ function keyboardCodeLabel(code) {
 }
 
 function keyboardMouseIconSource(code) {
+  if (window.WWComboInputIcons) return window.WWComboInputIcons.keyboardMouseIconSource(code);
   const parts = String(code || '').split('+').map((source) => {
     const hold = source.endsWith('Hold');
     const core = hold ? source.slice(0, -4) : source;
@@ -216,6 +218,7 @@ function normalizeAxisKeySettings(value) {
     gamepadBindings: normalizeBindings(value.gamepadBindings),
     preferences: {
       inputMode: value.preferences?.inputMode === 'gamepad' ? 'gamepad' : 'keyboard',
+      keyboardIconMode: value.preferences?.keyboardIconMode === 'actual' ? 'actual' : 'default',
       gamepadIconSet: value.preferences?.gamepadIconSet === 'playstation' ? 'playstation' : 'xbox'
     }
   };
@@ -1062,10 +1065,28 @@ function axisBindingCode(moveId, mode) {
   return source?.find((binding) => binding.moveId === moveId)?.inputs.find((input) => input.code)?.code || '';
 }
 
+function axisLabelMatchesMove(label, moveId) {
+  const value = String(label || '').trim();
+  if (!value || value.includes('[') || value.includes(']')) return !value;
+  if (value === DEFAULT_MOVE_LABELS[moveId]) return true;
+  const mappingId = {
+    basic_attack: 'mouse-left', heavy_attack: 'mouse-left-hold',
+    skill: 'skill', skill_hold: 'skill-hold',
+    echo: 'echo', echo_hold: 'echo-hold',
+    liberation: 'liberation', liberation_hold: 'liberation-hold',
+    dodge: 'mouse-right', dodge_hold: 'mouse-right-hold',
+    jump: 'jump', jump_hold: 'jump-hold', tool: 'tool',
+    finisher: 'finisher', forward: 'forward',
+    switch_1: 'i', switch_2: 'ii', switch_3: 'iii'
+  }[moveId];
+  const mapping = AXIS_ICON_MAPPINGS.find((item) => item.id === mappingId);
+  return Boolean(mapping?.triggers.includes(value));
+}
+
 function axisStepDisplay(step, labels) {
   const label = axisStepLabel(step, labels);
   const custom = String(labels[step.id] || '').trim();
-  if (!state.axisKeySettings || custom || state.axisIconSet === 'graphic') return { label, iconSrc: '', wide: false };
+  if (!state.axisKeySettings || !axisLabelMatchesMove(custom, step.moveId) || state.axisIconSet === 'graphic') return { label, iconSrc: '', wide: false };
   if (state.axisIconSet === 'english') {
     const code = axisBindingCode(step.moveId, 'keyboard');
     return { label, iconSrc: code ? keyboardMouseIconSource(code) || '' : '', wide: code.includes('+') };
