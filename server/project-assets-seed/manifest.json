@@ -1,0 +1,1432 @@
+{
+  "schemaVersion": 1,
+  "revision": 1,
+  "updatedAt": "2026-07-29T14:53:30.206Z",
+  "characters": [
+    {
+      "id": "base_通用",
+      "names": {
+        "zh-CN": "通用",
+        "en-US": "General",
+        "ja-JP": "汎用",
+        "ko-KR": "공용"
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/1993017b98fbec80beec.png",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 4,
+          "y": 43,
+          "w": 93,
+          "h": 14
+        },
+        "stretch": {
+          "left": 11,
+          "right": 86
+        },
+        "edge": 0
+      }
+    },
+    {
+      "id": "base_爱弥斯",
+      "names": {
+        "zh-CN": "爱弥斯",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/5d6d4f5173c5678d1ce2.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_安可",
+      "names": {
+        "zh-CN": "安可",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/e74198ac1209e53c604d.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_暗主",
+      "names": {
+        "zh-CN": "暗主",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/2e6c029050b88535ab79.png",
+        "imageWidth": 426,
+        "imageHeight": 78,
+        "crop": {
+          "x": 5,
+          "y": 12,
+          "w": 92,
+          "h": 72
+        },
+        "stretch": {
+          "left": 32,
+          "right": 72
+        },
+        "edge": 6
+      }
+    },
+    {
+      "id": "base_奥古斯塔",
+      "names": {
+        "zh-CN": "奥古斯塔",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/f960cb5ab1c1e340b13b.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_白芷",
+      "names": {
+        "zh-CN": "白芷",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/d58a41a29d1d2993e3dc.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 4,
+          "y": 43,
+          "w": 93,
+          "h": 14
+        },
+        "stretch": {
+          "left": 34,
+          "right": 86
+        },
+        "edge": 0
+      }
+    },
+    {
+      "id": "base_卜灵",
+      "names": {
+        "zh-CN": "卜灵",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/b767a227b20bad5934f7.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 4,
+          "y": 43,
+          "w": 93,
+          "h": 14
+        },
+        "stretch": {
+          "left": 34,
+          "right": 86
+        },
+        "edge": 0
+      }
+    },
+    {
+      "id": "base_布兰特",
+      "names": {
+        "zh-CN": "布兰特",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/24de5208f53fbeb61d05.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_长离",
+      "names": {
+        "zh-CN": "长离",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/2cafaba706eaac87c348.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_炽霞",
+      "names": {
+        "zh-CN": "炽霞",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/35c814900f3e20ed8316.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 4,
+          "y": 43,
+          "w": 93,
+          "h": 14
+        },
+        "stretch": {
+          "left": 34,
+          "right": 86
+        },
+        "edge": 0
+      }
+    },
+    {
+      "id": "base_椿",
+      "names": {
+        "zh-CN": "椿",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/74059aeb753ec5847873.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_达妮娅",
+      "names": {
+        "zh-CN": "达妮娅",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/eeeb13586f5a952cb6ba.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_丹瑾",
+      "names": {
+        "zh-CN": "丹瑾",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/20ecc3d814a21de916ac.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 4,
+          "y": 43,
+          "w": 93,
+          "h": 14
+        },
+        "stretch": {
+          "left": 34,
+          "right": 86
+        },
+        "edge": 0
+      }
+    },
+    {
+      "id": "base_灯灯",
+      "names": {
+        "zh-CN": "灯灯",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/0257f571242f7e54bd62.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 4,
+          "y": 43,
+          "w": 93,
+          "h": 14
+        },
+        "stretch": {
+          "left": 34,
+          "right": 86
+        },
+        "edge": 0
+      }
+    },
+    {
+      "id": "base_绯雪",
+      "names": {
+        "zh-CN": "绯雪",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/05a8ba430b4db41a9b0d.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_菲比",
+      "names": {
+        "zh-CN": "菲比",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/3b6c17c585d60c9644ee.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_风主",
+      "names": {
+        "zh-CN": "风主",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/f3bd8393f5e94370c798.png",
+        "imageWidth": 426,
+        "imageHeight": 78,
+        "crop": {
+          "x": 5,
+          "y": 12,
+          "w": 92,
+          "h": 72
+        },
+        "stretch": {
+          "left": 32,
+          "right": 72
+        },
+        "edge": 6
+      }
+    },
+    {
+      "id": "base_弗洛洛",
+      "names": {
+        "zh-CN": "弗洛洛",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/f4b4ba27a7a5ce396ad1.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_光主",
+      "names": {
+        "zh-CN": "光主",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/44d20f3e9e7fe0bf296f.png",
+        "imageWidth": 426,
+        "imageHeight": 78,
+        "crop": {
+          "x": 5,
+          "y": 12,
+          "w": 92,
+          "h": 72
+        },
+        "stretch": {
+          "left": 32,
+          "right": 72
+        },
+        "edge": 6
+      }
+    },
+    {
+      "id": "base_忌炎",
+      "names": {
+        "zh-CN": "忌炎",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/279c71c9c29842710d21.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_嘉贝丽娜",
+      "names": {
+        "zh-CN": "嘉贝丽娜",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/ab1d4cc8604ea96f7cc0.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_鉴心",
+      "names": {
+        "zh-CN": "鉴心",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/717d80fb2cbbee758353.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_今汐",
+      "names": {
+        "zh-CN": "今汐",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/957e878fd4faa12cea21.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_卡卡罗",
+      "names": {
+        "zh-CN": "卡卡罗",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/bc1f3a89361c50c7e720.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_卡提希娅",
+      "names": {
+        "zh-CN": "卡提希娅",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/cb050491995d3d0c8a94.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_坎特蕾拉",
+      "names": {
+        "zh-CN": "坎特蕾拉",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/fb22538aafed7f468cc0.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_珂莱塔",
+      "names": {
+        "zh-CN": "珂莱塔",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/d5882061864bd820cb38.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_雷主",
+      "names": {
+        "zh-CN": "雷主",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/f8794780bd14b631458d.png",
+        "imageWidth": 426,
+        "imageHeight": 78,
+        "crop": {
+          "x": 5,
+          "y": 12,
+          "w": 92,
+          "h": 72
+        },
+        "stretch": {
+          "left": 32,
+          "right": 72
+        },
+        "edge": 6
+      }
+    },
+    {
+      "id": "base_丽贝卡",
+      "names": {
+        "zh-CN": "丽贝卡",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/44c322fd8c5d7952ac7b.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_琳奈",
+      "names": {
+        "zh-CN": "琳奈",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/cc47a254134a7f880095.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_凌阳",
+      "names": {
+        "zh-CN": "凌阳",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/2c47dfa56421e9286d33.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_陆赫兹",
+      "names": {
+        "zh-CN": "陆赫兹",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/a3f10d3c80e6c76f1ab9.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_露帕",
+      "names": {
+        "zh-CN": "露帕",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/73de261c8d526f85f983.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_露西",
+      "names": {
+        "zh-CN": "露西",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/f0730f54ffa2186baaaa.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_洛可可",
+      "names": {
+        "zh-CN": "洛可可",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/14bb0d00a34c3f83a0d0.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_洛瑟拉",
+      "names": {
+        "zh-CN": "洛瑟拉",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/13fdbeac6450ed58cf8d.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_莫宁",
+      "names": {
+        "zh-CN": "莫宁",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/454068fde344f50268da.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_莫特斐",
+      "names": {
+        "zh-CN": "莫特斐",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/eebf27800f3bf4e7d287.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 4,
+          "y": 43,
+          "w": 93,
+          "h": 14
+        },
+        "stretch": {
+          "left": 34,
+          "right": 86
+        },
+        "edge": 0
+      }
+    },
+    {
+      "id": "base_千咲",
+      "names": {
+        "zh-CN": "千咲",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/bcab33a536db9f1a0cba.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_秋水",
+      "names": {
+        "zh-CN": "秋水",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/de891ee48ebe58b77668.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 4,
+          "y": 43,
+          "w": 93,
+          "h": 14
+        },
+        "stretch": {
+          "left": 34,
+          "right": 86
+        },
+        "edge": 0
+      }
+    },
+    {
+      "id": "base_仇远",
+      "names": {
+        "zh-CN": "仇远",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/906a873173d3ebffddcb.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_散华",
+      "names": {
+        "zh-CN": "散华",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/923595c9208d7c59d61b.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 4,
+          "y": 43,
+          "w": 93,
+          "h": 14
+        },
+        "stretch": {
+          "left": 34,
+          "right": 86
+        },
+        "edge": 0
+      }
+    },
+    {
+      "id": "base_守岸人",
+      "names": {
+        "zh-CN": "守岸人",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/ed21adb0ee71573a1d0e.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_穗穗",
+      "names": {
+        "zh-CN": "穗穗",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/99f0b1b5c6be3ffe946e.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_桃祈",
+      "names": {
+        "zh-CN": "桃祈",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/23664d62b68cf7ca9143.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 4,
+          "y": 43,
+          "w": 93,
+          "h": 14
+        },
+        "stretch": {
+          "left": 34,
+          "right": 86
+        },
+        "edge": 0
+      }
+    },
+    {
+      "id": "base_维里奈",
+      "names": {
+        "zh-CN": "维里奈",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/16853dfe94e1be24309c.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_西格莉卡",
+      "names": {
+        "zh-CN": "西格莉卡",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/ed69f86fdf7b55d9b3b5.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_夏空",
+      "names": {
+        "zh-CN": "夏空",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/9801db591f3233127835.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_相里要",
+      "names": {
+        "zh-CN": "相里要",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/b70db05dc1b40ca813e1.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_玄翎",
+      "names": {
+        "zh-CN": "玄翎",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/4f2b08ddfa4de7ae3656.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_秧秧",
+      "names": {
+        "zh-CN": "秧秧",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/6f215a66d3c6bbcc4616.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_吟霖",
+      "names": {
+        "zh-CN": "吟霖",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/2ac85a723562babb5a5b.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_尤诺",
+      "names": {
+        "zh-CN": "尤诺",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/9f4a503fb66a623e39f0.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_釉瑚",
+      "names": {
+        "zh-CN": "釉瑚",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/18b2a6c594df5222a965.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 4,
+          "y": 43,
+          "w": 93,
+          "h": 14
+        },
+        "stretch": {
+          "left": 34,
+          "right": 86
+        },
+        "edge": 0
+      }
+    },
+    {
+      "id": "base_渊武",
+      "names": {
+        "zh-CN": "渊武",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/9b178c1c35b5c32c641c.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 4,
+          "y": 43,
+          "w": 93,
+          "h": 14
+        },
+        "stretch": {
+          "left": 34,
+          "right": 86
+        },
+        "edge": 0
+      }
+    },
+    {
+      "id": "base_赞妮",
+      "names": {
+        "zh-CN": "赞妮",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/c390b62cdcfc9e2eadda.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    },
+    {
+      "id": "base_折枝",
+      "names": {
+        "zh-CN": "折枝",
+        "en-US": "",
+        "ja-JP": "",
+        "ko-KR": ""
+      },
+      "basePreset": {
+        "src": "/api/project-assets/v1/images/2765a15ad56367b63393.webp",
+        "imageWidth": 426,
+        "imageHeight": 426,
+        "crop": {
+          "x": 3,
+          "y": 44,
+          "w": 93,
+          "h": 13
+        },
+        "stretch": {
+          "left": 29,
+          "right": 78
+        },
+        "edge": 10
+      }
+    }
+  ]
+}

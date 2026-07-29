@@ -7,7 +7,7 @@
     <title>椰果朋克2077维护端</title>
     <link rel="icon" type="image/png" href="/assets/logo.png" />
     <link rel="apple-touch-icon" href="/assets/logo.png" />
-    <link rel="stylesheet" href="/admin/styles.css?v=20260729-3" />
+    <link rel="stylesheet" href="/admin/styles.css?v=20260729-4" />
   </head>
   <body>
     <header class="topbar">
@@ -45,6 +45,7 @@
           <button type="button" data-tab="charts">连段管理 <span id="chartManageCount">0</span></button>
           <button type="button" data-tab="withdrawals">撤回申请 <span id="withdrawalCount">0</span></button>
           <button type="button" data-tab="whitelist">UP 白名单</button>
+          <button type="button" data-tab="project-api">项目 API</button>
           <button type="button" data-tab="smtp">邮件通知</button>
           <button type="button" data-tab="server">服务器</button>
         </nav>
@@ -73,6 +74,54 @@
           <div class="section-heading"><div><h2>UP 白名单</h2><p>名单内邮箱发布后，用户名旁会展示 UP 标识。</p></div></div>
           <form class="inline-form" id="whitelistForm"><input id="whitelistEmail" type="email" autocomplete="off" placeholder="name@example.com" required /><button class="primary" type="submit">添加邮箱</button></form>
           <div class="chip-list" id="whitelistList"></div>
+        </section>
+
+        <section class="tab-panel" data-panel="project-api" hidden>
+          <div class="section-heading"><div><h2>角色翻译与招式块底图</h2><p>保存后立即更新公开 API，客户端会缓存新版本并在断网时回退到安装包资源。</p></div><button class="quiet" id="refreshProjectAssetsBtn" type="button">刷新</button></div>
+          <div class="api-endpoint"><span>公开接口</span><code id="projectApiUrl">/api/project-assets/v1/manifest.json</code><button class="quiet" id="copyProjectApiBtn" type="button">复制地址</button><small id="projectApiRevision">-</small></div>
+          <form class="release-editor" id="appReleaseForm">
+            <div class="release-editor-head"><div><span>CLIENT UPDATE</span><h3>客户端版本更新</h3><p>客户端发现更高的正式版本后会提示用户下载。上传的安装包保存在服务器持久目录。</p></div><code>/api/project-assets/v1/app-release.json</code></div>
+            <div class="release-fields">
+              <label><span>最新版本</span><input id="appReleaseVersion" inputmode="numeric" placeholder="0.2.1" required /></label>
+              <label><span>更新标题</span><input id="appReleaseTitle" maxlength="120" placeholder="WW Combo Trainer 0.2.1" /></label>
+              <label class="release-notes"><span>更新说明</span><textarea id="appReleaseNotes" maxlength="4000" rows="4" placeholder="每行填写一项主要改动"></textarea></label>
+              <label class="release-url"><span>外部下载地址（选填）</span><input id="appReleaseUrl" type="url" placeholder="留空则使用服务器上传的安装包" /></label>
+              <label class="file-field release-package"><span>服务器安装包</span><input id="appReleasePackage" type="file" accept=".exe,.msi,.zip,application/zip,application/x-msdownload" /></label>
+            </div>
+            <div class="release-current" id="appReleaseCurrent">尚未上传安装包。</div>
+            <div class="release-actions"><p class="form-message" id="appReleaseMessage" aria-live="polite"></p><button class="quiet" id="uploadAppReleaseBtn" type="button">上传安装包</button><button class="primary" type="submit">发布版本信息</button></div>
+          </form>
+          <div class="asset-manager">
+            <aside class="asset-browser">
+              <div class="asset-browser-tools"><input id="projectAssetSearch" type="search" autocomplete="off" placeholder="搜索角色或外文名" /><button class="primary" id="newProjectAssetBtn" type="button">新增</button></div>
+              <div class="asset-character-list" id="projectAssetList"></div>
+            </aside>
+            <form class="asset-editor" id="projectAssetForm">
+              <input id="projectAssetOriginalId" type="hidden" />
+              <div class="asset-editor-heading"><div><span id="projectAssetMode">编辑角色</span><h3 id="projectAssetTitle">请选择角色</h3></div><button class="quiet danger" id="deleteProjectAssetBtn" type="button">删除</button></div>
+              <div class="asset-name-grid">
+                <label><span>稳定 ID</span><input id="projectAssetId" maxlength="100" placeholder="留空自动生成" /></label>
+                <label><span>中文名</span><input id="projectAssetZh" maxlength="80" required /></label>
+                <label><span>English</span><input id="projectAssetEn" maxlength="80" /></label>
+                <label><span>日本語</span><input id="projectAssetJa" maxlength="80" /></label>
+                <label><span>한국어</span><input id="projectAssetKo" maxlength="80" /></label>
+              </div>
+              <label class="check-row asset-base-toggle"><input id="projectAssetHasBase" type="checkbox" checked /><span>为该角色提供招式块底图</span></label>
+              <div class="asset-base-editor" id="projectAssetBaseEditor">
+                <div class="asset-preview-column">
+                  <div class="asset-block-preview" id="projectAssetPreview"><span>底图预览</span></div>
+                  <label class="file-field"><span>上传或替换底图</span><input id="projectAssetImage" type="file" accept="image/png,image/jpeg,image/webp" /></label>
+                  <small>PNG / JPEG / WebP，最大 3 MB。未选择新图片时保留当前图片。</small>
+                </div>
+                <div class="asset-parameter-grid">
+                  <fieldset><legend>裁切区域（百分比）</legend><label>X<input id="projectAssetCropX" type="number" min="0" max="100" step="0.1" required /></label><label>Y<input id="projectAssetCropY" type="number" min="0" max="100" step="0.1" required /></label><label>宽<input id="projectAssetCropW" type="number" min="0.1" max="100" step="0.1" required /></label><label>高<input id="projectAssetCropH" type="number" min="0.1" max="100" step="0.1" required /></label></fieldset>
+                  <fieldset><legend>横向拉伸与边缘</legend><label>左边界<input id="projectAssetStretchLeft" type="number" min="0" max="100" step="0.1" required /></label><label>右边界<input id="projectAssetStretchRight" type="number" min="0" max="100" step="0.1" required /></label><label>边缘<input id="projectAssetEdge" type="number" min="0" max="100" step="0.1" required /></label></fieldset>
+                  <input id="projectAssetImageWidth" type="hidden" /><input id="projectAssetImageHeight" type="hidden" /><input id="projectAssetCurrentSrc" type="hidden" />
+                </div>
+              </div>
+              <div class="asset-editor-actions"><p class="form-message" id="projectAssetMessage" aria-live="polite"></p><button class="primary" id="saveProjectAssetBtn" type="submit">保存并发布 API</button></div>
+            </form>
+          </div>
         </section>
 
         <section class="tab-panel" data-panel="smtp" hidden>
@@ -127,6 +176,6 @@
         <div class="form-actions"><button class="quiet" id="cancelUploadBtn" type="button">取消</button><button class="publish-button" type="submit">上传并更新网站</button></div>
       </form>
     </div>
-    <script src="/admin/app.js?v=20260729-3"></script>
+    <script src="/admin/app.js?v=20260729-4"></script>
   </body>
 </html>

@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createCommunityService } from './community.mjs';
 import { buildRelease, currentRelease, updateRepositoriesAndBuild } from './release.mjs';
+import { createProjectAssetsService } from './projectAssets.mjs';
 
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const MAIN_ROOT = path.dirname(SERVER_DIR);
@@ -71,6 +72,8 @@ async function rebuildCommunityRelease() {
 
 const community = createCommunityService({ runtimeRoot: RUNTIME_ROOT, rebuildRelease: rebuildCommunityRelease });
 await community.initialize();
+const projectAssets = createProjectAssetsService({ runtimeRoot: RUNTIME_ROOT, serverDir: SERVER_DIR });
+await projectAssets.initialize();
 
 const loginAttempts = new Map();
 const updateState = {
@@ -126,6 +129,7 @@ function cacheControlFor(relative) {
 
 async function serveFile(req, res, root, relative, options = {}) {
   const cacheControl = options.cacheControl || cacheControlFor(relative);
+  const extraHeaders = options.headers || {};
   const target = safeTarget(root, relative);
   if (!target) return sendText(res, 403, 'Forbidden');
   let details;
@@ -138,7 +142,7 @@ async function serveFile(req, res, root, relative, options = {}) {
 
   const etag = `"${details.size.toString(16)}-${Math.floor(details.mtimeMs).toString(16)}"`;
   if (req.headers['if-none-match'] === etag) {
-    res.writeHead(304, { etag, 'cache-control': cacheControl });
+    res.writeHead(304, { etag, 'cache-control': cacheControl, ...extraHeaders });
     res.end();
     return;
   }
@@ -168,7 +172,8 @@ async function serveFile(req, res, root, relative, options = {}) {
     'content-length': end - start + 1,
     'accept-ranges': 'bytes',
     'cache-control': cacheControl,
-    etag
+    etag,
+    ...extraHeaders
   };
   if (statusCode === 206) headers['content-range'] = `bytes ${start}-${end}/${details.size}`;
   res.writeHead(statusCode, headers);
@@ -446,6 +451,51 @@ async function handleAdminApi(req, res, pathname) {
     return;
   }
 
+  if (req.method === 'GET' && pathname === '/api/server/project-assets') {
+    const session = requireSession(req, res);
+    if (!session) return;
+    sendJson(res, 200, projectAssets.adminManifest());
+    return;
+  }
+
+  if (req.method === 'PUT' && pathname === '/api/server/project-assets') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    sendJson(res, 200, { ok: true, ...(await projectAssets.upsert(await readJsonBody(req, 5 * 1024 * 1024))) });
+    return;
+  }
+
+  const projectAssetDelete = /^\/api\/server\/project-assets\/([^/]+)$/.exec(pathname);
+  if (req.method === 'DELETE' && projectAssetDelete) {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    sendJson(res, 200, { ok: true, manifest: await projectAssets.remove(decodeURIComponent(projectAssetDelete[1])) });
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/api/server/app-release') {
+    const session = requireSession(req, res);
+    if (!session) return;
+    sendJson(res, 200, projectAssets.adminRelease());
+    return;
+  }
+
+  if (req.method === 'PUT' && pathname === '/api/server/app-release') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    sendJson(res, 200, { ok: true, release: await projectAssets.saveRelease(await readJsonBody(req, 8 * 1024)) });
+    return;
+  }
+
+  if (req.method === 'PUT' && pathname === '/api/server/app-release/package') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    const fileName = decodeURIComponent(String(req.headers['x-file-name'] || ''));
+    const release = await projectAssets.uploadReleasePackage(req, fileName, Number(req.headers['content-length'] || 0));
+    sendJson(res, 200, { ok: true, release });
+    return;
+  }
+
   sendJson(res, 404, { error: 'Not found' });
 }
 
@@ -514,6 +564,43 @@ const server = createServer(async (req, res) => {
     }
     if (pathname.startsWith('/api/community/')) {
       await handleCommunityApi(req, res, pathname);
+      return;
+    }
+    if (pathname === '/api/project-assets/v1/manifest.json') {
+      if (req.method !== 'GET' && req.method !== 'HEAD') return sendJson(res, 405, { error: 'Method not allowed' }, { 'access-control-allow-origin': '*' });
+      sendJson(res, 200, projectAssets.publicManifest(), {
+        'access-control-allow-origin': '*',
+        'cache-control': 'no-cache'
+      });
+      return;
+    }
+    if (pathname === '/api/project-assets/v1/app-release.json') {
+      if (req.method !== 'GET' && req.method !== 'HEAD') return sendJson(res, 405, { error: 'Method not allowed' }, { 'access-control-allow-origin': '*' });
+      sendJson(res, 200, projectAssets.publicRelease(), {
+        'access-control-allow-origin': '*',
+        'cache-control': 'no-cache'
+      });
+      return;
+    }
+    if ((req.method === 'GET' || req.method === 'HEAD') && pathname === '/api/app-release/download') {
+      const releaseInfo = projectAssets.adminRelease();
+      const storedName = releaseInfo.download?.storedName;
+      if (!storedName) return sendText(res, 404, 'No release package');
+      await serveFile(req, res, projectAssets.releaseRoot, storedName, {
+        cacheControl: 'no-cache',
+        headers: {
+          'access-control-allow-origin': '*',
+          'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(releaseInfo.download.fileName || storedName)}`
+        }
+      });
+      return;
+    }
+    const projectAssetImage = /^\/api\/project-assets\/v1\/images\/(.+)$/.exec(pathname);
+    if ((req.method === 'GET' || req.method === 'HEAD') && projectAssetImage) {
+      await serveFile(req, res, projectAssets.imageRoot, projectAssetImage[1], {
+        cacheControl: 'public, max-age=31536000, immutable',
+        headers: { 'access-control-allow-origin': '*' }
+      });
       return;
     }
     if (pathname === '/admin') {
