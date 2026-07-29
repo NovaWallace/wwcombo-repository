@@ -948,7 +948,7 @@ function renderCard(chart) {
   card.querySelector('.characters').textContent = chartCharacters(chart).join(' / ') || t('card.charactersMissing');
   card.querySelector('.rounds').textContent = t('unit.rounds', { count: Math.max(1, Number(chart.rounds || 1)) });
   card.querySelector('.duration').textContent = formatDuration(chart.durationMs);
-  card.querySelector('.steps').textContent = t('unit.actions', { count: Number(chart.stepCount || 0) });
+  card.querySelector('.steps').textContent = t('unit.switches', { count: Number(chart.loopSwitchCount || 0) });
   card.querySelector('.updated').textContent = formatDate(chart.updatedAt);
   card.querySelector('.votes').textContent = t('vote.summary', { up: Number(chart.votes?.up || 0), down: Number(chart.votes?.down || 0) });
   card.querySelector('.submitter-name').textContent = submitter.nickname;
@@ -1405,7 +1405,7 @@ async function openDetails(chart) {
   els.detailMeta.replaceChildren(
     detailMetaRow(t('meta.rounds'), t('unit.rounds', { count: Math.max(1, Number(chart.rounds || 1)) })),
     detailMetaRow(t('meta.firstCharacter'), chart.firstCharacter || chartCharacters(chart)[0] || t('common.unknown')),
-    detailMetaRow(t('meta.actions'), t('unit.actions', { count: Number(chart.stepCount || 0) })),
+    detailMetaRow(t('meta.loopSwitches'), t('unit.switches', { count: Number(chart.loopSwitchCount || 0) })),
     detailMetaRow(t('meta.updated'), formatDate(chart.updatedAt)),
     detailMetaRow(t('meta.uploadVersion'), chart.uploadVersion || state.gameVersion),
     detailMetaRow(t('meta.downloads'), t('unit.downloads', { count: Number(chart.downloadCount || 0) })),

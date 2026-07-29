@@ -41,6 +41,21 @@ function chartDuration(chart) {
   return Math.max(Number(chart.timelineDurationMs || 0), ...chart.steps.map((step) => Number(step.startMax || 0) + Number(step.durationMax || 0)));
 }
 
+function loopSwitchCount(chart) {
+  const loop = (Array.isArray(chart.periods) ? chart.periods : [])
+    .filter((period) => period?.kind === 'loop_axis')
+    .sort((left, right) => Number(left.startMs || 0) - Number(right.startMs || 0))[0];
+  if (!loop) return 0;
+  const startMs = Number(loop.startMs || 0);
+  const endMs = Number(loop.endMs);
+  return chart.steps.filter((step) => {
+    const stepStart = Number(step.startMin || 0);
+    return /^switch_[123]$/.test(String(step.moveId || ''))
+      && stepStart >= startMs
+      && (!Number.isFinite(endMs) || stepStart < endMs);
+  }).length;
+}
+
 function validStep(step) {
   const item = record(step);
   const times = [item.startMin, item.startMax, item.durationMin, item.durationMax];
@@ -126,6 +141,7 @@ function submissionPreview(payload) {
     characters,
     tags: (Array.isArray(community.tags) ? community.tags : chart.tags || []).filter((value) => typeof value === 'string' && value.trim()).map((value) => value.trim()).slice(0, 20),
     stepCount: chart.steps.length,
+    loopSwitchCount: loopSwitchCount(chart),
     rounds: Number.isFinite(community.rounds) ? Math.max(1, Math.round(community.rounds)) : 1,
     durationMs: Math.round(chartDuration(chart))
   };
@@ -154,6 +170,7 @@ function chartSummary(payload, submitter) {
     link: typeof community.link === 'string' && /^https?:\/\//i.test(community.link) ? community.link.slice(0, 1000) : '',
     durationMs: Math.round(chartDuration(chart)),
     stepCount: chart.steps.length,
+    loopSwitchCount: loopSwitchCount(chart),
     version: Number.isFinite(chart.version) ? chart.version : 1,
     updatedAt: Date.now(),
     repository: 'community'
