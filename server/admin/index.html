@@ -4,48 +4,41 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>椰果朋克2077控制台</title>
+    <title>椰果朋克2077维护端</title>
     <link rel="stylesheet" href="/admin/styles.css" />
   </head>
   <body>
     <header class="topbar">
-      <div>
-        <p>WWCOMBO CONTROL</p>
-        <h1>椰果朋克2077控制台</h1>
+      <a class="brand" href="/" target="_blank" rel="noopener noreferrer">
+        <span class="brand-mark">N</span><span><strong>椰果朋克2077</strong><small>社区维护端</small></span>
+      </a>
+      <div class="top-actions" id="topActions" hidden>
+        <button class="icon-command" id="quickWhitelistBtn" type="button" title="添加 UP 白名单"><span>UP</span>白名单</button>
+        <button class="publish-button" id="openUploadBtn" type="button">上传并更新</button>
+        <button class="icon-only" id="logoutBtn" type="button" title="退出登录" aria-label="退出登录">↪</button>
       </div>
-      <a href="/" target="_blank" rel="noopener noreferrer">打开用户站</a>
     </header>
 
     <main class="admin-shell">
       <section class="login-panel" id="loginPanel">
-        <div class="login-heading">
-          <span>管理员登录</span>
-          <strong>审核投稿和管理社区</strong>
-        </div>
+        <p class="eyebrow">MAINTAINER ACCESS</p>
+        <h1>进入社区维护端</h1>
+        <p>这里的密码只由你设置。系统不会生成或隐藏一个你不知道的密码。</p>
         <form id="loginForm">
           <label for="passwordInput">管理员密码</label>
-          <div class="login-row">
-            <input id="passwordInput" type="password" autocomplete="current-password" required />
-            <button type="submit">登录</button>
-          </div>
+          <div class="login-row"><input id="passwordInput" type="password" autocomplete="current-password" required /><button type="submit">登录</button></div>
           <p class="message" id="loginMessage" aria-live="polite"></p>
         </form>
-        <details class="password-help">
-          <summary>不知道密码？</summary>
-          <p>密码由服务器安装者设置。忘记后，在服务器终端重新运行安装脚本并添加 <code>--admin-password '新密码'</code>，至少 10 位。</p>
-        </details>
+        <details class="password-help"><summary>忘记密码</summary><p>在服务器终端运行 <code>sudo bash server/install-service.sh --admin-password '你设置的新密码'</code>，至少 10 位。登录后也可在“服务器”页修改。</p></details>
       </section>
 
       <section class="dashboard" id="dashboard" hidden>
         <div class="dashboard-head">
-          <div class="service-line">
-            <span class="status-dot" id="statusDot"></span>
-            <div><strong id="serviceStatus">服务运行中</strong><small id="releaseSummary">-</small></div>
-          </div>
-          <button class="quiet" id="logoutBtn" type="button">退出</button>
+          <div class="service-line"><span class="status-dot" id="statusDot"></span><div><strong id="serviceStatus">服务运行中</strong><small id="releaseSummary">-</small></div></div>
+          <span class="private-note">完整邮箱与投稿文件仅保存在服务器私有目录</span>
         </div>
 
-        <nav class="admin-tabs" aria-label="控制台页面">
+        <nav class="admin-tabs" aria-label="维护页面">
           <button class="active" type="button" data-tab="submissions">投稿审核 <span id="submissionCount">0</span></button>
           <button type="button" data-tab="withdrawals">撤回申请 <span id="withdrawalCount">0</span></button>
           <button type="button" data-tab="whitelist">UP 白名单</button>
@@ -54,31 +47,28 @@
         </nav>
 
         <section class="tab-panel active" data-panel="submissions">
-          <div class="section-heading"><div><h2>待审核投稿</h2><p>检查标题、作者和轴内容后决定是否公开。</p></div><button class="quiet" type="button" data-refresh>刷新</button></div>
-          <div class="task-list" id="submissionList"></div>
+          <div class="section-heading"><div><h2>待审核投稿</h2><p>预审核只负责标出异常，最终是否公开仍由你决定。</p></div><button class="quiet" type="button" data-refresh>刷新</button></div>
+          <div class="task-list submission-grid" id="submissionList"></div>
         </section>
 
         <section class="tab-panel" data-panel="withdrawals" hidden>
-          <div class="section-heading"><div><h2>撤回申请</h2><p>邮箱完全一致的申请会自动执行，这里只显示需要人工判断的项目。</p></div></div>
+          <div class="section-heading"><div><h2>撤回申请</h2><p>邮箱一致的请求已自动执行，此处只保留无法自动核验的申请。</p></div></div>
           <div class="task-list" id="withdrawalList"></div>
         </section>
 
         <section class="tab-panel" data-panel="whitelist" hidden>
-          <div class="section-heading"><div><h2>UP 白名单</h2><p>名单内邮箱审核通过后，用户名旁会显示 UP 标识。</p></div></div>
-          <form class="inline-form" id="whitelistForm">
-            <input id="whitelistEmail" type="email" autocomplete="off" placeholder="name@example.com" required />
-            <button class="primary" type="submit">添加邮箱</button>
-          </form>
+          <div class="section-heading"><div><h2>UP 白名单</h2><p>名单内邮箱发布后，用户名旁会展示 UP 标识。</p></div></div>
+          <form class="inline-form" id="whitelistForm"><input id="whitelistEmail" type="email" autocomplete="off" placeholder="name@example.com" required /><button class="primary" type="submit">添加邮箱</button></form>
           <div class="chip-list" id="whitelistList"></div>
         </section>
 
         <section class="tab-panel" data-panel="smtp" hidden>
-          <div class="section-heading"><div><h2>SMTP 邮件通知</h2><p>有新投稿时向指定邮箱发送提醒。QQ 邮箱推荐使用 smtp.qq.com、465 和授权码。</p></div></div>
+          <div class="section-heading"><div><h2>新投稿邮件提醒</h2><p>QQ 邮箱使用 smtp.qq.com、465 和授权码。邮件只提醒，不会绕过审核。</p></div></div>
           <form class="settings-form" id="smtpForm">
             <label><span>SMTP 主机</span><input id="smtpHost" required placeholder="smtp.qq.com" /></label>
             <label><span>端口</span><input id="smtpPort" type="number" min="1" max="65535" value="465" required /></label>
             <label><span>SMTP 账号</span><input id="smtpUser" required autocomplete="username" /></label>
-            <label><span>授权码</span><input id="smtpPass" type="password" autocomplete="new-password" placeholder="留空则保持现有授权码" /></label>
+            <label><span>邮箱授权码</span><input id="smtpPass" type="password" autocomplete="new-password" placeholder="留空则保持现有授权码" /></label>
             <label><span>发件地址</span><input id="smtpFrom" type="email" placeholder="默认使用 SMTP 账号" /></label>
             <label><span>接收通知邮箱</span><input id="smtpTo" type="email" required /></label>
             <label class="check-row"><input id="smtpSecure" type="checkbox" checked /><span>使用 TLS 安全连接</span></label>
@@ -88,21 +78,42 @@
         </section>
 
         <section class="tab-panel" data-panel="server" hidden>
-          <div class="section-heading"><div><h2>服务器与仓库</h2><p>从 GitHub 拉取基础连段和网站代码，不会覆盖服务器私有投稿。</p></div><button class="primary" id="updateBtn" type="button">从 GitHub 更新并重启</button></div>
+          <div class="section-heading"><div><h2>服务器与仓库</h2><p>拉取三个 GitHub 仓库并构建新快照，不覆盖服务器私有投稿。</p></div><button class="primary" id="updateBtn" type="button">从 GitHub 更新并重启</button></div>
           <dl class="metrics">
-            <div><dt>当前版本</dt><dd id="releaseId">-</dd></div>
-            <div><dt>上线时间</dt><dd id="releaseTime">-</dd></div>
-            <div><dt>连段数量</dt><dd id="chartCount">-</dd></div>
-            <div><dt>监听地址</dt><dd id="listenAddress">-</dd></div>
-            <div><dt>repository</dt><dd id="mainCommit">-</dd></div>
-            <div><dt>deta1</dt><dd id="data1Commit">-</dd></div>
-            <div><dt>deta2</dt><dd id="data2Commit">-</dd></div>
+            <div><dt>当前版本</dt><dd id="releaseId">-</dd></div><div><dt>上线时间</dt><dd id="releaseTime">-</dd></div><div><dt>连段数量</dt><dd id="chartCount">-</dd></div><div><dt>监听地址</dt><dd id="listenAddress">-</dd></div><div><dt>repository</dt><dd id="mainCommit">-</dd></div><div><dt>deta1</dt><dd id="data1Commit">-</dd></div><div><dt>deta2</dt><dd id="data2Commit">-</dd></div>
           </dl>
-          <div class="section-heading output-heading"><h2>更新状态</h2><span id="updateStatus">等待操作</span></div>
-          <pre id="outputBox">尚未执行更新。</pre>
+          <div class="section-heading output-heading"><h2>更新状态</h2><span id="updateStatus">等待操作</span></div><pre id="outputBox">尚未执行更新。</pre>
+          <form class="password-form" id="passwordForm">
+            <div><h2>修改管理员密码</h2><p>修改后旧登录会立即失效。新密码至少 10 位，并由你自己保存。</p></div>
+            <label><span>当前密码</span><input id="currentPassword" type="password" autocomplete="current-password" required /></label>
+            <label><span>新密码</span><input id="newPassword" type="password" minlength="10" autocomplete="new-password" required /></label>
+            <label><span>确认新密码</span><input id="confirmPassword" type="password" minlength="10" autocomplete="new-password" required /></label>
+            <button class="primary" type="submit">保存新密码</button><p class="form-message" id="passwordMessage" aria-live="polite"></p>
+          </form>
         </section>
       </section>
     </main>
+
+    <div class="modal-backdrop" id="reviewBackdrop" hidden>
+      <section class="review-dialog" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+        <header class="modal-header"><div><span class="risk-badge" id="reviewRisk">正在检查</span><h2 id="reviewTitle">连段审核</h2><p id="reviewSubmitter">-</p></div><button class="icon-only" id="closeReviewBtn" type="button" aria-label="关闭">×</button></header>
+        <div class="review-body">
+          <aside><div class="review-meta" id="reviewMeta"></div><div class="review-tags" id="reviewTags"></div><section class="risk-panel"><h3>自动预审核</h3><div id="reviewIssues"></div></section><div class="review-actions"><button class="quiet danger" id="reviewRejectBtn" type="button">拒绝</button><button class="primary" id="reviewApproveBtn" type="button">审核通过</button></div></aside>
+          <div class="axis-panel"><div class="axis-toolbar"><strong>连段图</strong><label>缩放 <input id="axisScale" type="range" min="80" max="180" value="125" /><output id="axisScaleValue">125%</output></label></div><div class="axis-preview" id="axisPreview"><p>正在读取连段图...</p></div></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="uploadBackdrop" hidden>
+      <form class="upload-dialog" id="adminUploadForm" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
+        <header class="modal-header"><div><span>MAINTAINER PUBLISH</span><h2 id="uploadTitle">上传并立即更新</h2><p>维护者上传会校验格式并直接公开，不进入待审核队列。</p></div><button class="icon-only" id="closeUploadBtn" type="button" aria-label="关闭">×</button></header>
+        <label><span>公开用户名</span><input id="uploadUsername" maxlength="40" autocomplete="name" required /></label>
+        <label><span>所有权邮箱</span><input id="uploadEmail" type="email" autocomplete="email" required /></label>
+        <label class="file-field"><span>连段 JSON</span><input id="uploadFile" type="file" accept=".json,.wwcombo.json,application/json" required /></label>
+        <p class="form-message" id="uploadMessage" aria-live="polite"></p>
+        <div class="form-actions"><button class="quiet" id="cancelUploadBtn" type="button">取消</button><button class="publish-button" type="submit">上传并更新网站</button></div>
+      </form>
+    </div>
     <script src="/admin/app.js"></script>
   </body>
 </html>

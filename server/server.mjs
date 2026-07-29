@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { createReadStream, existsSync } from 'node:fs';
-import { readFile, stat } from 'node:fs/promises';
+import { chmod, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,7 +37,8 @@ const CONTENT_TYPES = new Map([
 
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) throw new Error(`Invalid WWCOMBO_PORT: ${process.env.WWCOMBO_PORT}`);
 
-const config = JSON.parse(await readFile(path.join(RUNTIME_ROOT, 'config.json'), 'utf8'));
+const CONFIG_PATH = path.join(RUNTIME_ROOT, 'config.json');
+const config = JSON.parse(await readFile(CONFIG_PATH, 'utf8'));
 if (!config?.admin?.salt || !config?.admin?.hash || !config?.sessionSecret) throw new Error('Server admin config is incomplete.');
 
 const startupMessages = [];
@@ -226,6 +227,20 @@ function verifyPassword(password) {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
+async function changePassword(currentPassword, nextPassword) {
+  if (!verifyPassword(currentPassword)) throw new Error('当前管理员密码不正确。');
+  const value = String(nextPassword || '');
+  if (value.length < 10) throw new Error('新密码至少需要 10 个字符。');
+  const salt = randomBytes(16).toString('hex');
+  config.admin = { salt, hash: scryptSync(value, salt, 64).toString('hex') };
+  config.sessionSecret = randomBytes(32).toString('hex');
+  config.updatedAt = new Date().toISOString();
+  const temporary = `${CONFIG_PATH}.${process.pid}.tmp`;
+  await writeFile(temporary, `${JSON.stringify(config, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
+  await rename(temporary, CONFIG_PATH);
+  await chmod(CONFIG_PATH, 0o600).catch(() => {});
+}
+
 function clientAddress(req) {
   if (TRUST_PROXY) return String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
   return req.socket.remoteAddress || 'unknown';
@@ -292,6 +307,16 @@ async function handleAdminApi(req, res, pathname) {
     return;
   }
 
+  if (req.method === 'POST' && pathname === '/api/server/password') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    const body = await readJsonBody(req);
+    await changePassword(body.currentPassword, body.newPassword);
+    const replacement = createSession();
+    sendJson(res, 200, { ok: true, csrf: replacement.csrf }, { 'set-cookie': sessionCookie(req, replacement.token, SESSION_SECONDS) });
+    return;
+  }
+
   if (req.method === 'POST' && pathname === '/api/server/update') {
     const session = requireSession(req, res, true);
     if (!session) return;
@@ -342,6 +367,21 @@ async function handleAdminApi(req, res, pathname) {
       await community.reject(id, body.reason);
       sendJson(res, 200, { ok: true });
     }
+    return;
+  }
+
+  const submissionPreview = /^\/api\/server\/submissions\/([^/]+)\/preview$/.exec(pathname);
+  if (req.method === 'GET' && submissionPreview) {
+    const session = requireSession(req, res);
+    if (!session) return;
+    sendJson(res, 200, await community.submissionContent(decodeURIComponent(submissionPreview[1])));
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/api/server/submissions/publish') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    sendJson(res, 200, { ok: true, ...(await community.publishDirect(await readJsonBody(req, 2 * 1024 * 1024), clientAddress(req))) });
     return;
   }
 

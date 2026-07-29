@@ -7,7 +7,15 @@
 
 ## 一键安装
 
-服务器需要 Node.js 18+、Git 和 systemd：
+最省事的方式是一键安装依赖并启动。脚本会安装 Node.js 20、npm、Git 和项目依赖，然后要求你亲自输入两次管理密码：
+
+```bash
+git clone https://github.com/NovaWallace/wwcombo-repository.git
+cd wwcombo-repository
+sudo bash server/one-click-install.sh --public-url https://Nova.fb520.site --trust-proxy
+```
+
+服务器已经有 Node.js 18+、npm、Git 和 systemd 时，也可以直接运行安装服务脚本：
 
 ```bash
 git clone https://github.com/NovaWallace/wwcombo-repository.git
@@ -64,6 +72,8 @@ http://127.0.0.1:9881
 ## 后台更新
 
 管理后台地址：<https://Nova.fb520.site/admin/>
+
+维护端右上角“上传并更新”可由维护者直接发布本地 JSON；“UP 白名单”用于添加特殊邮箱。普通用户投稿进入审核页后，点击“查看连段图”会读取私有 JSON 并生成预览。系统会自动检查连续 6 个及以上相同招式，以及无法转换为图标的自定义文字；无异常时标为“低风险”，但不会替维护者自动通过。
 
 点击“从 GitHub 更新并重启”后，服务器会：
 

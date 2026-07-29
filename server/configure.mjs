@@ -28,8 +28,8 @@ if (existsSync(configPath)) {
   }
 }
 
-const generatedPassword = suppliedPassword || randomBytes(12).toString('base64url');
-if (generatedPassword.length < 10) throw new Error('管理员密码至少需要 10 个字符。');
+if (!suppliedPassword) throw new Error('首次配置必须由维护者明确设置管理员密码，使用 WWCOMBO_ADMIN_PASSWORD 传入。');
+if (suppliedPassword.length < 10) throw new Error('管理员密码至少需要 10 个字符。');
 const salt = randomBytes(16).toString('hex');
 const config = {
   version: 1,
@@ -37,7 +37,7 @@ const config = {
   updatedAt: new Date().toISOString(),
   admin: {
     salt,
-    hash: scryptSync(generatedPassword, salt, 64).toString('hex')
+    hash: scryptSync(suppliedPassword, salt, 64).toString('hex')
   },
   sessionSecret: existing?.sessionSecret || randomBytes(32).toString('hex')
 };
@@ -46,5 +46,4 @@ await writeFile(temporary, `${JSON.stringify(config, null, 2)}\n`, { encoding: '
 await rename(temporary, configPath);
 await chmod(configPath, 0o600);
 
-if (suppliedPassword) console.log(existing ? '管理员密码已重置。' : '管理员密码已设置。');
-else console.log(`首次管理员密码：${generatedPassword}`);
+console.log(existing ? '管理员密码已重置。' : '管理员密码已设置。');

@@ -9,7 +9,7 @@ const MAX_DURATION_MS = 10 * 60 * 1000;
 const ICON_TRIGGERS = [
   '长按共鸣解放', '长按普攻', '长按技能', '长按声骸', '长按解放', '长按闪避', '长按跳跃',
   '共鸣解放', '终结技', '普攻', '重击', '技能', '声骸', '解放', '闪避', '跳跃', '工具', '变奏', '延奏', '处决', '前走',
-  'iii', 'ii', 'a', 'z', 'e', 'E', 'q', 'Q', 'r', 'R', 's', 'S', 'd', 'D', 'j', 'J', 't', 'b', 'y', 'f', 'w', 'i'
+  'iii', 'ii', 'a', 'z', 'Z', 'e', 'E', 'q', 'Q', 'r', 'R', 's', 'S', 'd', 'D', 'j', 'J', 't', 'b', 'y', 'f', 'w', 'i', '闪', '跳'
 ].sort((left, right) => right.length - left.length);
 
 function record(value) {
