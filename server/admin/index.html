@@ -7,7 +7,8 @@
     <title>椰果朋克2077维护端</title>
     <link rel="icon" type="image/png" href="/assets/logo.png" />
     <link rel="apple-touch-icon" href="/assets/logo.png" />
-    <link rel="stylesheet" href="/admin/styles.css?v=20260729-4" />
+    <link rel="stylesheet" href="/admin/styles.css?v=20260730-5" />
+    <link rel="stylesheet" href="/admin/community-cards.css?v=20260730-1" />
   </head>
   <body>
     <header class="topbar">
@@ -161,7 +162,23 @@
         <header class="modal-header"><div><span class="risk-badge" id="reviewRisk">正在检查</span><h2 id="reviewTitle">连段审核</h2><p id="reviewSubmitter">-</p></div><button class="icon-only" id="closeReviewBtn" type="button" aria-label="关闭">×</button></header>
         <div class="review-body">
           <aside><div class="review-meta" id="reviewMeta"></div><div class="review-tags" id="reviewTags"></div><section class="risk-panel"><h3>自动预审核</h3><div id="reviewIssues"></div></section><div class="review-actions"><button class="quiet danger" id="reviewRejectBtn" type="button">拒绝</button><button class="primary" id="reviewApproveBtn" type="button">审核通过</button></div></aside>
-          <div class="axis-panel"><div class="axis-toolbar"><strong>连段图</strong><label>缩放 <input id="axisScale" type="range" min="80" max="180" value="125" /><output id="axisScaleValue">125%</output></label></div><div class="axis-preview" id="axisPreview"><p>正在读取连段图...</p></div></div>
+          <div class="axis-panel"><div class="axis-toolbar"><div><strong>连段图</strong><small id="reviewAxisSummary">正在读取轴数据</small></div><div class="axis-toolbar-controls"><label>缩放 <input id="axisScale" data-admin-axis-scale type="range" min="80" max="180" step="5" value="125" /><output id="axisScaleValue" data-admin-axis-scale-value>125%</output></label><div class="axis-icon-set"><button class="active" type="button" data-admin-icon-set="english">字母</button><button type="button" data-admin-icon-set="graphic">图形</button><button type="button" data-admin-icon-set="xbox">Xbox</button><button type="button" data-admin-icon-set="playstation">PS</button></div></div></div><div class="axis-preview" id="axisPreview"><p>正在读取连段图...</p></div></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="manageDetailBackdrop" hidden>
+      <section class="manage-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="manageDetailTitle">
+        <header class="modal-header detail-header"><div><span>COMBO DETAIL</span><h2 id="manageDetailTitle">连段详情</h2><p id="manageDetailSubmitter">-</p></div><button class="icon-only" id="closeManageDetailBtn" type="button" aria-label="关闭">×</button></header>
+        <div class="manage-detail-layout">
+          <aside class="manage-detail-info">
+            <div class="detail-characters" id="manageDetailCharacters"></div>
+            <div class="detail-tags" id="manageDetailTags"></div>
+            <dl class="detail-meta" id="manageDetailMeta"></dl>
+            <section class="detail-section" id="manageDetailDescriptionSection"><h3>简介</h3><p id="manageDetailDescription"></p></section>
+            <div class="manage-detail-actions"><a class="quiet" id="manageDetailDownload" download>下载连段</a><button class="quiet danger" id="manageDetailDelete" type="button">删除连段</button></div>
+          </aside>
+          <section class="axis-panel"><div class="axis-toolbar"><div><strong>连段图</strong><small id="manageAxisSummary">正在读取轴数据</small></div><div class="axis-toolbar-controls"><label>缩放 <input id="manageAxisScale" data-admin-axis-scale type="range" min="80" max="180" step="5" value="125" /><output id="manageAxisScaleValue" data-admin-axis-scale-value>125%</output></label><div class="axis-icon-set"><button class="active" type="button" data-admin-icon-set="english">字母</button><button type="button" data-admin-icon-set="graphic">图形</button><button type="button" data-admin-icon-set="xbox">Xbox</button><button type="button" data-admin-icon-set="playstation">PS</button></div></div></div><div class="axis-preview" id="manageAxisPreview"><p>正在读取连段图...</p></div></section>
         </div>
       </section>
     </div>
@@ -176,6 +193,6 @@
         <div class="form-actions"><button class="quiet" id="cancelUploadBtn" type="button">取消</button><button class="publish-button" type="submit">上传并更新网站</button></div>
       </form>
     </div>
-    <script src="/admin/app.js?v=20260729-4"></script>
+    <script src="/admin/app.js?v=20260730-5"></script>
   </body>
 </html>

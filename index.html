@@ -178,6 +178,7 @@
             <div><dt data-i18n="meta.duration">轴长</dt><dd class="duration"></dd></div>
             <div><dt data-i18n="meta.actions">操作</dt><dd class="steps"></dd></div>
             <div><dt data-i18n="meta.updated">更新</dt><dd class="updated"></dd></div>
+            <div><dt data-i18n="vote.rating">评价</dt><dd class="votes"></dd></div>
           </dl>
         </div>
         <div class="combo-actions">
@@ -239,7 +240,7 @@
                   <button type="button" data-icon-set="xbox" aria-pressed="false">Xbox</button>
                   <button type="button" data-icon-set="playstation" aria-pressed="false">PS</button>
                 </div>
-                <span class="experimental-badge" data-i18n="axis.experimental">实验功能</span>
+                <button class="axis-keymap-import" type="button" data-axis-keymap-import><i data-lucide="keyboard" aria-hidden="true"></i><span data-i18n="axis.importKeys">导入按键设置</span></button>
               </div>
             </div>
             <div class="axis-preview" id="uploadAxisPreview"><div class="axis-empty" data-i18n="upload.previewEmpty">导入后会在这里预览连段图</div></div>
@@ -299,6 +300,14 @@
               <h3 data-i18n="meta.uploader">上传者</h3>
               <p id="detailSubmitter"></p>
             </section>
+            <section class="detail-section vote-section">
+              <h3 data-i18n="vote.rating">评价</h3>
+              <div class="vote-actions">
+                <button id="detailUpvote" type="button"><i data-lucide="thumbs-up" aria-hidden="true"></i><span data-vote-count="up">0</span></button>
+                <button id="detailDownvote" type="button"><i data-lucide="thumbs-down" aria-hidden="true"></i><span data-vote-count="down">0</span></button>
+              </div>
+              <p class="vote-hint" id="detailVoteHint" data-i18n="vote.downloadRequired">下载后可以赞或踩，每个浏览器只能选择一次。</p>
+            </section>
             <div class="detail-links">
               <a id="detailSourceLink" class="secondary-button" target="_blank" rel="noreferrer" hidden>
                 <i data-lucide="external-link" aria-hidden="true"></i>
@@ -329,7 +338,7 @@
                   <button type="button" data-icon-set="xbox" aria-pressed="false">Xbox</button>
                   <button type="button" data-icon-set="playstation" aria-pressed="false">PS</button>
                 </div>
-                <span class="experimental-badge" data-i18n="axis.experimental">实验功能</span>
+                <button class="axis-keymap-import" type="button" data-axis-keymap-import><i data-lucide="keyboard" aria-hidden="true"></i><span data-i18n="axis.importKeys">导入按键设置</span></button>
               </div>
             </div>
             <div class="axis-preview" id="axisPreview">
@@ -340,9 +349,11 @@
       </section>
     </div>
 
+    <input id="axisKeymapInput" class="sr-only" type="file" accept=".json,.wwkeys.json,application/json" />
+
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
-    <script src="i18n.js?v=20260729-30"></script>
-    <script src="app.js?v=20260729-30"></script>
+    <script src="i18n.js?v=20260730-31"></script>
+    <script src="app.js?v=20260730-31"></script>
   </body>
 </html>

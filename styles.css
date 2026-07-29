@@ -255,6 +255,15 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .detail-section[hidden] { display: none; }
 .detail-section h3 { margin: 0; color: #858b8f; font-size: 10px; }
 .detail-section p { margin: 0; color: var(--muted-strong); font-size: 12px; line-height: 1.65; white-space: pre-line; overflow-wrap: anywhere; }
+.vote-section { padding-top: 2px; }
+.vote-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.vote-actions button { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid #4b5358; border-radius: 4px; background: #1b2024; color: #c8ced1; font-weight: 900; cursor: pointer; }
+.vote-actions button:hover:not(:disabled) { border-color: #7d858a; background: #272d31; }
+.vote-actions button.selected { border-color: #d6ae55; background: #302713; color: #f3d17f; }
+.vote-actions button:disabled { cursor: not-allowed; opacity: .55; }
+.vote-actions button.selected:disabled { opacity: 1; }
+.vote-actions svg { width: 16px; height: 16px; }
+.vote-hint { color: #7f888d !important; font-size: 10px !important; }
 .detail-links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px; }
 .axis-preview-panel { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); background: #090b0d; }
 .axis-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 17px; border-bottom: 1px solid var(--line); background: #121619; }
@@ -271,6 +280,10 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .axis-icon-set button.active { background: #343a3e; color: #fff; }
 .axis-icon-set button:focus-visible { outline: 2px solid #f1cb75; outline-offset: 1px; }
 .experimental-badge { padding: 4px 7px; border: 1px solid #856322; border-radius: 3px; color: #f1cb75; font-size: 9px; font-weight: 900; }
+.axis-keymap-import { height: 28px; display: inline-flex; align-items: center; gap: 6px; padding: 0 9px; border: 1px solid #856322; border-radius: 3px; background: #231d11; color: #f1cb75; font-size: 9px; font-weight: 900; white-space: nowrap; cursor: pointer; }
+.axis-keymap-import:hover { border-color: #c99b3c; background: #302615; color: #ffe29c; }
+.axis-keymap-import.loaded { border-color: #347a61; background: #11271f; color: #78dfb4; }
+.axis-keymap-import svg { width: 14px; height: 14px; }
 .axis-preview { width: 100%; min-width: 0; min-height: 0; display: grid; align-content: start; gap: 18px; padding: 18px; overflow-x: hidden; overflow-y: auto; background-color: #0d1012; background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 24px 24px; }
 .axis-group { min-width: 0; display: grid; gap: calc(9px * var(--axis-scale, 1)); }
 .axis-group-head { display: flex; align-items: center; gap: 8px; }
@@ -495,6 +508,9 @@ html[data-theme='day'] .detail-meta dt,
 html[data-theme='day'] .detail-section h3 { color: #6a7e84; }
 html[data-theme='day'] .detail-meta dd { color: #17282d; }
 html[data-theme='day'] .detail-section p { color: #40565d; }
+html[data-theme='day'] .vote-actions button { border-color: #b9c7ca; background: #eef4f5; color: #334b52; }
+html[data-theme='day'] .vote-actions button:hover:not(:disabled) { border-color: #7e9298; background: #e1ebed; }
+html[data-theme='day'] .vote-actions button.selected { border-color: #a67b27; background: #fff4d7; color: #77520a; }
 
 html[data-theme='day'] .axis-preview-panel { background: #e7eff1; }
 html[data-theme='day'] .axis-preview-head { border-color: #c8d5d8; background: #f8fbfb; }
@@ -505,6 +521,9 @@ html[data-theme='day'] .axis-icon-set button { color: #657980; }
 html[data-theme='day'] .axis-icon-set button:hover { color: #17282d; }
 html[data-theme='day'] .axis-icon-set button.active { background: #577078; color: #ffffff; }
 html[data-theme='day'] .experimental-badge { border-color: #b58a3b; color: #835e17; background: #fff7e5; }
+html[data-theme='day'] .axis-keymap-import { border-color: #9d741f; background: #fff9e9; color: #77520a; }
+html[data-theme='day'] .axis-keymap-import:hover { border-color: #77520a; background: #fff1c9; }
+html[data-theme='day'] .axis-keymap-import.loaded { border-color: #348166; background: #e7f6ef; color: #176548; }
 html[data-theme='day'] .axis-preview { background-color: #edf3f4; background-image: linear-gradient(rgba(53,78,86,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(53,78,86,.08) 1px, transparent 1px); }
 html[data-theme='day'] .axis-flow { border-color: #b7c6ca; background: rgba(255,255,255,.92); }
 html[data-theme='day'] .axis-step { border-color: color-mix(in srgb, var(--role-color), #455d65 24%); background: color-mix(in srgb, var(--role-color), #ffffff 84%); }

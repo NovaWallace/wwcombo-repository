@@ -65,6 +65,13 @@ function labelRemainder(value) {
   let index = 0;
   let remainder = '';
   while (index < text.length) {
+    if (text[index] === '[') {
+      const closingIndex = text.indexOf(']', index + 1);
+      if (closingIndex >= 0) {
+        index = closingIndex + 1;
+        continue;
+      }
+    }
     const trigger = ICON_TRIGGERS.find((item) => text.startsWith(item, index));
     if (trigger) index += trigger.length;
     else {
@@ -179,6 +186,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const withdrawalsFile = path.join(root, 'withdrawals.json');
   const whitelistFile = path.join(root, 'whitelist.json');
   const downloadsFile = path.join(root, 'downloads.json');
+  const engagementFile = path.join(root, 'engagement.json');
   const smtpFile = path.join(root, 'smtp.json');
   const hiddenFile = path.join(root, 'hidden.json');
   let downloadWrite = Promise.resolve();
@@ -438,6 +446,61 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     return operation;
   }
 
+  async function recordDownload(comboId, voterId) {
+    const operation = downloadWrite.then(async () => {
+      const [counts, engagement] = await Promise.all([
+        readJson(downloadsFile, {}),
+        readJson(engagementFile, { counts: {}, downloads: {}, votes: {} })
+      ]);
+      const normalizedCounts = record(counts);
+      normalizedCounts[comboId] = Math.max(0, Number(normalizedCounts[comboId] || 0)) + 1;
+      engagement.counts = record(engagement.counts);
+      engagement.downloads = record(engagement.downloads);
+      engagement.votes = record(engagement.votes);
+      if (voterId) engagement.downloads[voterId] = { ...record(engagement.downloads[voterId]), [comboId]: Date.now() };
+      await Promise.all([writeJson(downloadsFile, normalizedCounts), writeJson(engagementFile, engagement)]);
+      return normalizedCounts[comboId];
+    });
+    downloadWrite = operation.catch(() => {});
+    return operation;
+  }
+
+  async function publicEngagement(voterId = '') {
+    const engagement = await readJson(engagementFile, { counts: {}, downloads: {}, votes: {} });
+    const counts = record(engagement.counts);
+    const downloaded = record(record(engagement.downloads)[voterId]);
+    const voterVotes = record(record(engagement.votes)[voterId]);
+    return { counts, downloaded, voterVotes };
+  }
+
+  async function castVote(comboId, voterId, vote) {
+    if (!comboId || !voterId || !['up', 'down'].includes(vote)) throw new Error('评价参数不正确。');
+    return serializeMutation(async () => {
+      const engagement = await readJson(engagementFile, { counts: {}, downloads: {}, votes: {} });
+      engagement.counts = record(engagement.counts);
+      engagement.downloads = record(engagement.downloads);
+      engagement.votes = record(engagement.votes);
+      if (!record(engagement.downloads[voterId])[comboId]) {
+        const error = new Error('请先下载该连段，再进行评价。');
+        error.statusCode = 403;
+        throw error;
+      }
+      const voterVotes = record(engagement.votes[voterId]);
+      if (voterVotes[comboId]) {
+        const error = new Error('你已经评价过这个连段。');
+        error.statusCode = 409;
+        throw error;
+      }
+      const current = record(engagement.counts[comboId]);
+      const next = { up: Math.max(0, Number(current.up || 0)), down: Math.max(0, Number(current.down || 0)) };
+      next[vote] += 1;
+      engagement.counts[comboId] = next;
+      engagement.votes[voterId] = { ...voterVotes, [comboId]: vote };
+      await writeJson(engagementFile, engagement);
+      return { votes: next, viewerVote: vote, canVote: false };
+    });
+  }
+
   async function status() {
     const [queue, published, withdrawals, emails, smtp, downloads, hidden] = await Promise.all([
       readJson(queueFile, { pending: [], history: [] }),
@@ -470,6 +533,9 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     setSmtp: (...args) => serializeMutation(() => setSmtp(...args)),
     testSmtp,
     incrementDownload,
+    recordDownload,
+    publicEngagement,
+    castVote,
     status
   };
 }

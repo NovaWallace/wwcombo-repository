@@ -19,6 +19,7 @@ const TRUST_PROXY = process.env.WWCOMBO_TRUST_PROXY === '1';
 const SESSION_SECONDS = 12 * 60 * 60;
 const LOGIN_WINDOW_MS = 60 * 1000;
 const MAX_LOGIN_FAILURES = 5;
+const VOTER_COOKIE_SECONDS = 2 * 365 * 24 * 60 * 60;
 const PUBLIC_ROOT_FILES = new Set(['/index.html', '/app.js', '/i18n.js', '/styles.css', '/site.webmanifest', '/build-info.json']);
 const CONTENT_TYPES = new Map([
   ['.html', 'text/html; charset=utf-8'],
@@ -243,6 +244,26 @@ function sessionCookie(req, token, maxAge) {
   return `wwcombo_admin=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure ? '; Secure' : ''}`;
 }
 
+function createVoterIdentity() {
+  const id = randomBytes(18).toString('base64url');
+  return { id, token: `${id}.${signature(`voter.${id}`)}` };
+}
+
+function readVoterIdentity(req) {
+  const [id, suppliedSignature, ...extra] = (cookieMap(req).get('wwcombo_voter') || '').split('.');
+  if (!id || !suppliedSignature || extra.length) return null;
+  const expectedSignature = signature(`voter.${id}`);
+  const supplied = Buffer.from(suppliedSignature);
+  const expected = Buffer.from(expectedSignature);
+  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return null;
+  return { id, token: `${id}.${suppliedSignature}` };
+}
+
+function voterCookie(req, token) {
+  const secure = Boolean(req.socket.encrypted) || (TRUST_PROXY && req.headers['x-forwarded-proto'] === 'https');
+  return `wwcombo_voter=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${VOTER_COOKIE_SECONDS}${secure ? '; Secure' : ''}`;
+}
+
 function verifyPassword(password) {
   const actual = scryptSync(String(password), config.admin.salt, 64);
   const expected = Buffer.from(config.admin.hash, 'hex');
@@ -284,7 +305,7 @@ function requireSession(req, res, requireCsrf = false) {
 async function publicStatus(session) {
   let currentIndex = { charts: [] };
   try {
-    currentIndex = JSON.parse((await readFile(path.join(PUBLIC_ROOT, 'community-index.json'), 'utf8')).replace(/^\ufeff/, ''));
+    currentIndex = await publicIndex();
   } catch {}
   return {
     authenticated: true,
@@ -511,13 +532,23 @@ function acceptSubmissionFrom(address) {
   return true;
 }
 
-async function publicIndex() {
+async function publicIndex(voterId = '') {
   const index = JSON.parse((await readFile(path.join(PUBLIC_ROOT, 'community-index.json'), 'utf8')).replace(/^\ufeff/, ''));
-  const downloads = (await community.status()).downloads;
+  const [downloads, engagement] = await Promise.all([
+    community.status().then((value) => value.downloads),
+    community.publicEngagement(voterId)
+  ]);
   index.charts = index.charts.map((chart) => ({
     ...chart,
+    tags: [...new Set((Array.isArray(chart.tags) ? chart.tags : []).map((tag) => tag === '全局' ? '错轮' : tag))],
     downloadCount: Math.max(0, Number(downloads[chart.id] || 0)),
-    downloadUrl: `/api/community/download/${encodeURIComponent(chart.id)}`
+    downloadUrl: `/api/community/download/${encodeURIComponent(chart.id)}`,
+    votes: {
+      up: Math.max(0, Number(engagement.counts[chart.id]?.up || 0)),
+      down: Math.max(0, Number(engagement.counts[chart.id]?.down || 0))
+    },
+    viewerVote: engagement.voterVotes[chart.id] || '',
+    canVote: Boolean(engagement.downloaded[chart.id] && !engagement.voterVotes[chart.id])
   }));
   return index;
 }
@@ -534,14 +565,34 @@ async function handleCommunityApi(req, res, pathname) {
     sendJson(res, 202, await community.requestWithdrawal(await readJsonBody(req)));
     return;
   }
+  if (req.method === 'POST' && pathname === '/api/community/vote') {
+    const voter = readVoterIdentity(req);
+    if (!voter) return sendJson(res, 403, { error: '请先下载该连段，再进行评价。' });
+    const body = await readJsonBody(req, 4 * 1024);
+    try {
+      sendJson(res, 200, await community.castVote(String(body.comboId || '').trim(), voter.id, body.vote));
+    } catch (error) {
+      sendJson(res, Number(error.statusCode || 400), { error: error.message || String(error) });
+    }
+    return;
+  }
   const match = /^\/api\/community\/download\/([^/]+)$/.exec(pathname);
   if ((req.method === 'GET' || req.method === 'HEAD') && match) {
     const comboId = decodeURIComponent(match[1]);
     const index = await publicIndex();
     const chart = index.charts.find((item) => item.id === comboId);
     if (!chart || !String(chart.url || '').startsWith('/data/')) return sendText(res, 404, 'Not found');
-    if (req.method === 'GET') await community.incrementDownload(comboId);
-    await serveFile(req, res, PUBLIC_ROOT, String(chart.url).slice(1));
+    const relativeChartPath = decodeURIComponent(String(chart.url).slice(1));
+    const chartFile = safeTarget(PUBLIC_ROOT, relativeChartPath);
+    if (!chartFile || !(await stat(chartFile).catch(() => null))?.isFile()) return sendText(res, 404, 'Not found');
+    let identity = readVoterIdentity(req);
+    if (req.method === 'GET') {
+      identity ||= createVoterIdentity();
+      await community.recordDownload(comboId, identity.id);
+    }
+    await serveFile(req, res, PUBLIC_ROOT, relativeChartPath, {
+      headers: identity ? { 'set-cookie': voterCookie(req, identity.token) } : {}
+    });
     return;
   }
   sendJson(res, 404, { error: 'Not found' });
@@ -612,7 +663,7 @@ const server = createServer(async (req, res) => {
       await serveFile(req, res, path.join(PUBLIC_ROOT, '.admin'), 'index.html', { cacheControl: 'no-store' });
       return;
     }
-    if (pathname === '/admin/styles.css' || pathname === '/admin/app.js') {
+    if (/^\/admin\/[a-z0-9-]+\.(?:css|js)$/i.test(pathname)) {
       await serveFile(req, res, path.join(PUBLIC_ROOT, '.admin'), pathname.slice('/admin/'.length), { cacheControl: 'no-store' });
       return;
     }
@@ -621,7 +672,7 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (pathname === '/community-index.json') {
-      sendJson(res, 200, await publicIndex());
+      sendJson(res, 200, await publicIndex(readVoterIdentity(req)?.id || ''));
       return;
     }
     if (PUBLIC_ROOT_FILES.has(pathname)) {

@@ -2,6 +2,7 @@ const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/icons/chara
 const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
 const UNKNOWN_CHARACTER_ICON = './assets/unknown-character.jpg';
 const PROFILE_STORAGE_KEY = 'wwcombo-community-profile-v1';
+const AXIS_KEY_SETTINGS_STORAGE_KEY = 'wwcombo-community-axis-key-settings-v1';
 const i18n = window.wwcomboI18n;
 if (!i18n) throw new Error('Community i18n runtime is unavailable.');
 const t = (key, values) => i18n.t(key, values);
@@ -170,6 +171,66 @@ function gamepadIconSource(code, iconSet) {
   return gamepadSvgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} 128">${glyphs}${plus}</svg>`);
 }
 
+function keyboardCodeLabel(code) {
+  const labels = {
+    MouseLeft: 'LMB', MouseRight: 'RMB', MouseMiddle: 'MMB', Space: 'Space',
+    ShiftLeft: 'Shift', ShiftRight: 'Shift', ControlLeft: 'Ctrl', ControlRight: 'Ctrl',
+    AltLeft: 'Alt', AltRight: 'Alt', Escape: 'Esc', Enter: 'Enter', Tab: 'Tab'
+  };
+  if (labels[code]) return labels[code];
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+  return code.replace(/^(Numpad|Arrow)/, '');
+}
+
+function keyboardMouseIconSource(code) {
+  const parts = String(code || '').split('+').map((source) => {
+    const hold = source.endsWith('Hold');
+    const core = hold ? source.slice(0, -4) : source;
+    return { label: keyboardCodeLabel(core), hold };
+  }).filter((part) => part.label);
+  if (!parts.length || parts.length > 2) return undefined;
+  const width = parts.length > 1 ? 236 : 128;
+  const keyWidth = parts.length > 1 ? 94 : 104;
+  const keys = parts.map((part, index) => {
+    const x = parts.length > 1 ? 3 + index * 136 : 12;
+    const fontSize = part.label.length > 5 ? 22 : part.label.length > 3 ? 28 : 38;
+    const marker = part.hold ? `<rect x="${x + 4}" y="7" width="${keyWidth - 8}" height="114" rx="18" fill="none" stroke="#ffd43b" stroke-width="6" stroke-dasharray="46 14"/>` : '';
+    return `<rect x="${x}" y="12" width="${keyWidth}" height="104" rx="18" fill="#252a2e" stroke="#fff" stroke-width="7"/><text x="${x + keyWidth / 2}" y="76" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="${fontSize}" font-weight="900" fill="#fff">${part.label.replaceAll('&', '&amp;').replaceAll('<', '&lt;')}</text>${marker}`;
+  }).join('');
+  const plus = parts.length > 1 ? '<path d="M118 49V79M103 64H133" stroke="#fff" stroke-width="8" stroke-linecap="round"/>' : '';
+  return gamepadSvgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} 128">${keys}${plus}</svg>`);
+}
+
+function normalizeAxisKeySettings(value) {
+  if (!value || typeof value !== 'object' || value.kind !== 'wwcombo-input-settings' || ![1, 2].includes(value.schemaVersion)) throw new Error('invalid-key-settings');
+  if (!Array.isArray(value.keyboardMouseBindings) || !Array.isArray(value.gamepadBindings)) throw new Error('invalid-key-settings');
+  const normalizeBindings = (items) => items.flatMap((item) => {
+    if (!item || typeof item.moveId !== 'string' || !Array.isArray(item.inputs)) return [];
+    const inputs = item.inputs.flatMap((input) => input && typeof input.code === 'string' && input.code.trim() ? [{ code: input.code.trim(), label: String(input.label || input.code).trim() }] : []);
+    return inputs.length ? [{ moveId: item.moveId.trim(), inputs }] : [];
+  });
+  return {
+    kind: 'wwcombo-input-settings', schemaVersion: value.schemaVersion,
+    keyboardMouseBindings: normalizeBindings(value.keyboardMouseBindings),
+    gamepadBindings: normalizeBindings(value.gamepadBindings),
+    preferences: {
+      inputMode: value.preferences?.inputMode === 'gamepad' ? 'gamepad' : 'keyboard',
+      gamepadIconSet: value.preferences?.gamepadIconSet === 'playstation' ? 'playstation' : 'xbox'
+    }
+  };
+}
+
+function savedAxisKeySettings() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(AXIS_KEY_SETTINGS_STORAGE_KEY) || 'null');
+    if (!stored?.settings) return { settings: null, fileName: '' };
+    return { settings: normalizeAxisKeySettings(stored.settings), fileName: String(stored.fileName || '') };
+  } catch {
+    return { settings: null, fileName: '' };
+  }
+}
+
 function savedHeroMotionEnabled() {
   try {
     return localStorage.getItem('wwcombo-hero-motion') === 'enabled';
@@ -178,6 +239,7 @@ function savedHeroMotionEnabled() {
   }
 }
 
+const savedKeys = savedAxisKeySettings();
 const state = {
   charts: [],
   theme: document.documentElement.dataset.theme === 'day' ? 'day' : 'night',
@@ -197,8 +259,11 @@ const state = {
   uploadPackage: null,
   axisIconSet: 'english',
   axisScale: 1,
+  axisKeySettings: savedKeys.settings,
+  axisKeySettingsFile: savedKeys.fileName,
   chartPackages: new Map()
 };
+if (state.axisKeySettings?.preferences.inputMode === 'gamepad') state.axisIconSet = state.axisKeySettings.preferences.gamepadIconSet;
 
 function savedProfile() {
   try {
@@ -285,11 +350,16 @@ const els = {
   detailSourceLink: document.getElementById('detailSourceLink'),
   detailDownload: document.getElementById('detailDownload'),
   detailWithdraw: document.getElementById('detailWithdraw'),
+  detailUpvote: document.getElementById('detailUpvote'),
+  detailDownvote: document.getElementById('detailDownvote'),
+  detailVoteHint: document.getElementById('detailVoteHint'),
   axisIconSetButtons: [...document.querySelectorAll('[data-icon-set]')],
   axisZoom: document.getElementById('axisZoom'),
   axisZoomValue: document.getElementById('axisZoomValue'),
   axisZoomControls: [...document.querySelectorAll('[data-axis-zoom]')],
   axisZoomValues: [...document.querySelectorAll('[data-axis-zoom-value]')],
+  axisKeymapButtons: [...document.querySelectorAll('[data-axis-keymap-import]')],
+  axisKeymapInput: document.getElementById('axisKeymapInput'),
   axisPreview: document.getElementById('axisPreview'),
   axisPreviewSummary: document.getElementById('axisPreviewSummary')
 };
@@ -393,7 +463,7 @@ function uploadedIndexChart(pack, fileName = '') {
     title: community.name || community.title || chart?.title || fileName || t('upload.previewTitle'),
     characters,
     character: characters[0] || chart?.character || '',
-    tags: (Array.isArray(community.tags) ? community.tags : chart?.tags || []).filter(Boolean),
+    tags: normalizedTags(Array.isArray(community.tags) ? community.tags : chart?.tags || []),
     rounds: Number(community.rounds || 1)
   };
 }
@@ -607,6 +677,10 @@ function uniqueSorted(values) {
   return [...new Set(values.filter(Boolean))].sort(collator.compare);
 }
 
+function normalizedTags(values) {
+  return [...new Set((Array.isArray(values) ? values : []).filter(Boolean).map((tag) => tag === '全局' ? '错轮' : tag))];
+}
+
 function chartCharacters(chart) {
   if (Array.isArray(chart.characters) && chart.characters.length) return chart.characters.filter(Boolean);
   return String(chart.character || '').split('/').map((item) => item.trim()).filter(Boolean);
@@ -707,6 +781,9 @@ async function downloadChart(event, chart) {
     anchor.click();
     anchor.remove();
     setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    chart.canVote = true;
+    renderVoteControls(chart);
+    render();
   } catch {
     location.href = url;
   } finally {
@@ -870,6 +947,7 @@ function renderCard(chart) {
   card.querySelector('.duration').textContent = formatDuration(chart.durationMs);
   card.querySelector('.steps').textContent = t('unit.actions', { count: Number(chart.stepCount || 0) });
   card.querySelector('.updated').textContent = formatDate(chart.updatedAt);
+  card.querySelector('.votes').textContent = t('vote.summary', { up: Number(chart.votes?.up || 0), down: Number(chart.votes?.down || 0) });
   card.querySelector('.submitter-name').textContent = submitter.nickname;
   card.querySelector('.submitter-email').textContent = submitter.email;
   const submitterAvatar = card.querySelector('.submitter-avatar');
@@ -933,6 +1011,40 @@ function renderDetailTags(chart) {
   }
 }
 
+function renderVoteControls(chart) {
+  const vote = chart.viewerVote === 'up' || chart.viewerVote === 'down' ? chart.viewerVote : '';
+  const canVote = chart.canVote === true && !vote;
+  els.detailUpvote.querySelector('[data-vote-count]').textContent = String(Number(chart.votes?.up || 0));
+  els.detailDownvote.querySelector('[data-vote-count]').textContent = String(Number(chart.votes?.down || 0));
+  els.detailUpvote.classList.toggle('selected', vote === 'up');
+  els.detailDownvote.classList.toggle('selected', vote === 'down');
+  els.detailUpvote.disabled = !canVote;
+  els.detailDownvote.disabled = !canVote;
+  els.detailVoteHint.textContent = t(vote ? 'vote.done' : canVote ? 'vote.ready' : 'vote.downloadRequired');
+}
+
+async function castVote(chart, vote) {
+  if (!chart?.id || !['up', 'down'].includes(vote) || chart.viewerVote) return;
+  els.detailUpvote.disabled = true;
+  els.detailDownvote.disabled = true;
+  try {
+    const response = await fetch('/api/community/vote', {
+      method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ comboId: chart.id, vote })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+    chart.votes = body.votes;
+    chart.viewerVote = body.viewerVote;
+    chart.canVote = false;
+    renderVoteControls(chart);
+    render();
+  } catch (error) {
+    renderVoteControls(chart);
+    alert(t('vote.failed', { error: error.message }));
+  }
+}
+
 function axisPeriodLabel(period, loopCount) {
   const source = String(period.label || '').trim();
   if (period.kind === 'startup_axis') return source && source !== '启动轴' && source !== '完整连段' ? source : t(source === '完整连段' ? 'axis.full' : 'axis.startup');
@@ -943,6 +1055,23 @@ function axisPeriodLabel(period, loopCount) {
 function axisStepLabel(step, labels) {
   const custom = String(labels[step.id] || '').trim();
   return custom || DEFAULT_MOVE_LABELS[step.moveId] || String(step.label || step.moveId || t('meta.actions'));
+}
+
+function axisBindingCode(moveId, mode) {
+  const source = mode === 'gamepad' ? state.axisKeySettings?.gamepadBindings : state.axisKeySettings?.keyboardMouseBindings;
+  return source?.find((binding) => binding.moveId === moveId)?.inputs.find((input) => input.code)?.code || '';
+}
+
+function axisStepDisplay(step, labels) {
+  const label = axisStepLabel(step, labels);
+  const custom = String(labels[step.id] || '').trim();
+  if (!state.axisKeySettings || custom || state.axisIconSet === 'graphic') return { label, iconSrc: '', wide: false };
+  if (state.axisIconSet === 'english') {
+    const code = axisBindingCode(step.moveId, 'keyboard');
+    return { label, iconSrc: code ? keyboardMouseIconSource(code) || '' : '', wide: code.includes('+') };
+  }
+  const code = axisBindingCode(step.moveId, 'gamepad');
+  return { label, iconSrc: code ? gamepadIconSource(code, state.axisIconSet) || '' : '', wide: code.includes('+') };
 }
 
 function axisIconParts(value) {
@@ -956,6 +1085,16 @@ function axisIconParts(value) {
     buffer = '';
   };
   while (index < text.length) {
+    if (text[index] === '[') {
+      const closingIndex = text.indexOf(']', index + 1);
+      if (closingIndex >= 0) {
+        pushText();
+        const literalText = text.slice(index + 1, closingIndex);
+        if (literalText) parts.push({ kind: 'text', value: literalText });
+        index = closingIndex + 1;
+        continue;
+      }
+    }
     const match = AXIS_ICON_TRIGGERS.find(({ trigger }) => text.startsWith(trigger, index));
     if (!match) {
       buffer += text[index];
@@ -985,8 +1124,9 @@ function groupAxisSteps(steps) {
   return groups;
 }
 
-function estimateAxisActionWidth(value) {
-  const parts = axisIconParts(value);
+function estimateAxisActionWidth(display) {
+  if (display.iconSrc) return display.wide ? 49 : AXIS_ICON_SIZE;
+  const parts = axisIconParts(display.label);
   const contentWidth = parts.reduce((width, part) => {
     if (part.kind === 'icon') {
       const wideGamepadIcon = ['xbox', 'playstation'].includes(state.axisIconSet) && part.mapping.gamepadCode?.includes('+');
@@ -1009,7 +1149,7 @@ function splitAxisMoveGroups(groups, labels, target = els.axisPreview) {
     let chunk = { slot: group.slot, steps: [], showAvatar: true };
     let width = (20 + AXIS_AVATAR_SIZE + 8) * scale;
     for (const step of group.steps) {
-      const actionWidth = estimateAxisActionWidth(axisStepLabel(step, labels)) * scale;
+      const actionWidth = estimateAxisActionWidth(axisStepDisplay(step, labels)) * scale;
       const nextWidth = width + (chunk.steps.length ? 5 * scale : 0) + actionWidth;
       if (chunk.steps.length && nextWidth > maxWidth) {
         chunks.push(chunk);
@@ -1024,10 +1164,20 @@ function splitAxisMoveGroups(groups, labels, target = els.axisPreview) {
   return chunks;
 }
 
-function axisActionContent(value) {
+function axisActionContent(display) {
   const action = document.createElement('span');
   action.className = 'axis-action';
-  for (const part of axisIconParts(value)) {
+  if (display.iconSrc) {
+    const icon = document.createElement('img');
+    icon.className = 'axis-action-icon';
+    if (display.wide) icon.classList.add('is-wide');
+    icon.src = display.iconSrc;
+    icon.alt = display.label;
+    icon.title = display.label;
+    action.appendChild(icon);
+    return action;
+  }
+  for (const part of axisIconParts(display.label)) {
     if (part.kind === 'text') {
       const text = document.createElement('span');
       text.textContent = part.value;
@@ -1052,6 +1202,35 @@ function renderAxisIconSet() {
     const active = button.dataset.iconSet === state.axisIconSet;
     button.classList.toggle('active', active);
     button.setAttribute('aria-pressed', String(active));
+  }
+}
+
+function renderAxisKeymapButtons() {
+  for (const button of els.axisKeymapButtons) {
+    button.classList.toggle('loaded', Boolean(state.axisKeySettings));
+    button.title = state.axisKeySettings
+      ? t('axis.keysImported', { file: state.axisKeySettingsFile || 'wwcombo-input-settings' })
+      : t('axis.importKeys');
+  }
+}
+
+async function importAxisKeySettings(file) {
+  if (!file) return;
+  try {
+    const value = JSON.parse((await file.text()).replace(/^\uFEFF/, ''));
+    state.axisKeySettings = normalizeAxisKeySettings(value);
+    state.axisKeySettingsFile = file.name;
+    if (state.axisKeySettings.preferences.inputMode === 'gamepad') state.axisIconSet = state.axisKeySettings.preferences.gamepadIconSet;
+    else state.axisIconSet = 'english';
+    try { localStorage.setItem(AXIS_KEY_SETTINGS_STORAGE_KEY, JSON.stringify({ settings: state.axisKeySettings, fileName: file.name })); } catch {}
+    renderAxisIconSet();
+    renderAxisKeymapButtons();
+    renderActiveAxisPreviews();
+    alert(t('axis.keysImported', { file: file.name }));
+  } catch {
+    alert(t('axis.keysInvalid'));
+  } finally {
+    els.axisKeymapInput.value = '';
   }
 }
 
@@ -1124,13 +1303,14 @@ function renderAxisPreview(pack, indexChart, targets = {}) {
       chip.style.setProperty('--role-color', ROLE_COLORS[slot - 1]);
       const firstStep = moveGroup.steps[0];
       const lastStep = moveGroup.steps[moveGroup.steps.length - 1];
-      const actionLabels = moveGroup.steps.map((step) => axisStepLabel(step, labels));
+      const actionDisplays = moveGroup.steps.map((step) => axisStepDisplay(step, labels));
+      const actionLabels = actionDisplays.map((display) => display.label);
       chip.title = `${character} · ${actionLabels.join('')} · ${formatDuration(firstStep.startMin)} - ${formatDuration(lastStep.startMin)}`;
       if (moveGroup.showAvatar) chip.appendChild(avatarElement(character));
       const content = document.createElement('div');
       content.className = 'axis-move-content';
       content.setAttribute('aria-label', actionLabels.join(''));
-      for (const actionLabel of actionLabels) content.appendChild(axisActionContent(actionLabel));
+      for (const display of actionDisplays) content.appendChild(axisActionContent(display));
       chip.appendChild(content);
       flow.appendChild(chip);
     }
@@ -1219,6 +1399,9 @@ async function openDetails(chart) {
   els.detailDownload.download = filenameFor(chart);
   els.detailDownload.onclick = (event) => downloadChart(event, chart);
   els.detailWithdraw.onclick = () => requestWithdrawal(chart);
+  els.detailUpvote.onclick = () => { void castVote(chart, 'up'); };
+  els.detailDownvote.onclick = () => { void castVote(chart, 'down'); };
+  renderVoteControls(chart);
   els.axisPreviewSummary.textContent = t('axis.loading');
   els.axisPreview.innerHTML = '<div class="axis-loading"><span></span><span></span><span></span></div>';
   els.detailBackdrop.hidden = false;
@@ -1299,6 +1482,7 @@ function refreshLocalizedView() {
   renderProfile();
   renderFilters();
   render();
+  renderAxisKeymapButtons();
   if (!els.characterPickerBackdrop.hidden) {
     setCharacterHint(false);
     renderCharacterPicker();
@@ -1349,7 +1533,7 @@ async function loadIndex() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (data.type !== 'wwcombo-community-index' || !Array.isArray(data.charts)) throw new Error(t('status.invalidIndex'));
-    state.charts = data.charts;
+    state.charts = data.charts.map((chart) => ({ ...chart, tags: normalizedTags(chart.tags) }));
     state.gameVersion = /^\d+\.\d+$/.test(String(data.gameVersion || '')) ? String(data.gameVersion) : '3.5';
     state.indexUpdatedAt = Number(data.updatedAt || 0);
     state.indexLoadState = 'ready';
@@ -1408,6 +1592,8 @@ for (const button of els.axisIconSetButtons) {
     renderActiveAxisPreviews();
   });
 }
+for (const button of els.axisKeymapButtons) button.addEventListener('click', () => els.axisKeymapInput.click());
+els.axisKeymapInput.addEventListener('change', () => { void importAxisKeySettings(els.axisKeymapInput.files?.[0]); });
 for (const input of els.axisZoomControls) {
   input.addEventListener('input', () => {
     state.axisScale = Math.max(0.8, Math.min(1.8, Number(input.value || 100) / 100));
@@ -1476,6 +1662,7 @@ els.uploadForm?.addEventListener('submit', submitCombo);
 updateThemeControl();
 updateMotionControl();
 renderProfile();
+renderAxisKeymapButtons();
 els.languageSelect.value = i18n.language;
 window.lucide?.createIcons();
 initHeroSpine();
