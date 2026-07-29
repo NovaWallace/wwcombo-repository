@@ -1,7 +1,7 @@
 const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/icons/character';
 const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
 const UNKNOWN_CHARACTER_ICON = './assets/unknown-character.jpg';
-const SUBMISSION_EMAIL = '2728756958@qq.com';
+const PROFILE_STORAGE_KEY = 'wwcombo-community-profile-v1';
 const i18n = window.wwcomboI18n;
 if (!i18n) throw new Error('Community i18n runtime is unavailable.');
 const t = (key, values) => i18n.t(key, values);
@@ -198,12 +198,46 @@ const state = {
   chartPackages: new Map()
 };
 
+function savedProfile() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY) || '{}');
+    return { username: String(value.username || '').trim().slice(0, 40), email: String(value.email || '').trim().toLowerCase().slice(0, 254) };
+  } catch {
+    return { username: '', email: '' };
+  }
+}
+
+state.profile = savedProfile();
+
 const els = {
   languageSelect: document.getElementById('languageSelect'),
   motionToggle: document.getElementById('motionToggle'),
   themeToggle: document.getElementById('themeToggle'),
   submissionButton: document.getElementById('submissionButton'),
   submissionButtonLabel: document.getElementById('submissionButtonLabel'),
+  profileButton: document.getElementById('profileButton'),
+  profileAvatar: document.getElementById('profileAvatar'),
+  profileName: document.getElementById('profileName'),
+  profileEmail: document.getElementById('profileEmail'),
+  profileBackdrop: document.getElementById('profileBackdrop'),
+  profileForm: document.getElementById('profileForm'),
+  profileUsernameInput: document.getElementById('profileUsernameInput'),
+  profileEmailInput: document.getElementById('profileEmailInput'),
+  profileFeedback: document.getElementById('profileFeedback'),
+  closeProfile: document.getElementById('closeProfileBtn'),
+  clearProfile: document.getElementById('clearProfileBtn'),
+  uploadBackdrop: document.getElementById('uploadBackdrop'),
+  uploadForm: document.getElementById('uploadForm'),
+  closeUpload: document.getElementById('closeUploadBtn'),
+  cancelUpload: document.getElementById('cancelUploadBtn'),
+  editUploadProfile: document.getElementById('editUploadProfileBtn'),
+  uploadAvatar: document.getElementById('uploadAvatar'),
+  uploadUsername: document.getElementById('uploadUsername'),
+  uploadEmail: document.getElementById('uploadEmail'),
+  comboFile: document.getElementById('comboFileInput'),
+  comboFileName: document.getElementById('comboFileName'),
+  uploadFeedback: document.getElementById('uploadFeedback'),
+  confirmUpload: document.getElementById('confirmUploadBtn'),
   form: document.getElementById('searchForm'),
   title: document.getElementById('titleInput'),
   clearTitle: document.getElementById('clearSearchBtn'),
@@ -241,6 +275,7 @@ const els = {
   detailSubmitter: document.getElementById('detailSubmitter'),
   detailSourceLink: document.getElementById('detailSourceLink'),
   detailDownload: document.getElementById('detailDownload'),
+  detailWithdraw: document.getElementById('detailWithdraw'),
   axisIconSetButtons: [...document.querySelectorAll('[data-icon-set]')],
   axisZoom: document.getElementById('axisZoom'),
   axisZoomValue: document.getElementById('axisZoomValue'),
@@ -253,41 +288,89 @@ const params = new URLSearchParams(location.search);
 const isLocalPreview = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
 const sourceUrl = params.get('source') || (isLocalPreview ? './demo-index.json' : './community-index.json');
 
-async function copySubmissionEmail() {
-  let copied = false;
+function maskProfileEmail(value) {
+  const email = String(value || '').trim().toLowerCase();
+  const at = email.lastIndexOf('@');
+  if (at < 1) return '';
+  return `${Array.from(email.slice(0, at)).slice(0, 2).join('')}***${email.slice(at)}`;
+}
+
+function profileInitial() {
+  return Array.from(state.profile.username || '?')[0]?.toUpperCase() || '?';
+}
+
+function renderProfile() {
+  const ready = Boolean(state.profile.username && state.profile.email);
+  els.profileAvatar.textContent = profileInitial();
+  els.profileName.textContent = ready ? state.profile.username : t('profile.guest');
+  els.profileEmail.textContent = ready ? maskProfileEmail(state.profile.email) : '';
+  els.uploadAvatar.textContent = profileInitial();
+  els.uploadUsername.textContent = ready ? state.profile.username : t('profile.guest');
+  els.uploadEmail.textContent = ready ? maskProfileEmail(state.profile.email) : t('profile.missing');
+}
+
+function openProfile() {
+  els.profileUsernameInput.value = state.profile.username;
+  els.profileEmailInput.value = state.profile.email;
+  els.profileFeedback.textContent = '';
+  els.profileBackdrop.hidden = false;
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => els.profileUsernameInput.focus());
+}
+
+function closeProfile() {
+  els.profileBackdrop.hidden = true;
+  if (els.uploadBackdrop.hidden && els.detailBackdrop.hidden && els.characterPickerBackdrop.hidden) document.body.style.overflow = '';
+}
+
+function openUpload() {
+  if (!state.profile.username || !state.profile.email) {
+    openProfile();
+    els.profileFeedback.textContent = t('profile.required');
+    return;
+  }
+  renderProfile();
+  els.comboFile.value = '';
+  els.comboFileName.textContent = t('upload.none');
+  els.uploadFeedback.textContent = '';
+  els.uploadFeedback.className = 'form-feedback';
+  els.uploadBackdrop.hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+
+function closeUpload() {
+  els.uploadBackdrop.hidden = true;
+  if (els.profileBackdrop.hidden && els.detailBackdrop.hidden && els.characterPickerBackdrop.hidden) document.body.style.overflow = '';
+}
+
+async function submitCombo(event) {
+  event.preventDefault();
+  const file = els.comboFile.files?.[0];
+  if (!file) return;
+  if (file.size > 1024 * 1024) {
+    els.uploadFeedback.textContent = t('upload.tooLarge');
+    return;
+  }
+  els.confirmUpload.disabled = true;
+  els.uploadFeedback.textContent = t('upload.sending');
   try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(SUBMISSION_EMAIL);
-      copied = true;
-    }
-  } catch {
-    copied = false;
+    const content = JSON.parse(await file.text());
+    const response = await fetch('/api/community/submit', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: state.profile.username, email: state.profile.email, fileName: file.name, content })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+    els.uploadFeedback.textContent = t('upload.success');
+    els.uploadFeedback.className = 'form-feedback success';
+    els.comboFile.value = '';
+    els.comboFileName.textContent = t('upload.none');
+  } catch (error) {
+    els.uploadFeedback.textContent = error instanceof SyntaxError ? t('upload.invalidJson') : error.message;
+  } finally {
+    els.confirmUpload.disabled = false;
   }
-
-  if (!copied) {
-    try {
-      const input = document.createElement('textarea');
-      input.value = SUBMISSION_EMAIL;
-      input.setAttribute('readonly', '');
-      input.style.position = 'fixed';
-      input.style.opacity = '0';
-      document.body.append(input);
-      input.select();
-      copied = document.execCommand('copy');
-      input.remove();
-    } catch {
-      copied = false;
-    }
-  }
-
-  if (!els.submissionButton || !els.submissionButtonLabel) return;
-  els.submissionButton.classList.toggle('is-copied', copied);
-  els.submissionButtonLabel.textContent = copied ? t('submission.copied') : t('submission.copyFailed');
-  clearTimeout(copySubmissionEmail.feedbackTimer);
-  copySubmissionEmail.feedbackTimer = setTimeout(() => {
-    els.submissionButton.classList.remove('is-copied');
-    els.submissionButtonLabel.textContent = t('submission.button');
-  }, 1800);
 }
 
 let heroSpinePlayer = null;
@@ -468,7 +551,8 @@ function submitterFor(chart) {
   const email = String(chart.submitter?.email || '').trim();
   return {
     nickname: nickname || t('submitter.historical'),
-    email: email || t('submitter.noEmail')
+    email: email || t('submitter.noEmail'),
+    badge: String(chart.submitter?.badge || '').toUpperCase() === 'UP' ? 'UP' : ''
   };
 }
 
@@ -499,7 +583,7 @@ function avatarElement(name, className = 'mini-avatar') {
 
 async function downloadChart(event, chart) {
   const link = event.currentTarget;
-  const url = chart.url || '';
+  const url = chart.downloadUrl || chart.url || '';
   if (!url) return;
   event.preventDefault();
   link.setAttribute('aria-busy', 'true');
@@ -655,6 +739,9 @@ function renderCard(chart) {
   card.querySelector('.updated').textContent = formatDate(chart.updatedAt);
   card.querySelector('.submitter-name').textContent = submitter.nickname;
   card.querySelector('.submitter-email').textContent = submitter.email;
+  const submitterBadge = card.querySelector('.submitter-badge');
+  submitterBadge.hidden = !submitter.badge;
+  submitterBadge.textContent = submitter.badge;
 
   const characters = chartCharacters(chart).slice(0, MAX_SELECTED_CHARACTERS);
   const characterContainer = card.querySelector('.card-characters');
@@ -928,6 +1015,34 @@ async function loadChartPackage(chart) {
   }
 }
 
+async function requestWithdrawal(chart) {
+  if (!state.profile.username || !state.profile.email) {
+    openProfile();
+    els.profileFeedback.textContent = t('profile.withdrawRequired');
+    return;
+  }
+  if (!confirm(t('withdraw.confirm', { title: chart.title || t('card.untitled') }))) return;
+  els.detailWithdraw.disabled = true;
+  try {
+    const response = await fetch('/api/community/withdraw', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ comboId: chart.id, username: state.profile.username, email: state.profile.email })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+    alert(body.status === 'withdrawn' ? t('withdraw.done') : t('withdraw.pending'));
+    if (body.status === 'withdrawn') {
+      closeDetails();
+      await loadIndex();
+    }
+  } catch (error) {
+    alert(t('withdraw.failed', { error: error.message }));
+  } finally {
+    els.detailWithdraw.disabled = false;
+  }
+}
+
 async function openDetails(chart) {
   state.detailChart = chart;
   state.detailPackage = null;
@@ -942,16 +1057,18 @@ async function openDetails(chart) {
     detailMetaRow(t('meta.actions'), t('unit.actions', { count: Number(chart.stepCount || 0) })),
     detailMetaRow(t('meta.updated'), formatDate(chart.updatedAt)),
     detailMetaRow(t('meta.uploadVersion'), chart.uploadVersion || state.gameVersion),
+    detailMetaRow(t('meta.downloads'), t('unit.downloads', { count: Number(chart.downloadCount || 0) })),
     detailMetaRow('ID', chart.id || t('common.unknown'))
   );
   els.detailDescription.textContent = chart.description || '';
   els.detailDescriptionSection.hidden = !chart.description;
-  els.detailSubmitter.textContent = `${submitter.nickname} · ${submitter.email}`;
+  els.detailSubmitter.textContent = `${submitter.nickname}${submitter.badge ? ` · ${submitter.badge}` : ''} · ${submitter.email}`;
   els.detailSourceLink.hidden = !chart.link;
   els.detailSourceLink.href = chart.link || '#';
-  els.detailDownload.href = chart.url || '#';
+  els.detailDownload.href = chart.downloadUrl || chart.url || '#';
   els.detailDownload.download = filenameFor(chart);
   els.detailDownload.onclick = (event) => downloadChart(event, chart);
+  els.detailWithdraw.onclick = () => requestWithdrawal(chart);
   els.axisPreviewSummary.textContent = t('axis.loading');
   els.axisPreview.innerHTML = '<div class="axis-loading"><span></span><span></span><span></span></div>';
   els.detailBackdrop.hidden = false;
@@ -1029,6 +1146,7 @@ function setStatus(kind, text) {
 function refreshLocalizedView() {
   updateThemeControl();
   updateMotionControl();
+  renderProfile();
   renderFilters();
   render();
   if (!els.characterPickerBackdrop.hidden) {
@@ -1146,7 +1264,9 @@ window.addEventListener('resize', () => {
 });
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
-  if (!els.detailBackdrop.hidden) closeDetails();
+  if (!els.uploadBackdrop.hidden) closeUpload();
+  else if (!els.profileBackdrop.hidden) closeProfile();
+  else if (!els.detailBackdrop.hidden) closeDetails();
   else if (!els.characterPickerBackdrop.hidden) closeCharacterPicker();
 });
 els.reset.addEventListener('click', resetFilters);
@@ -1158,12 +1278,39 @@ els.themeToggle?.addEventListener('click', () => {
 els.motionToggle?.addEventListener('click', () => {
   setHeroMotionEnabled(!state.heroMotionEnabled);
 });
-els.submissionButton?.addEventListener('click', () => {
-  void copySubmissionEmail();
+els.profileButton?.addEventListener('click', openProfile);
+els.closeProfile?.addEventListener('click', closeProfile);
+els.profileBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.profileBackdrop) closeProfile(); });
+els.profileForm?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  state.profile = { username: els.profileUsernameInput.value.trim().slice(0, 40), email: els.profileEmailInput.value.trim().toLowerCase().slice(0, 254) };
+  try { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.profile)); } catch {}
+  renderProfile();
+  els.profileFeedback.textContent = t('profile.saved');
+  els.profileFeedback.className = 'form-feedback success';
+  setTimeout(closeProfile, 500);
 });
+els.clearProfile?.addEventListener('click', () => {
+  state.profile = { username: '', email: '' };
+  try { localStorage.removeItem(PROFILE_STORAGE_KEY); } catch {}
+  els.profileUsernameInput.value = '';
+  els.profileEmailInput.value = '';
+  renderProfile();
+});
+els.submissionButton?.addEventListener('click', openUpload);
+els.closeUpload?.addEventListener('click', closeUpload);
+els.cancelUpload?.addEventListener('click', closeUpload);
+els.uploadBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.uploadBackdrop) closeUpload(); });
+els.editUploadProfile?.addEventListener('click', () => { closeUpload(); openProfile(); });
+els.comboFile?.addEventListener('change', () => {
+  els.comboFileName.textContent = els.comboFile.files?.[0]?.name || t('upload.none');
+  els.uploadFeedback.textContent = '';
+});
+els.uploadForm?.addEventListener('submit', submitCombo);
 
 updateThemeControl();
 updateMotionControl();
+renderProfile();
 els.languageSelect.value = i18n.language;
 window.lucide?.createIcons();
 initHeroSpine();
