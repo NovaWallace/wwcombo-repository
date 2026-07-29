@@ -5,6 +5,7 @@ const els = {
   serviceStatus: byId('serviceStatus'), releaseSummary: byId('releaseSummary'), releaseId: byId('releaseId'), releaseTime: byId('releaseTime'),
   chartCount: byId('chartCount'), listenAddress: byId('listenAddress'), mainCommit: byId('mainCommit'), data1Commit: byId('data1Commit'), data2Commit: byId('data2Commit'),
   updateStatus: byId('updateStatus'), output: byId('outputBox'), submissionCount: byId('submissionCount'), withdrawalCount: byId('withdrawalCount'),
+  chartManageCount: byId('chartManageCount'), chartManageList: byId('chartManageList'), chartSearch: byId('chartSearchInput'), chartCharacter: byId('chartCharacterSelect'), chartTag: byId('chartTagSelect'),
   submissionList: byId('submissionList'), withdrawalList: byId('withdrawalList'), whitelistForm: byId('whitelistForm'), whitelistEmail: byId('whitelistEmail'),
   whitelistList: byId('whitelistList'), quickWhitelist: byId('quickWhitelistBtn'), smtpForm: byId('smtpForm'), smtpHost: byId('smtpHost'),
   smtpPort: byId('smtpPort'), smtpUser: byId('smtpUser'), smtpPass: byId('smtpPass'), smtpFrom: byId('smtpFrom'), smtpTo: byId('smtpTo'),
@@ -25,7 +26,7 @@ const ICONS = [
   ['iii','iii'],['ii','ii'],['E','skill-hold'],['Q','echo-hold'],['R','liberation-hold'],['S','mouse-right-hold'],['D','mouse-right-hold'],['J','jump-hold'],['a','mouse-left'],['z','mouse-left-hold'],['e','skill'],['q','echo'],['r','liberation'],['s','mouse-right'],['d','mouse-right'],['j','jump'],['t','tool'],['b','intro'],['y','outro'],['f','finisher'],['w','forward'],['i','i']
 ].sort((left, right) => right[0].length - left[0].length);
 const CHINESE_ICON_NAMES = { i:'i.png', ii:'ii.png', iii:'iii.png', intro:'变奏.png', outro:'延奏.png', forward:'前走.png' };
-const state = { csrf:'', status:null, pollTimer:0, review:null, icons:new Map() };
+const state = { csrf:'', status:null, pollTimer:0, review:null, icons:new Map(), chartQuery:'', chartCharacter:'', chartTag:'' };
 
 async function api(url, options = {}) {
   const headers = { ...(options.headers || {}) };
@@ -74,6 +75,72 @@ function renderSubmissions(items) {
   }) : [empty('当前没有待审核投稿。')]));
 }
 
+function chartCharacters(chart) {
+  return (Array.isArray(chart.characters) ? chart.characters : [chart.character]).filter((value) => typeof value === 'string' && value.trim());
+}
+
+function uniqueSorted(values) {
+  return [...new Set(values.filter(Boolean))].sort((left, right) => left.localeCompare(right, 'zh-CN'));
+}
+
+function syncChartManageFilters(charts) {
+  if (!els.chartCharacter || !els.chartTag) return;
+  const characters = uniqueSorted(charts.flatMap(chartCharacters));
+  const tags = uniqueSorted(charts.flatMap((chart) => Array.isArray(chart.tags) ? chart.tags : []));
+  const characterValue = state.chartCharacter;
+  const tagValue = state.chartTag;
+  els.chartCharacter.replaceChildren(Object.assign(document.createElement('option'), { value: '', textContent: '全部角色' }), ...characters.map((name) => Object.assign(document.createElement('option'), { value: name, textContent: name })));
+  els.chartTag.replaceChildren(Object.assign(document.createElement('option'), { value: '', textContent: '全部标签' }), ...tags.map((tag) => Object.assign(document.createElement('option'), { value: tag, textContent: tag })));
+  els.chartCharacter.value = characters.includes(characterValue) ? characterValue : '';
+  els.chartTag.value = tags.includes(tagValue) ? tagValue : '';
+  state.chartCharacter = els.chartCharacter.value;
+  state.chartTag = els.chartTag.value;
+}
+
+function managedCharts(charts) {
+  const query = state.chartQuery.trim().toLowerCase();
+  return charts.filter((chart) => {
+    const tags = Array.isArray(chart.tags) ? chart.tags : [];
+    const characters = chartCharacters(chart);
+    return (!query || String(chart.title || '').toLowerCase().includes(query))
+      && (!state.chartCharacter || characters.includes(state.chartCharacter))
+      && (!state.chartTag || tags.includes(state.chartTag));
+  });
+}
+
+async function deleteManagedChart(id, title) {
+  if (!id || !confirm(`确认删除「${title || id}」？删除后当前网站会隐藏它。`)) return;
+  await api(`/api/server/charts/${encodeURIComponent(id)}/delete`, { method:'POST' });
+  await loadStatus();
+}
+
+function renderManagedCharts(charts) {
+  if (!els.chartManageList) return;
+  syncChartManageFilters(charts);
+  const filtered = managedCharts(charts);
+  els.chartManageCount.textContent = filtered.length;
+  els.chartManageList.replaceChildren(...(filtered.length ? filtered.map((chart) => {
+    const row = document.createElement('article');
+    row.className = 'task-row chart-row';
+    const content = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = chart.title || '未命名连段';
+    const meta = document.createElement('span');
+    meta.textContent = `${chartCharacters(chart).join(' / ') || '未知角色'} · ${(chart.tags || []).join(' / ') || '无标签'} · ${chart.uploadVersion || '未知版本'}`;
+    const note = document.createElement('small');
+    note.textContent = `ID: ${chart.id || '-'} · 上传者: ${chart.submitter?.nickname || '历史连段'}${chart.submitter?.email ? ` · ${chart.submitter.email}` : ''}`;
+    content.append(title, meta, note);
+    const controls = document.createElement('div');
+    controls.className = 'row-actions';
+    const avatars = document.createElement('div');
+    avatars.className = 'avatar-stack';
+    for (const name of chartCharacters(chart).slice(0, 3)) avatars.appendChild(avatar(name));
+    controls.append(avatars, button('删除', 'quiet danger', () => deleteManagedChart(chart.id, chart.title)));
+    row.append(content, controls);
+    return row;
+  }) : [empty('没有找到对应连段。')]));
+}
+
 function taskRow(title, meta, detail, actions=[]) { const row=document.createElement('article'); row.className='task-row'; const content=document.createElement('div'); const heading=document.createElement('strong'); heading.textContent=title; const metadata=document.createElement('span'); metadata.textContent=meta; const note=document.createElement('small'); note.textContent=detail; content.append(heading,metadata,note); const controls=document.createElement('div'); controls.className='row-actions'; controls.append(...actions); row.append(content,controls); return row; }
 function renderWithdrawals(items) { els.withdrawalCount.textContent=items.length; els.withdrawalList.replaceChildren(...(items.length ? items.map((item)=>taskRow(`连段 ${item.comboId}`,`${item.username || '未命名'} · ${item.email || '邮箱未知'} · ${formatDate(item.submittedAt)}`,'邮箱未能与所有权记录匹配，请人工确认。',[button('拒绝','quiet danger',()=>withdrawalAction(item.id,'reject')),button('批准撤回','primary',()=>withdrawalAction(item.id,'approve'))])) : [empty('当前没有需要人工处理的撤回申请。')])); }
 
@@ -98,7 +165,7 @@ function renderStatus(data) {
   els.statusDot.classList.toggle('busy',busy); els.statusDot.classList.toggle('error',failed); els.serviceStatus.textContent=busy?'正在更新仓库':failed?'上次更新失败':'服务运行中';
   els.releaseSummary.textContent=`${Number(data.release?.charts||0)} 个连段 · ${formatDate(data.release?.createdAt)}`; els.releaseId.textContent=data.release?.releaseId||'-'; els.releaseTime.textContent=formatDate(data.release?.createdAt); els.chartCount.textContent=`${Number(data.release?.charts||0)} 个`; els.listenAddress.textContent=`${data.server?.host||'-'}:${data.server?.port||'-'}`; els.mainCommit.textContent=short(data.release?.commits?.repository); els.data1Commit.textContent=short(data.release?.commits?.deta1); els.data2Commit.textContent=short(data.release?.commits?.deta2);
   els.update.disabled=busy; els.update.textContent=busy?'正在更新':'从 GitHub 更新并重启'; els.updateStatus.textContent=busy?'运行中':failed?'失败':update.status==='completed'?'已完成':'等待操作'; const output=[...(update.output||[])]; if(update.error) output.push('',`错误：${update.error}`); els.output.textContent=output.length?output.join('\n'):'尚未执行更新。';
-  const community=data.community||{}; renderSubmissions(community.submissions?.pending||[]); renderWithdrawals(community.withdrawals?.pending||[]); renderWhitelist(community.whitelist||[]); renderSmtp(community.smtp||{});
+  const community=data.community||{}; renderSubmissions(community.submissions?.pending||[]); renderManagedCharts(community.currentCharts||[]); renderWithdrawals(community.withdrawals?.pending||[]); renderWhitelist(community.whitelist||[]); renderSmtp(community.smtp||{});
 }
 
 function showLogin(message='') { clearTimeout(state.pollTimer); els.dashboard.hidden=true; els.topActions.hidden=true; els.loginPanel.hidden=false; els.loginMessage.textContent=message; state.csrf=''; }
@@ -134,6 +201,9 @@ els.quickWhitelist.addEventListener('click',()=>{switchTab('whitelist');setTimeo
 els.loginForm.addEventListener('submit',async(event)=>{event.preventDefault();els.loginMessage.textContent='正在登录';try{const data=await api('/api/server/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({password:els.password.value})});state.csrf=data.csrf||'';els.password.value='';await Promise.all([loadIcons(),loadStatus()]);}catch(error){els.loginMessage.textContent=error.message;}});
 els.logout.addEventListener('click',async()=>{try{await api('/api/server/logout',{method:'POST'});}finally{showLogin('已退出登录。');}});
 els.whitelistForm.addEventListener('submit',async(event)=>{event.preventDefault();const email=els.whitelistEmail.value.trim().toLowerCase();await saveWhitelist([...(state.status?.community?.whitelist||[]),email]);els.whitelistEmail.value='';});
+els.chartSearch?.addEventListener('input',()=>{state.chartQuery=els.chartSearch.value;renderManagedCharts(state.status?.community?.currentCharts||[]);});
+els.chartCharacter?.addEventListener('change',()=>{state.chartCharacter=els.chartCharacter.value;renderManagedCharts(state.status?.community?.currentCharts||[]);});
+els.chartTag?.addEventListener('change',()=>{state.chartTag=els.chartTag.value;renderManagedCharts(state.status?.community?.currentCharts||[]);});
 els.smtpForm.addEventListener('submit',async(event)=>{event.preventDefault();els.smtpMessage.textContent='正在保存';try{await api('/api/server/community/smtp',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({host:els.smtpHost.value,port:Number(els.smtpPort.value),user:els.smtpUser.value,pass:els.smtpPass.value,from:els.smtpFrom.value,to:els.smtpTo.value,secure:els.smtpSecure.checked})});els.smtpMessage.textContent='设置已保存。';await loadStatus({quiet:true});}catch(error){els.smtpMessage.textContent=error.message;}});
 els.smtpTest.addEventListener('click',async()=>{els.smtpMessage.textContent='正在发送测试邮件';try{await api('/api/server/community/smtp/test',{method:'POST'});els.smtpMessage.textContent='测试邮件已发送。';}catch(error){els.smtpMessage.textContent=error.message;}});
 els.update.addEventListener('click',async()=>{if(!confirm('确认拉取三个 GitHub 仓库并重启网站？私有投稿不会被覆盖。'))return;els.update.disabled=true;try{const result=await api('/api/server/update',{method:'POST'});els.output.textContent=`新版本 ${result.releaseId} 已构建，服务正在重启。`;setTimeout(()=>loadStatus({quiet:true}).catch(()=>{}),1800);}catch(error){els.output.textContent=error.body?.update?.error||error.message;}});

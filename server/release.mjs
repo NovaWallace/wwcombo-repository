@@ -150,6 +150,20 @@ async function mergeCommunityPublished({ runtimeRoot, stagingRoot, index }) {
   index.updatedAt = Date.now();
 }
 
+async function applyCommunityHidden({ runtimeRoot, stagingRoot, index }) {
+  const state = await readStateFile(path.join(runtimeRoot, 'community', 'hidden.json'), { ids: [] });
+  const ids = new Set((Array.isArray(state.ids) ? state.ids : []).map((id) => String(id || '').trim()).filter(Boolean));
+  if (!ids.size) return;
+  for (const chart of index.charts) {
+    if (!ids.has(chart.id) || !['deta1', 'deta2'].includes(chart.repository)) continue;
+    const publishedRoot = path.resolve(stagingRoot, 'data', chart.repository, 'published');
+    const target = path.resolve(publishedRoot, ...publishedParts(chart.url));
+    if (target !== publishedRoot && target.startsWith(`${publishedRoot}${path.sep}`)) await rm(target, { force: true });
+  }
+  index.charts = index.charts.filter((chart) => !ids.has(chart.id));
+  index.updatedAt = Date.now();
+}
+
 async function readStateFile(file, fallback) {
   try {
     return JSON.parse((await readFile(file, 'utf8')).replace(/^\ufeff/, ''));
@@ -212,6 +226,7 @@ export async function buildRelease({ mainRoot, runtimeRoot, onLog }) {
     }
 
     await mergeCommunityPublished({ runtimeRoot, stagingRoot, index });
+    await applyCommunityHidden({ runtimeRoot, stagingRoot, index });
 
     await writeFile(path.join(stagingRoot, 'community-index.json'), `${JSON.stringify(index, null, 2)}\n`, 'utf8');
     const totals = await countFiles(stagingRoot);

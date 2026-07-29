@@ -52,12 +52,21 @@ let release = await currentRelease({
 });
 let PUBLIC_ROOT = release.releaseRoot;
 let BUILD_INFO = JSON.parse(await readFile(path.join(PUBLIC_ROOT, 'build-info.json'), 'utf8'));
+let releaseWrite = Promise.resolve();
+
+function serializeRelease(task) {
+  const operation = releaseWrite.then(task, task);
+  releaseWrite = operation.catch(() => {});
+  return operation;
+}
 
 async function rebuildCommunityRelease() {
-  release = await buildRelease({ mainRoot: MAIN_ROOT, runtimeRoot: RUNTIME_ROOT });
-  PUBLIC_ROOT = release.releaseRoot;
-  BUILD_INFO = JSON.parse(await readFile(path.join(PUBLIC_ROOT, 'build-info.json'), 'utf8'));
-  return release;
+  return serializeRelease(async () => {
+    release = await buildRelease({ mainRoot: MAIN_ROOT, runtimeRoot: RUNTIME_ROOT });
+    PUBLIC_ROOT = release.releaseRoot;
+    BUILD_INFO = JSON.parse(await readFile(path.join(PUBLIC_ROOT, 'build-info.json'), 'utf8'));
+    return release;
+  });
 }
 
 const community = createCommunityService({ runtimeRoot: RUNTIME_ROOT, rebuildRelease: rebuildCommunityRelease });
@@ -267,13 +276,17 @@ function requireSession(req, res, requireCsrf = false) {
 }
 
 async function publicStatus(session) {
+  let currentIndex = { charts: [] };
+  try {
+    currentIndex = JSON.parse((await readFile(path.join(PUBLIC_ROOT, 'community-index.json'), 'utf8')).replace(/^\ufeff/, ''));
+  } catch {}
   return {
     authenticated: true,
     csrf: session.csrf,
     server: { host: HOST, port: PORT, publicUrl: PUBLIC_URL, startedAt: serverStartedAt },
     release: BUILD_INFO,
     update: { ...updateState, output: updateState.output.slice(-80) },
-    community: await community.status()
+    community: { ...(await community.status()), currentCharts: Array.isArray(currentIndex.charts) ? currentIndex.charts : [] }
   };
 }
 
@@ -338,7 +351,7 @@ async function handleAdminApi(req, res, pathname) {
     updateState.output = [];
     updateState.error = '';
     try {
-      const nextRelease = await updateRepositoriesAndBuild({
+      const nextRelease = await serializeRelease(() => updateRepositoriesAndBuild({
         mainRoot: MAIN_ROOT,
         runtimeRoot: RUNTIME_ROOT,
         onLog(message) {
@@ -346,7 +359,7 @@ async function handleAdminApi(req, res, pathname) {
           if (updateState.output.length > 200) updateState.output.shift();
           console.log(`[wwcombo] ${message}`);
         }
-      });
+      }));
       updateState.status = 'completed';
       updateState.finishedAt = Date.now();
       sendJson(res, 200, { ok: true, restart: true, releaseId: nextRelease.releaseId });
@@ -382,6 +395,14 @@ async function handleAdminApi(req, res, pathname) {
     const session = requireSession(req, res);
     if (!session) return;
     sendJson(res, 200, await community.submissionContent(decodeURIComponent(submissionPreview[1])));
+    return;
+  }
+
+  const chartDelete = /^\/api\/server\/charts\/([^/]+)\/delete$/.exec(pathname);
+  if (req.method === 'POST' && chartDelete) {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    sendJson(res, 200, { ok: true, ...(await community.deleteChart(decodeURIComponent(chartDelete[1]))) });
     return;
   }
 

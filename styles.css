@@ -61,6 +61,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .profile-button { min-width: 0; height: 40px; display: grid; grid-template-columns: 30px minmax(0, 110px); align-items: center; gap: 8px; padding: 0 9px 0 5px; border: 1px solid #4a5054; border-radius: 4px; background: #171a1d; color: var(--text); cursor: pointer; text-align: left; }
 .profile-button:hover { border-color: #858c91; background: #23272a; }
 .profile-avatar { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: #cf242b; color: #fff; font-size: 13px; font-style: normal; font-weight: 950; text-transform: uppercase; }
+.profile-avatar-image { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 .profile-copy { min-width: 0; display: grid; gap: 1px; }
 .profile-copy strong,.profile-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .profile-copy strong { font-size: 11px; }
@@ -152,6 +153,9 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .card-submitter strong { color: var(--muted-strong); font-size: 12px; }
 .card-submitter small { color: #858b8f; font-size: 10px; }
 .submitter-line { min-width: 0; display: flex; align-items: center; gap: 5px; }
+.submitter-avatar { width: 22px; height: 22px; flex: 0 0 22px; display: inline-grid; place-items: center; border-radius: 50%; overflow: hidden; background: #2c3236; }
+.submitter-avatar[hidden] { display: none; }
+.submitter-avatar-img { width: 22px; height: 22px; object-fit: cover; border-radius: 50%; }
 .submitter-badge { flex: 0 0 auto; padding: 2px 4px; border: 1px solid #d8ad52; border-radius: 2px; color: #f3cf7d; font-size: 8px; font-style: normal; font-weight: 950; }
 .detail-button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border: 1px solid #ff5960; border-radius: 4px; background: var(--red); color: #fff; font-size: 12px; font-weight: 900; cursor: pointer; }
 .detail-button:hover { background: var(--red-hover); }
@@ -204,6 +208,18 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .upload-identity strong,.upload-identity small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .upload-identity small { color:var(--muted); font-size:10px; }
 .upload-identity button { min-height:32px; border:1px solid var(--line); border-radius:3px; background:var(--surface-raised); color:var(--muted-strong); font-size:11px; cursor:pointer; }
+.profile-avatar-picker { display: grid; gap: 10px; }
+.profile-avatar-picker-head { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 11px; font-weight: 850; }
+.profile-avatar-picker-head strong { color: var(--muted-strong); }
+.profile-avatar-grid { max-height: 172px; display: grid; grid-template-columns: repeat(auto-fill, 44px); justify-content: start; gap: 10px; overflow: auto; padding: 10px; border: 1px solid var(--line); background: var(--surface); }
+.profile-avatar-option { width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border: 2px solid #4d555a; border-radius: 50%; background: #252a2e; color: #fff; font-weight: 950; cursor: pointer; overflow: hidden; }
+.profile-avatar-option.selected { border-color: #ff666d; box-shadow: 0 0 0 3px rgba(255, 82, 90, .18); }
+.profile-avatar-choice-image { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.upload-axis-preview { display: grid; min-height: 300px; border: 1px solid var(--line); background: #0c1013; }
+.axis-preview-head.compact { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.axis-preview-head.compact h3 { margin: 0; font-size: 13px; }
+.axis-preview-head.compact p { margin: 4px 0 0; font-size: 11px; color: var(--muted); }
+.upload-axis { max-height: 420px; min-height: 250px; overflow: auto; padding: 14px; }
 .file-drop { min-height:150px; place-items:center; align-content:center; gap:9px!important; padding:20px; border:1px dashed #626a6f!important; border-radius:4px; background:#0d1012; cursor:pointer; text-align:center; }
 .file-drop:hover { border-color:#ff656b!important; background:#151719; }
 .file-drop svg { width:30px; height:30px; color:#ef5b61; }

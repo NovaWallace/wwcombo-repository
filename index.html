@@ -18,7 +18,7 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260729-27" />
+    <link rel="stylesheet" href="styles.css?v=20260729-29" />
   </head>
   <body>
     <header class="site-header">
@@ -184,7 +184,7 @@
           <div class="card-characters"></div>
           <div class="card-submitter">
             <span data-i18n="meta.uploader">上传者</span>
-            <span class="submitter-line"><strong class="submitter-name"></strong><em class="submitter-badge" hidden>UP</em></span>
+            <span class="submitter-line"><strong class="submitter-name"></strong><span class="submitter-avatar"></span><em class="submitter-badge" hidden>UP</em></span>
             <small class="submitter-email"></small>
           </div>
           <button class="detail-button" type="button">
@@ -204,6 +204,10 @@
         <form class="account-form" id="profileForm">
           <label><span data-i18n="profile.username">用户名</span><input id="profileUsernameInput" maxlength="40" autocomplete="nickname" required /></label>
           <label><span data-i18n="profile.email">邮箱</span><input id="profileEmailInput" type="email" maxlength="254" autocomplete="email" required /></label>
+          <div class="profile-avatar-picker">
+            <div class="profile-avatar-picker-head"><span data-i18n="profile.avatar">头像</span><strong id="profileAvatarChoice" data-i18n="profile.avatarNone">未选择</strong></div>
+            <div class="profile-avatar-grid" id="profileAvatarGrid"></div>
+          </div>
           <p data-i18n="profile.privacy">公开页面显示完整用户名和脱敏邮箱，控制端保存完整邮箱用于撤回核验。</p>
           <div class="form-feedback" id="profileFeedback" aria-live="polite"></div>
           <footer class="modal-footer"><button type="button" id="clearProfileBtn" data-i18n="common.clear">清空</button><button class="primary-button" type="submit" data-i18n="profile.save">保存资料</button></footer>
@@ -220,6 +224,10 @@
         <form class="upload-form" id="uploadForm">
           <div class="upload-identity"><span class="profile-avatar" id="uploadAvatar">?</span><div><strong id="uploadUsername">-</strong><small id="uploadEmail">-</small></div><button type="button" id="editUploadProfileBtn" data-i18n="profile.edit">修改资料</button></div>
           <label class="file-drop" for="comboFileInput"><i data-lucide="file-json" aria-hidden="true"></i><strong data-i18n="upload.choose">选择 .wwcombo.json 文件</strong><span id="comboFileName" data-i18n="upload.none">尚未选择文件</span><input id="comboFileInput" type="file" accept=".json,.wwcombo.json,application/json" required /></label>
+          <section class="upload-axis-preview" id="uploadAxisSection" hidden>
+            <div class="axis-preview-head compact"><div><h3 data-i18n="upload.preview">连段预览</h3><p id="uploadAxisSummary" data-i18n="upload.previewEmpty">导入后会在这里预览连段图</p></div></div>
+            <div class="axis-preview upload-axis" id="uploadAxisPreview"></div>
+          </section>
           <div class="form-feedback" id="uploadFeedback" aria-live="polite"></div>
           <footer class="modal-footer"><button type="button" id="cancelUploadBtn" data-i18n="common.cancel">取消</button><button class="primary-button" id="confirmUploadBtn" type="submit"><i data-lucide="upload" aria-hidden="true"></i><span data-i18n="upload.submit">提交审核</span></button></footer>
         </form>
@@ -320,7 +328,7 @@
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
-    <script src="i18n.js?v=20260729-27"></script>
-    <script src="app.js?v=20260729-27"></script>
+    <script src="i18n.js?v=20260729-29"></script>
+    <script src="app.js?v=20260729-29"></script>
   </body>
 </html>

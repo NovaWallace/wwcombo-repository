@@ -42,6 +42,7 @@
 
         <nav class="admin-tabs" aria-label="维护页面">
           <button class="active" type="button" data-tab="submissions">投稿审核 <span id="submissionCount">0</span></button>
+          <button type="button" data-tab="charts">连段管理 <span id="chartManageCount">0</span></button>
           <button type="button" data-tab="withdrawals">撤回申请 <span id="withdrawalCount">0</span></button>
           <button type="button" data-tab="whitelist">UP 白名单</button>
           <button type="button" data-tab="smtp">邮件通知</button>
@@ -51,6 +52,16 @@
         <section class="tab-panel active" data-panel="submissions">
           <div class="section-heading"><div><h2>待审核投稿</h2><p>预审核只负责标出异常，最终是否公开仍由你决定。</p></div><button class="quiet" type="button" data-refresh>刷新</button></div>
           <div class="task-list submission-grid" id="submissionList"></div>
+        </section>
+
+        <section class="tab-panel" data-panel="charts" hidden>
+          <div class="section-heading"><div><h2>当前全部连段</h2><p>这里显示当前网站正在展示的连段。删除后会立即从网站隐藏，之后从 GitHub 更新也不会恢复。</p></div><button class="quiet" type="button" data-refresh>刷新</button></div>
+          <form class="manage-filters" id="chartManageFilters">
+            <label><span>标题</span><input id="chartSearchInput" type="search" autocomplete="off" placeholder="搜索连段标题" /></label>
+            <label><span>角色</span><select id="chartCharacterSelect"><option value="">全部角色</option></select></label>
+            <label><span>标签</span><select id="chartTagSelect"><option value="">全部标签</option></select></label>
+          </form>
+          <div class="task-list chart-manage-list" id="chartManageList"></div>
         </section>
 
         <section class="tab-panel" data-panel="withdrawals" hidden>

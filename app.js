@@ -201,13 +201,15 @@ const state = {
 function savedProfile() {
   try {
     const value = JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY) || '{}');
-    return { username: String(value.username || '').trim().slice(0, 40), email: String(value.email || '').trim().toLowerCase().slice(0, 254) };
+    return { username: String(value.username || '').trim().slice(0, 40), email: String(value.email || '').trim().toLowerCase().slice(0, 254), avatar: String(value.avatar || '').trim().slice(0, 80) };
   } catch {
-    return { username: '', email: '' };
+    return { username: '', email: '', avatar: '' };
   }
 }
 
 state.profile = savedProfile();
+state.profileDraftAvatar = state.profile.avatar;
+let uploadPreviewToken = 0;
 
 const els = {
   languageSelect: document.getElementById('languageSelect'),
@@ -223,6 +225,8 @@ const els = {
   profileForm: document.getElementById('profileForm'),
   profileUsernameInput: document.getElementById('profileUsernameInput'),
   profileEmailInput: document.getElementById('profileEmailInput'),
+  profileAvatarGrid: document.getElementById('profileAvatarGrid'),
+  profileAvatarChoice: document.getElementById('profileAvatarChoice'),
   profileFeedback: document.getElementById('profileFeedback'),
   closeProfile: document.getElementById('closeProfileBtn'),
   clearProfile: document.getElementById('clearProfileBtn'),
@@ -236,6 +240,9 @@ const els = {
   uploadEmail: document.getElementById('uploadEmail'),
   comboFile: document.getElementById('comboFileInput'),
   comboFileName: document.getElementById('comboFileName'),
+  uploadAxisSection: document.getElementById('uploadAxisSection'),
+  uploadAxisPreview: document.getElementById('uploadAxisPreview'),
+  uploadAxisSummary: document.getElementById('uploadAxisSummary'),
   uploadFeedback: document.getElementById('uploadFeedback'),
   confirmUpload: document.getElementById('confirmUploadBtn'),
   form: document.getElementById('searchForm'),
@@ -302,19 +309,35 @@ function profileInitial() {
   return Array.from(state.profile.username || '?')[0]?.toUpperCase() || '?';
 }
 
+function renderProfileAvatarNode(target, name, fallbackText = profileInitial()) {
+  target.replaceChildren();
+  const avatarName = String(name || '').trim();
+  if (avatarName && state.characterIcons.has(avatarName)) {
+    const image = avatarElement(avatarName, 'profile-avatar-image');
+    image.title = avatarName;
+    target.appendChild(image);
+    return;
+  }
+  target.textContent = fallbackText;
+}
+
 function renderProfile() {
   const ready = Boolean(state.profile.username && state.profile.email);
-  els.profileAvatar.textContent = profileInitial();
+  renderProfileAvatarNode(els.profileAvatar, state.profile.avatar);
   els.profileName.textContent = ready ? state.profile.username : t('profile.guest');
   els.profileEmail.textContent = ready ? maskProfileEmail(state.profile.email) : '';
-  els.uploadAvatar.textContent = profileInitial();
+  renderProfileAvatarNode(els.uploadAvatar, state.profile.avatar);
   els.uploadUsername.textContent = ready ? state.profile.username : t('profile.guest');
   els.uploadEmail.textContent = ready ? maskProfileEmail(state.profile.email) : t('profile.missing');
+  if (els.profileAvatarChoice) els.profileAvatarChoice.textContent = state.profile.avatar || t('profile.avatarNone');
+  renderProfileAvatarGrid();
 }
 
 function openProfile() {
+  state.profileDraftAvatar = state.profile.avatar;
   els.profileUsernameInput.value = state.profile.username;
   els.profileEmailInput.value = state.profile.email;
+  renderProfileAvatarGrid();
   els.profileFeedback.textContent = '';
   els.profileFeedback.className = 'form-feedback';
   els.profileBackdrop.hidden = false;
@@ -323,6 +346,7 @@ function openProfile() {
 }
 
 function closeProfile() {
+  state.profileDraftAvatar = state.profile.avatar;
   els.profileBackdrop.hidden = true;
   if (els.uploadBackdrop.hidden && els.detailBackdrop.hidden && els.characterPickerBackdrop.hidden) document.body.style.overflow = '';
 }
@@ -334,8 +358,12 @@ function openUpload() {
     return;
   }
   renderProfile();
+  uploadPreviewToken += 1;
   els.comboFile.value = '';
   els.comboFileName.textContent = t('upload.none');
+  els.uploadAxisSection.hidden = true;
+  els.uploadAxisPreview.replaceChildren();
+  els.uploadAxisSummary.textContent = t('upload.previewEmpty');
   els.uploadFeedback.textContent = '';
   els.uploadFeedback.className = 'form-feedback';
   els.uploadBackdrop.hidden = false;
@@ -345,6 +373,50 @@ function openUpload() {
 function closeUpload() {
   els.uploadBackdrop.hidden = true;
   if (els.profileBackdrop.hidden && els.detailBackdrop.hidden && els.characterPickerBackdrop.hidden) document.body.style.overflow = '';
+}
+
+function uploadedIndexChart(pack, fileName = '') {
+  const chart = pack?.chart || (Array.isArray(pack?.charts) ? pack.charts[0] : null) || (Array.isArray(pack?.steps) ? pack : null);
+  const community = chart?.community || {};
+  const characters = (Array.isArray(community.characters) ? community.characters : [chart?.character]).filter(Boolean).slice(0, 3);
+  return {
+    id: community.id || chart?.id || fileName || 'upload-preview',
+    title: community.name || community.title || chart?.title || fileName || t('upload.previewTitle'),
+    characters,
+    character: characters[0] || chart?.character || '',
+    tags: (Array.isArray(community.tags) ? community.tags : chart?.tags || []).filter(Boolean),
+    rounds: Number(community.rounds || 1)
+  };
+}
+
+async function previewUploadFile() {
+  const file = els.comboFile.files?.[0];
+  const previewToken = ++uploadPreviewToken;
+  els.comboFileName.textContent = file?.name || t('upload.none');
+  els.uploadFeedback.textContent = '';
+  els.uploadFeedback.className = 'form-feedback';
+  els.uploadAxisSection.hidden = !file;
+  els.uploadAxisPreview.replaceChildren();
+  if (!file) return;
+  if (file.size > 1024 * 1024) {
+    els.uploadFeedback.textContent = t('upload.tooLarge');
+    return;
+  }
+  els.uploadAxisSummary.textContent = t('upload.previewLoading');
+  els.uploadAxisPreview.innerHTML = '<div class="axis-loading"><span></span><span></span><span></span></div>';
+  try {
+    const content = JSON.parse((await file.text()).replace(/^\ufeff/, ''));
+    if (previewToken !== uploadPreviewToken || els.comboFile.files?.[0] !== file) return;
+    renderAxisPreview(content, uploadedIndexChart(content, file.name), { preview: els.uploadAxisPreview, summary: els.uploadAxisSummary });
+  } catch (error) {
+    if (previewToken !== uploadPreviewToken || els.comboFile.files?.[0] !== file) return;
+    els.uploadAxisPreview.replaceChildren();
+    const failure = document.createElement('div');
+    failure.className = 'axis-error';
+    failure.textContent = error instanceof SyntaxError ? t('upload.invalidJson') : t('axis.failed', { error: error.message });
+    els.uploadAxisPreview.appendChild(failure);
+    els.uploadAxisSummary.textContent = t('axis.unavailable');
+  }
 }
 
 async function submitCombo(event) {
@@ -358,11 +430,11 @@ async function submitCombo(event) {
   els.confirmUpload.disabled = true;
   els.uploadFeedback.textContent = t('upload.sending');
   try {
-    const content = JSON.parse(await file.text());
+    const content = JSON.parse((await file.text()).replace(/^\ufeff/, ''));
     const response = await fetch('/api/community/submit', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: state.profile.username, email: state.profile.email, fileName: file.name, content })
+      body: JSON.stringify({ username: state.profile.username, email: state.profile.email, avatar: state.profile.avatar, fileName: file.name, content })
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
@@ -556,7 +628,8 @@ function submitterFor(chart) {
   return {
     nickname: nickname || t('submitter.historical'),
     email: email || t('submitter.noEmail'),
-    badge: String(chart.submitter?.badge || '').toUpperCase() === 'UP' ? 'UP' : ''
+    badge: String(chart.submitter?.badge || '').toUpperCase() === 'UP' ? 'UP' : '',
+    avatar: String(chart.submitter?.avatar || '').trim()
   };
 }
 
@@ -611,6 +684,30 @@ async function downloadChart(event, chart) {
 
 function availableCharacters() {
   return uniqueSorted([...state.characterIcons.keys(), ...state.charts.flatMap(chartCharacters)]);
+}
+
+function renderProfileAvatarGrid() {
+  if (!els.profileAvatarGrid) return;
+  const names = availableCharacters();
+  const buttons = [];
+  const clear = document.createElement('button');
+  clear.type = 'button';
+  clear.className = `profile-avatar-option${state.profileDraftAvatar ? '' : ' selected'}`;
+  clear.dataset.avatar = '';
+  clear.textContent = profileInitial();
+  clear.title = t('profile.avatarClear');
+  buttons.push(clear);
+  for (const name of names) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `profile-avatar-option${state.profileDraftAvatar === name ? ' selected' : ''}`;
+    button.dataset.avatar = name;
+    button.title = name;
+    button.appendChild(avatarElement(name, 'profile-avatar-choice-image'));
+    buttons.push(button);
+  }
+  els.profileAvatarGrid.replaceChildren(...buttons);
+  if (els.profileAvatarChoice) els.profileAvatarChoice.textContent = state.profileDraftAvatar || t('profile.avatarNone');
 }
 
 function renderCharacterTrigger() {
@@ -743,6 +840,10 @@ function renderCard(chart) {
   card.querySelector('.updated').textContent = formatDate(chart.updatedAt);
   card.querySelector('.submitter-name').textContent = submitter.nickname;
   card.querySelector('.submitter-email').textContent = submitter.email;
+  const submitterAvatar = card.querySelector('.submitter-avatar');
+  submitterAvatar.replaceChildren();
+  if (submitter.avatar) submitterAvatar.appendChild(avatarElement(submitter.avatar, 'submitter-avatar-img'));
+  submitterAvatar.hidden = !submitter.avatar;
   const submitterBadge = card.querySelector('.submitter-badge');
   submitterBadge.hidden = !submitter.badge;
   submitterBadge.textContent = submitter.badge;
@@ -864,12 +965,12 @@ function estimateAxisActionWidth(value) {
   return Math.max(20, contentWidth + Math.max(0, parts.length - 1) * 2);
 }
 
-function axisBlockMaxWidth() {
-  return Math.max(220, els.axisPreview.clientWidth - 72);
+function axisBlockMaxWidth(target = els.axisPreview) {
+  return Math.max(220, target.clientWidth - 72);
 }
 
-function splitAxisMoveGroups(groups, labels) {
-  const maxWidth = axisBlockMaxWidth();
+function splitAxisMoveGroups(groups, labels, target = els.axisPreview) {
+  const maxWidth = axisBlockMaxWidth(target);
   const scale = state.axisScale;
   const chunks = [];
   for (const group of groups) {
@@ -922,8 +1023,10 @@ function renderAxisIconSet() {
   }
 }
 
-function renderAxisPreview(pack, indexChart) {
-  const chart = pack?.chart || (Array.isArray(pack?.charts) ? pack.charts[0] : null);
+function renderAxisPreview(pack, indexChart, targets = {}) {
+  const previewTarget = targets.preview || els.axisPreview;
+  const summaryTarget = targets.summary || els.axisPreviewSummary;
+  const chart = pack?.chart || (Array.isArray(pack?.charts) ? pack.charts[0] : null) || (Array.isArray(pack?.steps) ? pack : null);
   if (!chart || !Array.isArray(chart.steps)) throw new Error(t('axis.invalid'));
   const allPeriods = Array.isArray(chart.periods)
     ? chart.periods.filter((period) => period?.kind === 'startup_axis' || period?.kind === 'loop_axis')
@@ -955,7 +1058,7 @@ function renderAxisPreview(pack, indexChart) {
       .filter((step) => Number(step.startMin || 0) >= start && Number(step.startMin || 0) < end)
       .sort((left, right) => Number(left.startMin || 0) - Number(right.startMin || 0) || String(left.id || '').localeCompare(String(right.id || '')));
     visibleStepCount += steps.length;
-    const moveGroups = splitAxisMoveGroups(groupAxisSteps(steps), labels);
+    const moveGroups = splitAxisMoveGroups(groupAxisSteps(steps), labels, previewTarget);
     visibleBlockCount += moveGroups.length;
     const group = document.createElement('section');
     group.className = 'axis-group';
@@ -997,11 +1100,11 @@ function renderAxisPreview(pack, indexChart) {
     group.append(heading, flow);
     fragment.appendChild(group);
   }
-  els.axisPreview.replaceChildren(fragment);
+  previewTarget.replaceChildren(fragment);
   const periodText = showAll
     ? `${showAllReasons.map((tag) => i18n.localizeTag(tag)).join(' / ')} · ${t('axis.allRounds')}`
     : periods.map((period) => axisPeriodLabel(period, loops.length)).join(' + ');
-  els.axisPreviewSummary.textContent = t('axis.summary', { periods: periodText, steps: visibleStepCount, blocks: visibleBlockCount });
+  summaryTarget.textContent = t('axis.summary', { periods: periodText, steps: visibleStepCount, blocks: visibleBlockCount });
 }
 
 async function loadChartPackage(chart) {
@@ -1179,6 +1282,7 @@ async function loadCharacterIcons() {
       if (name && /^https?:\/\//i.test(source) && !icons.has(name)) icons.set(name, source);
     }
     state.characterIcons = icons;
+    renderProfile();
     render();
     if (!els.characterPickerBackdrop.hidden) renderCharacterPicker();
   } catch {
@@ -1287,7 +1391,7 @@ els.closeProfile?.addEventListener('click', closeProfile);
 els.profileBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.profileBackdrop) closeProfile(); });
 els.profileForm?.addEventListener('submit', (event) => {
   event.preventDefault();
-  state.profile = { username: els.profileUsernameInput.value.trim().slice(0, 40), email: els.profileEmailInput.value.trim().toLowerCase().slice(0, 254) };
+  state.profile = { ...state.profile, username: els.profileUsernameInput.value.trim().slice(0, 40), email: els.profileEmailInput.value.trim().toLowerCase().slice(0, 254), avatar: state.profileDraftAvatar };
   try { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.profile)); } catch {}
   renderProfile();
   els.profileFeedback.textContent = t('profile.saved');
@@ -1295,11 +1399,18 @@ els.profileForm?.addEventListener('submit', (event) => {
   setTimeout(closeProfile, 500);
 });
 els.clearProfile?.addEventListener('click', () => {
-  state.profile = { username: '', email: '' };
+  state.profile = { username: '', email: '', avatar: '' };
+  state.profileDraftAvatar = '';
   try { localStorage.removeItem(PROFILE_STORAGE_KEY); } catch {}
   els.profileUsernameInput.value = '';
   els.profileEmailInput.value = '';
   renderProfile();
+});
+els.profileAvatarGrid?.addEventListener('click', (event) => {
+  const button = event.target.closest('.profile-avatar-option');
+  if (!button) return;
+  state.profileDraftAvatar = button.dataset.avatar || '';
+  renderProfileAvatarGrid();
 });
 els.submissionButton?.addEventListener('click', openUpload);
 els.closeUpload?.addEventListener('click', closeUpload);
@@ -1307,8 +1418,7 @@ els.cancelUpload?.addEventListener('click', closeUpload);
 els.uploadBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.uploadBackdrop) closeUpload(); });
 els.editUploadProfile?.addEventListener('click', () => { closeUpload(); openProfile(); });
 els.comboFile?.addEventListener('change', () => {
-  els.comboFileName.textContent = els.comboFile.files?.[0]?.name || t('upload.none');
-  els.uploadFeedback.textContent = '';
+  void previewUploadFile();
 });
 els.uploadForm?.addEventListener('submit', submitCombo);
 

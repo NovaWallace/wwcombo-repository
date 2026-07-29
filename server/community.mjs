@@ -180,7 +180,15 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const whitelistFile = path.join(root, 'whitelist.json');
   const downloadsFile = path.join(root, 'downloads.json');
   const smtpFile = path.join(root, 'smtp.json');
+  const hiddenFile = path.join(root, 'hidden.json');
   let downloadWrite = Promise.resolve();
+  let mutationWrite = Promise.resolve();
+
+  function serializeMutation(task) {
+    const operation = mutationWrite.then(task, task);
+    mutationWrite = operation.catch(() => {});
+    return operation;
+  }
 
   async function initialize() {
     await Promise.all([mkdir(pendingRoot, { recursive: true }), mkdir(publishedRoot, { recursive: true })]);
@@ -226,9 +234,10 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const id = randomUUID();
     const fileName = safeName(body.fileName || 'combo.wwcombo.json');
     const storedFile = `${id}.wwcombo.json`;
+    const avatar = String(body.avatar || '').trim().slice(0, 80);
     const submission = {
       id, username, email, fileName, storedFile, status: 'pending', submittedAt: Date.now(), address: String(address || ''),
-      preview: submissionPreview(content), preflight
+      avatar, preview: submissionPreview(content), preflight
     };
     await writeFile(path.join(pendingRoot, storedFile), serialized, { encoding: 'utf8', mode: 0o600 });
     const queue = await readJson(queueFile, { pending: [], history: [] });
@@ -269,7 +278,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const source = path.join(pendingRoot, submission.storedFile);
     const payload = JSON.parse(await readFile(source, 'utf8'));
     const up = (await whitelist()).includes(normalizeEmail(submission.email));
-    const submitter = { nickname: submission.username, email: publicEmail(submission.email), ...(up ? { badge: 'UP' } : {}) };
+    const submitter = { nickname: submission.username, email: publicEmail(submission.email), ...(submission.avatar ? { avatar: submission.avatar } : {}), ...(up ? { badge: 'UP' } : {}) };
     const summary = chartSummary(payload, submitter);
     const { chart } = submittedChart(payload);
     const publicPackage = {
@@ -320,6 +329,22 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     await Promise.all([writeJson(publishedFile, published), writeJson(ownersFile, owners)]);
     await rebuildRelease();
     return true;
+  }
+
+  async function hiddenIds() {
+    const value = await readJson(hiddenFile, { ids: [] });
+    return [...new Set((Array.isArray(value.ids) ? value.ids : []).map((id) => String(id || '').trim()).filter(Boolean))].sort();
+  }
+
+  async function deleteChart(comboId) {
+    const id = String(comboId || '').trim();
+    if (!id) throw new Error('连段 ID 不能为空。');
+    const removedPrivate = await removePublished(id);
+    const ids = new Set(await hiddenIds());
+    ids.add(id);
+    await writeJson(hiddenFile, { ids: [...ids].sort() });
+    if (!removedPrivate) await rebuildRelease();
+    return { removedPrivate, hidden: true };
   }
 
   async function requestWithdrawal(body) {
@@ -414,11 +439,11 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   }
 
   async function status() {
-    const [queue, published, withdrawals, emails, smtp, downloads] = await Promise.all([
+    const [queue, published, withdrawals, emails, smtp, downloads, hidden] = await Promise.all([
       readJson(queueFile, { pending: [], history: [] }),
       readJson(publishedFile, { charts: [] }),
       readJson(withdrawalsFile, { pending: [], history: [] }),
-      whitelist(), smtpSettings(), readJson(downloadsFile, {})
+      whitelist(), smtpSettings(), readJson(downloadsFile, {}), hiddenIds()
     ]);
     return {
       submissions: { pending: queue.pending || [], history: (queue.history || []).slice(-30).reverse() },
@@ -426,9 +451,25 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       published: published.charts || [],
       whitelist: emails,
       smtp: smtpPublic(smtp),
-      downloads: record(downloads)
+      downloads: record(downloads),
+      hidden
     };
   }
 
-  return { initialize, submit, submissionContent, publishDirect, approve, reject, requestWithdrawal, resolveWithdrawal, setWhitelist, setSmtp, testSmtp, incrementDownload, status };
+  return {
+    initialize,
+    submit: (...args) => serializeMutation(() => submit(...args)),
+    submissionContent,
+    publishDirect: (...args) => serializeMutation(() => publishDirect(...args)),
+    approve: (...args) => serializeMutation(() => approve(...args)),
+    reject: (...args) => serializeMutation(() => reject(...args)),
+    deleteChart: (...args) => serializeMutation(() => deleteChart(...args)),
+    requestWithdrawal: (...args) => serializeMutation(() => requestWithdrawal(...args)),
+    resolveWithdrawal: (...args) => serializeMutation(() => resolveWithdrawal(...args)),
+    setWhitelist: (...args) => serializeMutation(() => setWhitelist(...args)),
+    setSmtp: (...args) => serializeMutation(() => setSmtp(...args)),
+    testSmtp,
+    incrementDownload,
+    status
+  };
 }
