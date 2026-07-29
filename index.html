@@ -18,7 +18,7 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260728-25" />
+    <link rel="stylesheet" href="styles.css?v=20260729-26" />
   </head>
   <body>
     <header class="site-header">
@@ -53,23 +53,25 @@
             </button>
             <div class="submission-help-tooltip" id="submissionHelpTooltip" role="tooltip">
               <strong data-i18n="submission.helpTitle">投稿与处理说明</strong>
-              <p data-i18n="submission.helpSubmit">将 .wwcombo.json 文件作为附件发送到 2728756958@qq.com。系统每 10 分钟自动收取并检查格式，格式正确后直接发布，无需人工审核。</p>
-              <p data-i18n="submission.helpWithdraw">需要撤回时，请使用投稿邮箱发信，主题写“撤回”，正文填写连段 ID；身份核对成功后会自动删除，无法核对的申请会转为人工处理。</p>
-              <p data-i18n="submission.helpReport">需要投诉时，主题写“投诉”，正文填写连段 ID，维护者会在控制台处理。</p>
+              <p data-i18n="submission.helpSubmit">先在头像栏登记用户名和邮箱，再直接上传 .wwcombo.json 文件。投稿会进入后台审核，通过后公开。</p>
+              <p data-i18n="submission.helpWithdraw">详情页可以发出撤回申请；申请邮箱与上传记录完全一致时自动撤回，否则进入人工处理。</p>
+              <p data-i18n="submission.helpReport">用户名会公开显示，邮箱始终脱敏；真实邮箱只用于审核和身份核对。</p>
             </div>
           </div>
-          <a
+          <button class="profile-button" id="profileButton" type="button" aria-label="用户资料" data-i18n-aria-label="profile.buttonAria">
+            <span class="profile-avatar" id="profileAvatar">?</span>
+            <span class="profile-copy"><strong id="profileName" data-i18n="profile.guest">登记资料</strong><small id="profileEmail"></small></span>
+          </button>
+          <button
             class="submission-button"
             id="submissionButton"
-            href="https://mail.qq.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="复制投稿邮箱并打开 QQ 邮箱"
+            type="button"
+            title="直接上传连段"
             data-i18n-title="submission.buttonTitle"
           >
             <i data-lucide="upload" aria-hidden="true"></i>
             <span id="submissionButtonLabel" aria-live="polite" data-i18n="submission.button">上传连段</span>
-          </a>
+          </button>
         </div>
       </div>
     </header>
@@ -183,6 +185,7 @@
           <div class="card-submitter">
             <span data-i18n="meta.uploader">上传者</span>
             <strong class="submitter-name"></strong>
+            <span class="submitter-badge" hidden>UP</span>
             <small class="submitter-email"></small>
           </div>
           <button class="detail-button" type="button">
@@ -192,6 +195,37 @@
         </div>
       </article>
     </template>
+
+    <div class="modal-backdrop" id="profileBackdrop" hidden>
+      <section class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+        <header class="modal-header">
+          <div><h2 id="profileTitle" data-i18n="profile.title">用户资料</h2><p data-i18n="profile.hint">资料只保存在当前浏览器，投稿时发送给控制端。</p></div>
+          <button class="icon-button" id="closeProfileBtn" type="button" aria-label="关闭"><i data-lucide="x" aria-hidden="true"></i></button>
+        </header>
+        <form class="account-form" id="profileForm">
+          <label><span data-i18n="profile.username">用户名</span><input id="profileUsernameInput" maxlength="40" autocomplete="nickname" required /></label>
+          <label><span data-i18n="profile.email">邮箱</span><input id="profileEmailInput" type="email" maxlength="254" autocomplete="email" required /></label>
+          <p data-i18n="profile.privacy">公开页面显示完整用户名和脱敏邮箱，控制端保存完整邮箱用于撤回核验。</p>
+          <div class="form-feedback" id="profileFeedback" aria-live="polite"></div>
+          <footer class="modal-footer"><button type="button" id="clearProfileBtn" data-i18n="common.clear">清空</button><button class="primary-button" type="submit" data-i18n="profile.save">保存资料</button></footer>
+        </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="uploadBackdrop" hidden>
+      <section class="upload-dialog" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
+        <header class="modal-header">
+          <div><h2 id="uploadTitle" data-i18n="upload.title">上传连段</h2><p data-i18n="upload.hint">文件会进入控制台审核，通过后公开。</p></div>
+          <button class="icon-button" id="closeUploadBtn" type="button" aria-label="关闭"><i data-lucide="x" aria-hidden="true"></i></button>
+        </header>
+        <form class="upload-form" id="uploadForm">
+          <div class="upload-identity"><span class="profile-avatar" id="uploadAvatar">?</span><div><strong id="uploadUsername">-</strong><small id="uploadEmail">-</small></div><button type="button" id="editUploadProfileBtn" data-i18n="profile.edit">修改资料</button></div>
+          <label class="file-drop" for="comboFileInput"><i data-lucide="file-json" aria-hidden="true"></i><strong data-i18n="upload.choose">选择 .wwcombo.json 文件</strong><span id="comboFileName" data-i18n="upload.none">尚未选择文件</span><input id="comboFileInput" type="file" accept=".json,.wwcombo.json,application/json" required /></label>
+          <div class="form-feedback" id="uploadFeedback" aria-live="polite"></div>
+          <footer class="modal-footer"><button type="button" id="cancelUploadBtn" data-i18n="common.cancel">取消</button><button class="primary-button" id="confirmUploadBtn" type="submit"><i data-lucide="upload" aria-hidden="true"></i><span data-i18n="upload.submit">提交审核</span></button></footer>
+        </form>
+      </section>
+    </div>
 
     <div class="modal-backdrop" id="characterPickerBackdrop" hidden>
       <section class="character-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="characterPickerTitle">
@@ -253,6 +287,7 @@
                 <i data-lucide="download" aria-hidden="true"></i>
                 <span data-i18n="detail.download">下载连段</span>
               </a>
+              <button id="detailWithdraw" class="secondary-button withdraw-button" type="button"><i data-lucide="undo-2" aria-hidden="true"></i><span data-i18n="withdraw.button">申请撤回</span></button>
             </div>
           </aside>
           <section class="axis-preview-panel" aria-labelledby="axisPreviewTitle">
@@ -286,7 +321,7 @@
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
-    <script src="i18n.js?v=20260728-25"></script>
-    <script src="app.js?v=20260728-25"></script>
+    <script src="i18n.js?v=20260729-26"></script>
+    <script src="app.js?v=20260729-26"></script>
   </body>
 </html>

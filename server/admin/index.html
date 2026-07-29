@@ -4,20 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>椰果朋克2077服务器管理</title>
+    <title>椰果朋克2077控制台</title>
     <link rel="stylesheet" href="/admin/styles.css" />
   </head>
   <body>
-    <main class="admin-shell">
-      <header class="admin-header">
-        <div>
-          <p>WWCOMBO SERVER</p>
-          <h1>椰果朋克2077服务器管理</h1>
-        </div>
-        <a href="/" target="_blank" rel="noopener noreferrer">打开网站</a>
-      </header>
+    <header class="topbar">
+      <div>
+        <p>WWCOMBO CONTROL</p>
+        <h1>椰果朋克2077控制台</h1>
+      </div>
+      <a href="/" target="_blank" rel="noopener noreferrer">打开用户站</a>
+    </header>
 
+    <main class="admin-shell">
       <section class="login-panel" id="loginPanel">
+        <div class="login-heading">
+          <span>管理员登录</span>
+          <strong>审核投稿和管理社区</strong>
+        </div>
         <form id="loginForm">
           <label for="passwordInput">管理员密码</label>
           <div class="login-row">
@@ -26,41 +30,75 @@
           </div>
           <p class="message" id="loginMessage" aria-live="polite"></p>
         </form>
+        <details class="password-help">
+          <summary>不知道密码？</summary>
+          <p>密码由服务器安装者设置。忘记后，在服务器终端重新运行安装脚本并添加 <code>--admin-password '新密码'</code>，至少 10 位。</p>
+        </details>
       </section>
 
       <section class="dashboard" id="dashboard" hidden>
-        <div class="dashboard-actions">
-          <div>
+        <div class="dashboard-head">
+          <div class="service-line">
             <span class="status-dot" id="statusDot"></span>
-            <strong id="serviceStatus">服务运行中</strong>
+            <div><strong id="serviceStatus">服务运行中</strong><small id="releaseSummary">-</small></div>
           </div>
-          <div class="button-row">
-            <button class="secondary" id="logoutBtn" type="button">退出</button>
-            <button class="primary" id="updateBtn" type="button">从 GitHub 更新并重启</button>
-          </div>
+          <button class="quiet" id="logoutBtn" type="button">退出</button>
         </div>
 
-        <dl class="metrics">
-          <div><dt>当前版本</dt><dd id="releaseId">-</dd></div>
-          <div><dt>上线时间</dt><dd id="releaseTime">-</dd></div>
-          <div><dt>连段数量</dt><dd id="chartCount">-</dd></div>
-          <div><dt>监听地址</dt><dd id="listenAddress">-</dd></div>
-        </dl>
+        <nav class="admin-tabs" aria-label="控制台页面">
+          <button class="active" type="button" data-tab="submissions">投稿审核 <span id="submissionCount">0</span></button>
+          <button type="button" data-tab="withdrawals">撤回申请 <span id="withdrawalCount">0</span></button>
+          <button type="button" data-tab="whitelist">UP 白名单</button>
+          <button type="button" data-tab="smtp">邮件通知</button>
+          <button type="button" data-tab="server">服务器</button>
+        </nav>
 
-        <section class="repository-status">
-          <h2>仓库版本</h2>
-          <dl>
+        <section class="tab-panel active" data-panel="submissions">
+          <div class="section-heading"><div><h2>待审核投稿</h2><p>检查标题、作者和轴内容后决定是否公开。</p></div><button class="quiet" type="button" data-refresh>刷新</button></div>
+          <div class="task-list" id="submissionList"></div>
+        </section>
+
+        <section class="tab-panel" data-panel="withdrawals" hidden>
+          <div class="section-heading"><div><h2>撤回申请</h2><p>邮箱完全一致的申请会自动执行，这里只显示需要人工判断的项目。</p></div></div>
+          <div class="task-list" id="withdrawalList"></div>
+        </section>
+
+        <section class="tab-panel" data-panel="whitelist" hidden>
+          <div class="section-heading"><div><h2>UP 白名单</h2><p>名单内邮箱审核通过后，用户名旁会显示 UP 标识。</p></div></div>
+          <form class="inline-form" id="whitelistForm">
+            <input id="whitelistEmail" type="email" autocomplete="off" placeholder="name@example.com" required />
+            <button class="primary" type="submit">添加邮箱</button>
+          </form>
+          <div class="chip-list" id="whitelistList"></div>
+        </section>
+
+        <section class="tab-panel" data-panel="smtp" hidden>
+          <div class="section-heading"><div><h2>SMTP 邮件通知</h2><p>有新投稿时向指定邮箱发送提醒。QQ 邮箱推荐使用 smtp.qq.com、465 和授权码。</p></div></div>
+          <form class="settings-form" id="smtpForm">
+            <label><span>SMTP 主机</span><input id="smtpHost" required placeholder="smtp.qq.com" /></label>
+            <label><span>端口</span><input id="smtpPort" type="number" min="1" max="65535" value="465" required /></label>
+            <label><span>SMTP 账号</span><input id="smtpUser" required autocomplete="username" /></label>
+            <label><span>授权码</span><input id="smtpPass" type="password" autocomplete="new-password" placeholder="留空则保持现有授权码" /></label>
+            <label><span>发件地址</span><input id="smtpFrom" type="email" placeholder="默认使用 SMTP 账号" /></label>
+            <label><span>接收通知邮箱</span><input id="smtpTo" type="email" required /></label>
+            <label class="check-row"><input id="smtpSecure" type="checkbox" checked /><span>使用 TLS 安全连接</span></label>
+            <div class="form-actions"><button class="quiet" id="smtpTestBtn" type="button">发送测试邮件</button><button class="primary" type="submit">保存设置</button></div>
+            <p class="form-message" id="smtpMessage" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="tab-panel" data-panel="server" hidden>
+          <div class="section-heading"><div><h2>服务器与仓库</h2><p>从 GitHub 拉取基础连段和网站代码，不会覆盖服务器私有投稿。</p></div><button class="primary" id="updateBtn" type="button">从 GitHub 更新并重启</button></div>
+          <dl class="metrics">
+            <div><dt>当前版本</dt><dd id="releaseId">-</dd></div>
+            <div><dt>上线时间</dt><dd id="releaseTime">-</dd></div>
+            <div><dt>连段数量</dt><dd id="chartCount">-</dd></div>
+            <div><dt>监听地址</dt><dd id="listenAddress">-</dd></div>
             <div><dt>repository</dt><dd id="mainCommit">-</dd></div>
             <div><dt>deta1</dt><dd id="data1Commit">-</dd></div>
             <div><dt>deta2</dt><dd id="data2Commit">-</dd></div>
           </dl>
-        </section>
-
-        <section class="task-output">
-          <div class="section-heading">
-            <h2>更新状态</h2>
-            <span id="updateStatus">等待操作</span>
-          </div>
+          <div class="section-heading output-heading"><h2>更新状态</h2><span id="updateStatus">等待操作</span></div>
           <pre id="outputBox">尚未执行更新。</pre>
         </section>
       </section>

@@ -28,9 +28,12 @@ done
 
 [[ ${EUID:-$(id -u)} -eq 0 ]] || { echo "Run this installer with sudo." >&2; exit 1; }
 command -v node >/dev/null 2>&1 || { echo "Node.js 18+ is required." >&2; exit 1; }
+command -v npm >/dev/null 2>&1 || { echo "npm is required." >&2; exit 1; }
 command -v git >/dev/null 2>&1 || { echo "Git is required." >&2; exit 1; }
 command -v systemctl >/dev/null 2>&1 || { echo "systemd is required." >&2; exit 1; }
 [[ "$PUBLIC_URL" =~ ^https?://[^[:space:]]+$ ]] || { echo "Invalid public URL: $PUBLIC_URL" >&2; exit 1; }
+
+npm install --omit=dev --prefix "$SERVER_DIR"
 
 RUN_USER="${SUDO_USER:-root}"
 RUN_GROUP="$(id -gn "$RUN_USER")"

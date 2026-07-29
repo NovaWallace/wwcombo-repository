@@ -5,7 +5,8 @@ import { readFile, stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { currentRelease, updateRepositoriesAndBuild } from './release.mjs';
+import { createCommunityService } from './community.mjs';
+import { buildRelease, currentRelease, updateRepositoriesAndBuild } from './release.mjs';
 
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const MAIN_ROOT = path.dirname(SERVER_DIR);
@@ -40,7 +41,7 @@ const config = JSON.parse(await readFile(path.join(RUNTIME_ROOT, 'config.json'),
 if (!config?.admin?.salt || !config?.admin?.hash || !config?.sessionSecret) throw new Error('Server admin config is incomplete.');
 
 const startupMessages = [];
-const release = await currentRelease({
+let release = await currentRelease({
   mainRoot: MAIN_ROOT,
   runtimeRoot: RUNTIME_ROOT,
   onLog(message) {
@@ -48,8 +49,18 @@ const release = await currentRelease({
     console.log(`[wwcombo] ${message}`);
   }
 });
-const PUBLIC_ROOT = release.releaseRoot;
-const BUILD_INFO = JSON.parse(await readFile(path.join(PUBLIC_ROOT, 'build-info.json'), 'utf8'));
+let PUBLIC_ROOT = release.releaseRoot;
+let BUILD_INFO = JSON.parse(await readFile(path.join(PUBLIC_ROOT, 'build-info.json'), 'utf8'));
+
+async function rebuildCommunityRelease() {
+  release = await buildRelease({ mainRoot: MAIN_ROOT, runtimeRoot: RUNTIME_ROOT });
+  PUBLIC_ROOT = release.releaseRoot;
+  BUILD_INFO = JSON.parse(await readFile(path.join(PUBLIC_ROOT, 'build-info.json'), 'utf8'));
+  return release;
+}
+
+const community = createCommunityService({ runtimeRoot: RUNTIME_ROOT, rebuildRelease: rebuildCommunityRelease });
+await community.initialize();
 
 const loginAttempts = new Map();
 const updateState = {
@@ -154,12 +165,12 @@ async function serveFile(req, res, root, relative) {
   createReadStream(target, { start, end }).pipe(res);
 }
 
-async function readJsonBody(req) {
+async function readJsonBody(req, maxBytes = 16 * 1024) {
   const chunks = [];
   let bytes = 0;
   for await (const chunk of req) {
     bytes += chunk.length;
-    if (bytes > 16 * 1024) throw new Error('Request body is too large.');
+    if (bytes > maxBytes) throw new Error('Request body is too large.');
     chunks.push(chunk);
   }
   return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
@@ -233,13 +244,14 @@ function requireSession(req, res, requireCsrf = false) {
   return session;
 }
 
-function publicStatus(session) {
+async function publicStatus(session) {
   return {
     authenticated: true,
     csrf: session.csrf,
     server: { host: HOST, port: PORT, publicUrl: PUBLIC_URL, startedAt: serverStartedAt },
     release: BUILD_INFO,
-    update: { ...updateState, output: updateState.output.slice(-80) }
+    update: { ...updateState, output: updateState.output.slice(-80) },
+    community: await community.status()
   };
 }
 
@@ -270,7 +282,7 @@ async function handleAdminApi(req, res, pathname) {
 
   if (req.method === 'GET' && pathname === '/api/server/status') {
     const session = requireSession(req, res);
-    if (session) sendJson(res, 200, publicStatus(session));
+    if (session) sendJson(res, 200, await publicStatus(session));
     return;
   }
 
@@ -319,10 +331,103 @@ async function handleAdminApi(req, res, pathname) {
     return;
   }
 
+  const submissionAction = /^\/api\/server\/submissions\/([^/]+)\/(approve|reject)$/.exec(pathname);
+  if (req.method === 'POST' && submissionAction) {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    const body = await readJsonBody(req);
+    const id = decodeURIComponent(submissionAction[1]);
+    if (submissionAction[2] === 'approve') sendJson(res, 200, { ok: true, chart: await community.approve(id) });
+    else {
+      await community.reject(id, body.reason);
+      sendJson(res, 200, { ok: true });
+    }
+    return;
+  }
+
+  const withdrawalAction = /^\/api\/server\/withdrawals\/([^/]+)\/(approve|reject)$/.exec(pathname);
+  if (req.method === 'POST' && withdrawalAction) {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    const result = await community.resolveWithdrawal(decodeURIComponent(withdrawalAction[1]), withdrawalAction[2] === 'approve');
+    sendJson(res, 200, { ok: true, ...result });
+    return;
+  }
+
+  if (req.method === 'PUT' && pathname === '/api/server/community/whitelist') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    const body = await readJsonBody(req);
+    sendJson(res, 200, { ok: true, emails: await community.setWhitelist(body.emails) });
+    return;
+  }
+
+  if (req.method === 'PUT' && pathname === '/api/server/community/smtp') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    sendJson(res, 200, { ok: true, smtp: await community.setSmtp(await readJsonBody(req)) });
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/api/server/community/smtp/test') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    await community.testSmtp();
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
   sendJson(res, 404, { error: 'Not found' });
 }
 
 const serverStartedAt = Date.now();
+const submissionAttempts = new Map();
+
+function acceptSubmissionFrom(address) {
+  const now = Date.now();
+  const attempts = (submissionAttempts.get(address) || []).filter((time) => now - time < 10 * 60 * 1000);
+  if (attempts.length >= 5) return false;
+  attempts.push(now);
+  submissionAttempts.set(address, attempts);
+  return true;
+}
+
+async function publicIndex() {
+  const index = JSON.parse((await readFile(path.join(PUBLIC_ROOT, 'community-index.json'), 'utf8')).replace(/^\ufeff/, ''));
+  const downloads = (await community.status()).downloads;
+  index.charts = index.charts.map((chart) => ({
+    ...chart,
+    downloadCount: Math.max(0, Number(downloads[chart.id] || 0)),
+    downloadUrl: `/api/community/download/${encodeURIComponent(chart.id)}`
+  }));
+  return index;
+}
+
+async function handleCommunityApi(req, res, pathname) {
+  if (req.method === 'POST' && pathname === '/api/community/submit') {
+    const address = clientAddress(req);
+    if (!acceptSubmissionFrom(address)) return sendJson(res, 429, { error: '投稿过于频繁，请稍后再试。' });
+    const result = await community.submit(await readJsonBody(req, 1400 * 1024), address);
+    sendJson(res, 202, result);
+    return;
+  }
+  if (req.method === 'POST' && pathname === '/api/community/withdraw') {
+    sendJson(res, 202, await community.requestWithdrawal(await readJsonBody(req)));
+    return;
+  }
+  const match = /^\/api\/community\/download\/([^/]+)$/.exec(pathname);
+  if ((req.method === 'GET' || req.method === 'HEAD') && match) {
+    const comboId = decodeURIComponent(match[1]);
+    const index = await publicIndex();
+    const chart = index.charts.find((item) => item.id === comboId);
+    if (!chart || !String(chart.url || '').startsWith('/data/')) return sendText(res, 404, 'Not found');
+    if (req.method === 'GET') await community.incrementDownload(comboId);
+    await serveFile(req, res, PUBLIC_ROOT, String(chart.url).slice(1));
+    return;
+  }
+  sendJson(res, 404, { error: 'Not found' });
+}
+
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
@@ -336,6 +441,10 @@ const server = createServer(async (req, res) => {
 
     if (pathname.startsWith('/api/server/')) {
       await handleAdminApi(req, res, pathname);
+      return;
+    }
+    if (pathname.startsWith('/api/community/')) {
+      await handleCommunityApi(req, res, pathname);
       return;
     }
     if (pathname === '/admin') {
@@ -356,7 +465,7 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (pathname === '/community-index.json') {
-      await serveFile(req, res, PUBLIC_ROOT, 'community-index.json');
+      sendJson(res, 200, await publicIndex());
       return;
     }
     if (PUBLIC_ROOT_FILES.has(pathname)) {

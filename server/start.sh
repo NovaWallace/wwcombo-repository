@@ -39,10 +39,15 @@ done
 
 command -v node >/dev/null 2>&1 || { echo "Node.js 18+ is required." >&2; exit 1; }
 command -v git >/dev/null 2>&1 || { echo "Git is required." >&2; exit 1; }
+command -v npm >/dev/null 2>&1 || { echo "npm is required." >&2; exit 1; }
 NODE_MAJOR="$(node -p "Number(process.versions.node.split('.')[0])")"
 (( NODE_MAJOR >= 18 )) || { echo "Node.js 18+ is required; current version: $(node -v)" >&2; exit 1; }
 [[ "$PORT" =~ ^[0-9]+$ ]] && (( PORT >= 1 && PORT <= 65535 )) || { echo "Invalid port: $PORT" >&2; exit 1; }
 [[ "$PUBLIC_URL" =~ ^https?://[^[:space:]]+$ ]] || { echo "Invalid public URL: $PUBLIC_URL" >&2; exit 1; }
+
+if [[ ! -d "$SERVER_DIR/node_modules/nodemailer" ]]; then
+  npm install --omit=dev --prefix "$SERVER_DIR"
+fi
 
 mkdir -p "$RUNTIME_ROOT"
 if [[ -n "$ADMIN_PASSWORD" ]]; then

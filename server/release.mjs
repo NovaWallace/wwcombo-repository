@@ -128,6 +128,36 @@ async function readState(runtimeRoot) {
   }
 }
 
+async function mergeCommunityPublished({ runtimeRoot, stagingRoot, index }) {
+  const communityRoot = path.join(runtimeRoot, 'community');
+  const manifest = await readStateFile(path.join(communityRoot, 'published.json'), { charts: [] });
+  const items = Array.isArray(manifest.charts) ? manifest.charts : [];
+  if (!items.length) return;
+  const targetRoot = path.join(stagingRoot, 'data', 'community', 'published');
+  await mkdir(targetRoot, { recursive: true });
+  const directCharts = [];
+  for (const item of items) {
+    if (!item || typeof item !== 'object' || !item.chart || typeof item.fileName !== 'string') continue;
+    const fileName = path.basename(item.fileName);
+    if (fileName !== item.fileName || !/\.wwcombo\.json$/i.test(fileName)) continue;
+    const source = path.join(communityRoot, 'published', fileName);
+    if (!existsSync(source)) continue;
+    await cp(source, path.join(targetRoot, fileName), { force: true });
+    directCharts.push({ ...item.chart, repository: 'community', url: `/data/community/published/${encodeURIComponent(fileName)}` });
+  }
+  const directIds = new Set(directCharts.map((chart) => chart.id));
+  index.charts = [...directCharts, ...index.charts.filter((chart) => !directIds.has(chart.id))];
+  index.updatedAt = Date.now();
+}
+
+async function readStateFile(file, fallback) {
+  try {
+    return JSON.parse((await readFile(file, 'utf8')).replace(/^\ufeff/, ''));
+  } catch {
+    return fallback;
+  }
+}
+
 async function pruneReleases(runtimeRoot, keep = 3) {
   const releasesRoot = path.join(runtimeRoot, 'releases');
   const entries = await readdir(releasesRoot, { withFileTypes: true });
@@ -180,6 +210,8 @@ export async function buildRelease({ mainRoot, runtimeRoot, onLog }) {
       if (!existsSync(localFile)) throw new Error(`索引对应的连段不存在: ${chart.id}`);
       chart.url = `/data/${repositoryId}/published/${encodedPublishedPath(parts)}`;
     }
+
+    await mergeCommunityPublished({ runtimeRoot, stagingRoot, index });
 
     await writeFile(path.join(stagingRoot, 'community-index.json'), `${JSON.stringify(index, null, 2)}\n`, 'utf8');
     const totals = await countFiles(stagingRoot);
