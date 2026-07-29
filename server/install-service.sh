@@ -39,6 +39,21 @@ RUN_USER="${SUDO_USER:-root}"
 RUN_GROUP="$(id -gn "$RUN_USER")"
 install -d -o "$RUN_USER" -g "$RUN_GROUP" -m 0750 "$RUNTIME_ROOT"
 
+if [[ ! -f "$RUNTIME_ROOT/config.json" && -z "$ADMIN_PASSWORD" ]]; then
+  if [[ -t 0 ]]; then
+    read -r -s -p "请设置管理员密码（至少 10 位）：" ADMIN_PASSWORD
+    echo
+    read -r -s -p "请再次输入管理员密码：" ADMIN_PASSWORD_CONFIRM
+    echo
+    [[ "$ADMIN_PASSWORD" == "$ADMIN_PASSWORD_CONFIRM" ]] || { echo "两次输入的管理员密码不一致。" >&2; exit 1; }
+    [[ ${#ADMIN_PASSWORD} -ge 10 ]] || { echo "管理员密码至少需要 10 位。" >&2; exit 1; }
+    unset ADMIN_PASSWORD_CONFIRM
+  else
+    echo "首次安装必须使用 --admin-password 设置一个至少 10 位且自己知道的密码。" >&2
+    exit 1
+  fi
+fi
+
 if [[ -n "$ADMIN_PASSWORD" ]]; then
   WWCOMBO_ADMIN_PASSWORD="$ADMIN_PASSWORD" node "$SERVER_DIR/configure.mjs" --runtime "$RUNTIME_ROOT"
 else

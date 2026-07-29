@@ -429,9 +429,9 @@ async function handleCommunityApi(req, res, pathname) {
 }
 
 const server = createServer(async (req, res) => {
+  let pathname = '';
   try {
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-    let pathname;
     try {
       pathname = decodeURIComponent(url.pathname);
     } catch {
@@ -479,7 +479,10 @@ const server = createServer(async (req, res) => {
     sendText(res, 404, 'Not found');
   } catch (error) {
     console.error(error);
-    if (!res.headersSent) sendJson(res, 500, { error: '服务器内部错误。' });
+    if (!res.headersSent) {
+      const apiRequest = pathname?.startsWith('/api/');
+      sendJson(res, apiRequest ? 400 : 500, { error: apiRequest ? (error.message || String(error)) : '服务器内部错误。' });
+    }
     else res.destroy();
   }
 });

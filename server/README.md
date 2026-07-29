@@ -12,7 +12,12 @@
 ```bash
 git clone https://github.com/NovaWallace/wwcombo-repository.git
 cd wwcombo-repository
-sudo bash server/install-service.sh --public-url https://Nova.fb520.site --trust-proxy
+sudo bash server/install-service.sh \
+  --host 0.0.0.0 \
+  --port 9881 \
+  --public-url https://Nova.fb520.site \
+  --trust-proxy \
+  --admin-password '至少10位且自己保存的密码'
 ```
 
 安装脚本会在 systemd 服务参数和环境变量中同时写入 `0.0.0.0:9881`。旧安装更新代码后，应重新执行上面的安装命令，使现有 `wwcombo.service` 同步新的监听配置。
@@ -20,12 +25,12 @@ sudo bash server/install-service.sh --public-url https://Nova.fb520.site --trust
 安装程序会：
 
 1. 创建独立运行目录 `/var/lib/wwcombo`。
-2. 生成并在终端打印随机管理密码。
+2. 保存安装者明确设置的管理密码；交互式安装也会要求输入并确认密码。
 3. 自动 clone 两个数据仓库并校验全部连段。
 4. 启动 `0.0.0.0:9881`。
 5. 注册 `wwcombo.service`，开机自动运行。
 
-指定后台密码时，至少使用 10 个字符：
+后台密码至少使用 10 个字符。首次安装不会再生成一个未知的随机密码；非交互式安装必须提供 `--admin-password`：
 
 ```bash
 sudo bash server/install-service.sh --public-url https://Nova.fb520.site --trust-proxy --admin-password 'CHANGE_THIS_PASSWORD'
@@ -71,8 +76,10 @@ http://127.0.0.1:9881
 
 更新失败时，当前服务和旧快照保持可用，不会展示更新到一半的数据。
 
-## 本地维护端
+## 投稿数据与后台
 
-QQ 收件、完整投稿者信息、撤回和投诉只留在维护者电脑。维护站点击“一键更新并 Push”后，按 `deta1`、`deta2`、`repository` 的顺序推送。随后登录服务器后台点击更新即可。
+用户可以直接在网站登记用户名和邮箱并提交连段。新投稿进入服务器审核队列，审核通过后才会公开；完整邮箱、所有权记录、撤回申请、UP 白名单、SMTP 配置和下载次数只保存在服务器的 `/var/lib/wwcombo/community`，不会写入公开 GitHub 仓库或公开网站文件。
 
-服务器不会获取 `.env`、QQ 邮箱授权码、`submission-owners.json`、`mail-requests.json` 或投稿者完整邮箱。
+用户以与投稿一致的邮箱发起撤回时会自动删除；无法核验的撤回申请进入后台人工处理。后台可配置 QQ SMTP（`smtp.qq.com:465`，使用授权码）向维护者发送新投稿提醒，SMTP 不负责自动发布。
+
+旧的本地维护站仍可执行“一键更新并 Push”，按 `deta1`、`deta2`、`repository` 的顺序推送历史仓库内容。服务器主人随后在管理后台点击“从 GitHub 更新并重启”即可拉取更新；服务器不会获取维护者电脑上的 `.env` 或 QQ 邮箱授权码。

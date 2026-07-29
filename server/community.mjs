@@ -6,6 +6,11 @@ import path from 'node:path';
 const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_STEPS = 5000;
 const MAX_DURATION_MS = 10 * 60 * 1000;
+const ICON_TRIGGERS = [
+  '长按共鸣解放', '长按普攻', '长按技能', '长按声骸', '长按解放', '长按闪避', '长按跳跃',
+  '共鸣解放', '终结技', '普攻', '重击', '技能', '声骸', '解放', '闪避', '跳跃', '工具', '变奏', '延奏', '处决', '前走',
+  'iii', 'ii', 'a', 'z', 'e', 'E', 'q', 'Q', 'r', 'R', 's', 'S', 'd', 'D', 'j', 'J', 't', 'b', 'y', 'f', 'w', 'i'
+].sort((left, right) => right.length - left.length);
 
 function record(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -53,6 +58,70 @@ function submittedChart(payload) {
   if (!chart.steps.every(validStep)) throw new Error('连段步骤格式不正确。');
   if (chartDuration(chart) > MAX_DURATION_MS) throw new Error('连段时间轴超过 10 分钟。');
   return { item, chart };
+}
+
+function labelRemainder(value) {
+  const text = String(value || '').trim();
+  let index = 0;
+  let remainder = '';
+  while (index < text.length) {
+    const trigger = ICON_TRIGGERS.find((item) => text.startsWith(item, index));
+    if (trigger) index += trigger.length;
+    else {
+      if (!/\s/.test(text[index])) remainder += text[index];
+      index += 1;
+    }
+  }
+  return remainder;
+}
+
+function preflightReview(payload) {
+  const { item, chart } = submittedChart(payload);
+  const labels = record(item.contentLabels);
+  const ordered = [...chart.steps].sort((left, right) => Number(left.startMin || 0) - Number(right.startMin || 0) || String(left.id || '').localeCompare(String(right.id || '')));
+  const repeatedActionRuns = [];
+  let run = [];
+  for (const step of ordered) {
+    if (run.length && run[0].moveId !== step.moveId) {
+      if (run.length >= 6) repeatedActionRuns.push({ moveId: run[0].moveId, label: run[0].label || run[0].moveId, count: run.length, startMs: Number(run[0].startMin || 0) });
+      run = [];
+    }
+    run.push(step);
+  }
+  if (run.length >= 6) repeatedActionRuns.push({ moveId: run[0].moveId, label: run[0].label || run[0].moveId, count: run.length, startMs: Number(run[0].startMin || 0) });
+
+  const stepIds = new Set(chart.steps.map((step) => step.id));
+  const unconvertibleLabels = Object.entries(labels)
+    .filter(([stepId, value]) => stepIds.has(stepId) && String(value || '').trim())
+    .map(([stepId, value]) => ({ stepId, label: String(value).trim().slice(0, 120), remainder: labelRemainder(value).slice(0, 120) }))
+    .filter((item) => item.remainder);
+  const issues = [
+    ...repeatedActionRuns.map((item) => `连续 ${item.count} 次“${item.label}”（${Math.round(item.startMs)} ms 起）`),
+    ...unconvertibleLabels.map((item) => `自定义文字“${item.label}”含无法图标化内容“${item.remainder}”`)
+  ];
+  return {
+    level: issues.length ? 'review' : 'low',
+    lowRisk: issues.length === 0,
+    checkedAt: Date.now(),
+    issues,
+    repeatedActionRuns,
+    unconvertibleLabels
+  };
+}
+
+function submissionPreview(payload) {
+  const { chart } = submittedChart(payload);
+  const community = record(chart.community);
+  const characters = (Array.isArray(community.characters) ? community.characters : [chart.character])
+    .filter((value) => typeof value === 'string' && value.trim()).map((value) => value.trim()).slice(0, 3);
+  return {
+    title: String(community.name || community.title || chart.title || '未命名连段').trim().slice(0, 120),
+    characters,
+    tags: (Array.isArray(community.tags) ? community.tags : chart.tags || []).filter((value) => typeof value === 'string' && value.trim()).map((value) => value.trim()).slice(0, 20),
+    stepCount: chart.steps.length,
+    rounds: Number.isFinite(community.rounds) ? Math.max(1, Math.round(community.rounds)) : 1,
+    durationMs: Math.round(chartDuration(chart))
+  };
 }
 
 function chartSummary(payload, submitter) {
@@ -111,6 +180,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const whitelistFile = path.join(root, 'whitelist.json');
   const downloadsFile = path.join(root, 'downloads.json');
   const smtpFile = path.join(root, 'smtp.json');
+  let downloadWrite = Promise.resolve();
 
   async function initialize() {
     await Promise.all([mkdir(pendingRoot, { recursive: true }), mkdir(publishedRoot, { recursive: true })]);
@@ -144,30 +214,51 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     return '';
   }
 
-  async function submit(body, address) {
+  async function submit(body, address, { notify = true } = {}) {
     const username = String(body.username || '').trim().slice(0, 40);
     const email = normalizeEmail(body.email);
     if (!username) throw new Error('请先填写用户名。');
     if (!email) throw new Error('邮箱格式不正确。');
     const content = record(body.content);
-    submittedChart(content);
+    const preflight = preflightReview(content);
     const serialized = `${JSON.stringify(content, null, 2)}\n`;
     if (Buffer.byteLength(serialized) > MAX_FILE_BYTES) throw new Error('连段文件不能超过 1 MB。');
     const id = randomUUID();
     const fileName = safeName(body.fileName || 'combo.wwcombo.json');
     const storedFile = `${id}.wwcombo.json`;
-    const submission = { id, username, email, fileName, storedFile, status: 'pending', submittedAt: Date.now(), address: String(address || '') };
+    const submission = {
+      id, username, email, fileName, storedFile, status: 'pending', submittedAt: Date.now(), address: String(address || ''),
+      preview: submissionPreview(content), preflight
+    };
     await writeFile(path.join(pendingRoot, storedFile), serialized, { encoding: 'utf8', mode: 0o600 });
     const queue = await readJson(queueFile, { pending: [], history: [] });
     queue.pending = [...(Array.isArray(queue.pending) ? queue.pending : []), submission];
     await writeJson(queueFile, queue);
-    try {
-      submission.notificationError = await sendSubmissionNotice(submission);
-    } catch (error) {
-      submission.notificationError = error.message || String(error);
+    if (notify) {
+      try {
+        submission.notificationError = await sendSubmissionNotice(submission);
+      } catch (error) {
+        submission.notificationError = error.message || String(error);
+      }
     }
     await writeJson(queueFile, queue);
     return { id, status: 'pending' };
+  }
+
+  async function submissionContent(id) {
+    const queue = await readJson(queueFile, { pending: [], history: [] });
+    const submission = (queue.pending || []).find((item) => item.id === id);
+    if (!submission) throw new Error('投稿不存在或已经处理。');
+    const storedFile = path.basename(String(submission.storedFile || ''));
+    if (!storedFile || storedFile !== submission.storedFile) throw new Error('投稿文件路径不安全。');
+    const content = JSON.parse(await readFile(path.join(pendingRoot, storedFile), 'utf8'));
+    return { submission, content, preflight: preflightReview(content) };
+  }
+
+  async function publishDirect(body, address) {
+    const queued = await submit(body, address, { notify: false });
+    const chart = await approve(queued.id);
+    return { status: 'published', chart };
   }
 
   async function approve(id) {
@@ -259,6 +350,27 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   async function setWhitelist(emails) {
     const normalized = [...new Set((Array.isArray(emails) ? emails : []).map(normalizeEmail).filter(Boolean))].sort();
     await writeJson(whitelistFile, { emails: normalized });
+    const [published, owners] = await Promise.all([readJson(publishedFile, { charts: [] }), readJson(ownersFile, {})]);
+    let changed = false;
+    for (const item of published.charts || []) {
+      const comboId = item.chart?.id;
+      const shouldBadge = normalized.includes(normalizeEmail(owners[comboId]?.email));
+      const submitter = record(item.chart?.submitter);
+      if (Boolean(submitter.badge) === shouldBadge) continue;
+      item.chart.submitter = { ...submitter, ...(shouldBadge ? { badge: 'UP' } : {}) };
+      if (!shouldBadge) delete item.chart.submitter.badge;
+      const packageFile = path.join(publishedRoot, item.fileName);
+      const payload = await readJson(packageFile, null);
+      if (payload?.chart) {
+        payload.chart.community = { ...record(payload.chart.community), submitter: item.chart.submitter };
+        await writeFile(packageFile, `${JSON.stringify(payload, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
+      }
+      changed = true;
+    }
+    if (changed) {
+      await writeJson(publishedFile, published);
+      await rebuildRelease();
+    }
     return normalized;
   }
 
@@ -291,10 +403,14 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   }
 
   async function incrementDownload(comboId) {
-    const counts = record(await readJson(downloadsFile, {}));
-    counts[comboId] = Math.max(0, Number(counts[comboId] || 0)) + 1;
-    await writeJson(downloadsFile, counts);
-    return counts[comboId];
+    const operation = downloadWrite.then(async () => {
+      const counts = record(await readJson(downloadsFile, {}));
+      counts[comboId] = Math.max(0, Number(counts[comboId] || 0)) + 1;
+      await writeJson(downloadsFile, counts);
+      return counts[comboId];
+    });
+    downloadWrite = operation.catch(() => {});
+    return operation;
   }
 
   async function status() {
@@ -314,5 +430,5 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     };
   }
 
-  return { initialize, submit, approve, reject, requestWithdrawal, resolveWithdrawal, setWhitelist, setSmtp, testSmtp, incrementDownload, status };
+  return { initialize, submit, submissionContent, publishDirect, approve, reject, requestWithdrawal, resolveWithdrawal, setWhitelist, setSmtp, testSmtp, incrementDownload, status };
 }

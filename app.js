@@ -313,6 +313,7 @@ function openProfile() {
   els.profileUsernameInput.value = state.profile.username;
   els.profileEmailInput.value = state.profile.email;
   els.profileFeedback.textContent = '';
+  els.profileFeedback.className = 'form-feedback';
   els.profileBackdrop.hidden = false;
   document.body.style.overflow = 'hidden';
   requestAnimationFrame(() => els.profileUsernameInput.focus());
