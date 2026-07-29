@@ -18,7 +18,7 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260729-29" />
+    <link rel="stylesheet" href="styles.css?v=20260729-30" />
   </head>
   <body>
     <header class="site-header">
@@ -216,21 +216,35 @@
     </div>
 
     <div class="modal-backdrop" id="uploadBackdrop" hidden>
-      <section class="upload-dialog" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
+      <section class="upload-dialog upload-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
         <header class="modal-header">
           <div><h2 id="uploadTitle" data-i18n="upload.title">上传连段</h2><p data-i18n="upload.hint">文件会进入控制台审核，通过后公开。</p></div>
           <button class="icon-button" id="closeUploadBtn" type="button" aria-label="关闭"><i data-lucide="x" aria-hidden="true"></i></button>
         </header>
-        <form class="upload-form" id="uploadForm">
-          <div class="upload-identity"><span class="profile-avatar" id="uploadAvatar">?</span><div><strong id="uploadUsername">-</strong><small id="uploadEmail">-</small></div><button type="button" id="editUploadProfileBtn" data-i18n="profile.edit">修改资料</button></div>
-          <label class="file-drop" for="comboFileInput"><i data-lucide="file-json" aria-hidden="true"></i><strong data-i18n="upload.choose">选择 .wwcombo.json 文件</strong><span id="comboFileName" data-i18n="upload.none">尚未选择文件</span><input id="comboFileInput" type="file" accept=".json,.wwcombo.json,application/json" required /></label>
-          <section class="upload-axis-preview" id="uploadAxisSection" hidden>
-            <div class="axis-preview-head compact"><div><h3 data-i18n="upload.preview">连段预览</h3><p id="uploadAxisSummary" data-i18n="upload.previewEmpty">导入后会在这里预览连段图</p></div></div>
-            <div class="axis-preview upload-axis" id="uploadAxisPreview"></div>
+        <div class="upload-layout">
+          <form class="upload-form upload-info" id="uploadForm">
+            <div class="upload-identity"><span class="profile-avatar" id="uploadAvatar">?</span><div><strong id="uploadUsername">-</strong><small id="uploadEmail">-</small></div><button type="button" id="editUploadProfileBtn" data-i18n="profile.edit">修改资料</button></div>
+            <label class="file-drop" for="comboFileInput"><i data-lucide="file-json" aria-hidden="true"></i><strong data-i18n="upload.choose">选择 .wwcombo.json 文件</strong><span id="comboFileName" data-i18n="upload.none">尚未选择文件</span><input id="comboFileInput" type="file" accept=".json,.wwcombo.json,application/json" required /></label>
+            <div class="form-feedback" id="uploadFeedback" aria-live="polite"></div>
+            <footer class="modal-footer"><button type="button" id="cancelUploadBtn" data-i18n="common.cancel">取消</button><button class="primary-button" id="confirmUploadBtn" type="submit"><i data-lucide="upload" aria-hidden="true"></i><span data-i18n="upload.submit">提交审核</span></button></footer>
+          </form>
+          <section class="axis-preview-panel upload-axis-panel" id="uploadAxisSection" aria-labelledby="uploadAxisTitle">
+            <div class="axis-preview-head">
+              <div><h3 id="uploadAxisTitle" data-i18n="upload.preview">连段预览</h3><p id="uploadAxisSummary" data-i18n="upload.previewEmpty">导入后会在这里预览连段图</p></div>
+              <div class="axis-preview-options">
+                <label class="axis-zoom-control" for="uploadAxisZoom"><i data-lucide="zoom-in" aria-hidden="true"></i><input id="uploadAxisZoom" data-axis-zoom type="range" min="80" max="180" step="10" value="100" /><output id="uploadAxisZoomValue" data-axis-zoom-value for="uploadAxisZoom">100%</output></label>
+                <div class="axis-icon-set" role="group" aria-label="招式图标样式" data-i18n-aria-label="axis.iconStyle">
+                  <button class="active" type="button" data-icon-set="english" aria-pressed="true" data-i18n="axis.letters">字母</button>
+                  <button type="button" data-icon-set="graphic" aria-pressed="false" data-i18n="axis.graphics">图形</button>
+                  <button type="button" data-icon-set="xbox" aria-pressed="false">Xbox</button>
+                  <button type="button" data-icon-set="playstation" aria-pressed="false">PS</button>
+                </div>
+                <span class="experimental-badge" data-i18n="axis.experimental">实验功能</span>
+              </div>
+            </div>
+            <div class="axis-preview" id="uploadAxisPreview"><div class="axis-empty" data-i18n="upload.previewEmpty">导入后会在这里预览连段图</div></div>
           </section>
-          <div class="form-feedback" id="uploadFeedback" aria-live="polite"></div>
-          <footer class="modal-footer"><button type="button" id="cancelUploadBtn" data-i18n="common.cancel">取消</button><button class="primary-button" id="confirmUploadBtn" type="submit"><i data-lucide="upload" aria-hidden="true"></i><span data-i18n="upload.submit">提交审核</span></button></footer>
-        </form>
+        </div>
       </section>
     </div>
 
@@ -306,8 +320,8 @@
               <div class="axis-preview-options">
                 <label class="axis-zoom-control" for="axisZoom">
                   <i data-lucide="zoom-in" aria-hidden="true"></i>
-                  <input id="axisZoom" type="range" min="80" max="180" step="10" value="100" />
-                  <output id="axisZoomValue" for="axisZoom">100%</output>
+                  <input id="axisZoom" data-axis-zoom type="range" min="80" max="180" step="10" value="100" />
+                  <output id="axisZoomValue" data-axis-zoom-value for="axisZoom">100%</output>
                 </label>
                 <div class="axis-icon-set" role="group" aria-label="招式图标样式" data-i18n-aria-label="axis.iconStyle">
                   <button class="active" type="button" data-icon-set="english" aria-pressed="true" data-i18n="axis.letters">字母</button>
@@ -328,7 +342,7 @@
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
-    <script src="i18n.js?v=20260729-29"></script>
-    <script src="app.js?v=20260729-29"></script>
+    <script src="i18n.js?v=20260729-30"></script>
+    <script src="app.js?v=20260729-30"></script>
   </body>
 </html>

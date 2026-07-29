@@ -193,6 +193,8 @@ const state = {
   sort: 'version',
   detailChart: null,
   detailPackage: null,
+  uploadChart: null,
+  uploadPackage: null,
   axisIconSet: 'english',
   axisScale: 1,
   chartPackages: new Map()
@@ -286,6 +288,8 @@ const els = {
   axisIconSetButtons: [...document.querySelectorAll('[data-icon-set]')],
   axisZoom: document.getElementById('axisZoom'),
   axisZoomValue: document.getElementById('axisZoomValue'),
+  axisZoomControls: [...document.querySelectorAll('[data-axis-zoom]')],
+  axisZoomValues: [...document.querySelectorAll('[data-axis-zoom-value]')],
   axisPreview: document.getElementById('axisPreview'),
   axisPreviewSummary: document.getElementById('axisPreviewSummary')
 };
@@ -357,13 +361,15 @@ function openUpload() {
     els.profileFeedback.textContent = t('profile.required');
     return;
   }
+  state.uploadChart = null;
+  state.uploadPackage = null;
   renderProfile();
+  renderAxisIconSet();
+  syncAxisScaleControls();
   uploadPreviewToken += 1;
   els.comboFile.value = '';
   els.comboFileName.textContent = t('upload.none');
-  els.uploadAxisSection.hidden = true;
-  els.uploadAxisPreview.replaceChildren();
-  els.uploadAxisSummary.textContent = t('upload.previewEmpty');
+  resetUploadAxisPreview();
   els.uploadFeedback.textContent = '';
   els.uploadFeedback.className = 'form-feedback';
   els.uploadBackdrop.hidden = false;
@@ -371,6 +377,9 @@ function openUpload() {
 }
 
 function closeUpload() {
+  uploadPreviewToken += 1;
+  state.uploadChart = null;
+  state.uploadPackage = null;
   els.uploadBackdrop.hidden = true;
   if (els.profileBackdrop.hidden && els.detailBackdrop.hidden && els.characterPickerBackdrop.hidden) document.body.style.overflow = '';
 }
@@ -389,17 +398,35 @@ function uploadedIndexChart(pack, fileName = '') {
   };
 }
 
+function resetUploadAxisPreview() {
+  els.uploadAxisSummary.textContent = t('upload.previewEmpty');
+  const empty = document.createElement('div');
+  empty.className = 'axis-empty';
+  empty.textContent = t('upload.previewEmpty');
+  els.uploadAxisPreview.replaceChildren(empty);
+}
+
+function renderUploadAxisPreview() {
+  if (!state.uploadChart || !state.uploadPackage) return;
+  renderAxisPreview(state.uploadPackage, state.uploadChart, { preview: els.uploadAxisPreview, summary: els.uploadAxisSummary });
+}
+
 async function previewUploadFile() {
   const file = els.comboFile.files?.[0];
   const previewToken = ++uploadPreviewToken;
   els.comboFileName.textContent = file?.name || t('upload.none');
   els.uploadFeedback.textContent = '';
   els.uploadFeedback.className = 'form-feedback';
-  els.uploadAxisSection.hidden = !file;
+  state.uploadChart = null;
+  state.uploadPackage = null;
   els.uploadAxisPreview.replaceChildren();
-  if (!file) return;
+  if (!file) {
+    resetUploadAxisPreview();
+    return;
+  }
   if (file.size > 1024 * 1024) {
     els.uploadFeedback.textContent = t('upload.tooLarge');
+    resetUploadAxisPreview();
     return;
   }
   els.uploadAxisSummary.textContent = t('upload.previewLoading');
@@ -407,7 +434,9 @@ async function previewUploadFile() {
   try {
     const content = JSON.parse((await file.text()).replace(/^\ufeff/, ''));
     if (previewToken !== uploadPreviewToken || els.comboFile.files?.[0] !== file) return;
-    renderAxisPreview(content, uploadedIndexChart(content, file.name), { preview: els.uploadAxisPreview, summary: els.uploadAxisSummary });
+    state.uploadPackage = content;
+    state.uploadChart = uploadedIndexChart(content, file.name);
+    renderUploadAxisPreview();
   } catch (error) {
     if (previewToken !== uploadPreviewToken || els.comboFile.files?.[0] !== file) return;
     els.uploadAxisPreview.replaceChildren();
@@ -442,6 +471,9 @@ async function submitCombo(event) {
     els.uploadFeedback.className = 'form-feedback success';
     els.comboFile.value = '';
     els.comboFileName.textContent = t('upload.none');
+    state.uploadChart = null;
+    state.uploadPackage = null;
+    resetUploadAxisPreview();
   } catch (error) {
     els.uploadFeedback.textContent = error instanceof SyntaxError ? t('upload.invalidJson') : error.message;
   } finally {
@@ -1023,6 +1055,17 @@ function renderAxisIconSet() {
   }
 }
 
+function syncAxisScaleControls() {
+  const percent = Math.round(state.axisScale * 100);
+  for (const input of els.axisZoomControls) input.value = String(percent);
+  for (const output of els.axisZoomValues) output.value = `${percent}%`;
+}
+
+function renderActiveAxisPreviews() {
+  if (state.detailChart && state.detailPackage) renderAxisPreview(state.detailPackage, state.detailChart);
+  renderUploadAxisPreview();
+}
+
 function renderAxisPreview(pack, indexChart, targets = {}) {
   const previewTarget = targets.preview || els.axisPreview;
   const summaryTarget = targets.summary || els.axisPreviewSummary;
@@ -1261,6 +1304,12 @@ function refreshLocalizedView() {
     renderCharacterPicker();
   }
   if (state.detailChart) void openDetails(state.detailChart);
+  if (!els.uploadBackdrop.hidden) {
+    renderAxisIconSet();
+    syncAxisScaleControls();
+    if (state.uploadChart && state.uploadPackage) renderUploadAxisPreview();
+    else resetUploadAxisPreview();
+  }
   if (state.indexLoadState === 'loading') setStatus('', t('status.loading'));
   else if (state.indexLoadState === 'ready') setStatus('ready', t('status.ready', { count: state.charts.length, date: formatDate(state.indexUpdatedAt) }));
   else setStatus('error', t('status.indexFailed'));
@@ -1356,19 +1405,21 @@ for (const button of els.axisIconSetButtons) {
     if (!['english', 'graphic', 'xbox', 'playstation'].includes(next) || next === state.axisIconSet) return;
     state.axisIconSet = next;
     renderAxisIconSet();
-    if (state.detailChart && state.detailPackage) renderAxisPreview(state.detailPackage, state.detailChart);
+    renderActiveAxisPreviews();
   });
 }
-els.axisZoom?.addEventListener('input', () => {
-  state.axisScale = Math.max(0.8, Math.min(1.8, Number(els.axisZoom.value || 100) / 100));
-  els.axisZoomValue.value = `${Math.round(state.axisScale * 100)}%`;
-  if (state.detailChart && state.detailPackage) renderAxisPreview(state.detailPackage, state.detailChart);
-});
+for (const input of els.axisZoomControls) {
+  input.addEventListener('input', () => {
+    state.axisScale = Math.max(0.8, Math.min(1.8, Number(input.value || 100) / 100));
+    syncAxisScaleControls();
+    renderActiveAxisPreviews();
+  });
+}
 let axisResizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(axisResizeTimer);
-  if (!state.detailChart || !state.detailPackage) return;
-  axisResizeTimer = setTimeout(() => renderAxisPreview(state.detailPackage, state.detailChart), 120);
+  if ((!state.detailChart || !state.detailPackage) && (!state.uploadChart || !state.uploadPackage)) return;
+  axisResizeTimer = setTimeout(renderActiveAxisPreviews, 120);
 });
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
