@@ -103,7 +103,14 @@ function safeTarget(root, relative) {
 }
 
 function cacheControlFor(relative) {
-  if (relative.endsWith('.html') || relative.endsWith('community-index.json') || relative.endsWith('build-info.json')) return 'no-cache';
+  if (
+    relative.endsWith('.html')
+    || relative.endsWith('.js')
+    || relative.endsWith('.css')
+    || relative.endsWith('site.webmanifest')
+    || relative.endsWith('community-index.json')
+    || relative.endsWith('build-info.json')
+  ) return 'no-cache';
   if (relative.endsWith('.wwcombo.json')) return 'public, max-age=86400';
   return 'public, max-age=604800';
 }

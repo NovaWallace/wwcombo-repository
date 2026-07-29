@@ -286,7 +286,10 @@ const els = {
 const collator = new Intl.Collator('zh-CN-u-co-pinyin', { sensitivity: 'base', numeric: true });
 const params = new URLSearchParams(location.search);
 const isFilePreview = location.protocol === 'file:';
-const sourceUrl = params.get('source') || (isFilePreview ? './demo-index.json' : './community-index.json');
+const requestedSource = params.get('source') || '';
+const sourceUrl = (!isFilePreview && /(^|\/)demo-index\.json(?:$|\?)/i.test(requestedSource))
+  ? './community-index.json'
+  : requestedSource || (isFilePreview ? './demo-index.json' : './community-index.json');
 
 function maskProfileEmail(value) {
   const email = String(value || '').trim().toLowerCase();
