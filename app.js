@@ -285,8 +285,8 @@ const els = {
 
 const collator = new Intl.Collator('zh-CN-u-co-pinyin', { sensitivity: 'base', numeric: true });
 const params = new URLSearchParams(location.search);
-const isLocalPreview = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
-const sourceUrl = params.get('source') || (isLocalPreview ? './demo-index.json' : './community-index.json');
+const isFilePreview = location.protocol === 'file:';
+const sourceUrl = params.get('source') || (isFilePreview ? './demo-index.json' : './community-index.json');
 
 function maskProfileEmail(value) {
   const email = String(value || '').trim().toLowerCase();
