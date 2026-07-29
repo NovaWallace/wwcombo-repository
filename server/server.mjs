@@ -124,7 +124,8 @@ function cacheControlFor(relative) {
   return 'public, max-age=604800';
 }
 
-async function serveFile(req, res, root, relative) {
+async function serveFile(req, res, root, relative, options = {}) {
+  const cacheControl = options.cacheControl || cacheControlFor(relative);
   const target = safeTarget(root, relative);
   if (!target) return sendText(res, 403, 'Forbidden');
   let details;
@@ -137,7 +138,7 @@ async function serveFile(req, res, root, relative) {
 
   const etag = `"${details.size.toString(16)}-${Math.floor(details.mtimeMs).toString(16)}"`;
   if (req.headers['if-none-match'] === etag) {
-    res.writeHead(304, { etag, 'cache-control': cacheControlFor(relative) });
+    res.writeHead(304, { etag, 'cache-control': cacheControl });
     res.end();
     return;
   }
@@ -166,7 +167,7 @@ async function serveFile(req, res, root, relative) {
     'content-type': CONTENT_TYPES.get(path.extname(target).toLowerCase()) || 'application/octet-stream',
     'content-length': end - start + 1,
     'accept-ranges': 'bytes',
-    'cache-control': cacheControlFor(relative),
+    'cache-control': cacheControl,
     etag
   };
   if (statusCode === 206) headers['content-range'] = `bytes ${start}-${end}/${details.size}`;
@@ -521,11 +522,11 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (pathname === '/admin/' || pathname === '/admin/index.html') {
-      await serveFile(req, res, path.join(PUBLIC_ROOT, '.admin'), 'index.html');
+      await serveFile(req, res, path.join(PUBLIC_ROOT, '.admin'), 'index.html', { cacheControl: 'no-store' });
       return;
     }
     if (pathname === '/admin/styles.css' || pathname === '/admin/app.js') {
-      await serveFile(req, res, path.join(PUBLIC_ROOT, '.admin'), pathname.slice('/admin/'.length));
+      await serveFile(req, res, path.join(PUBLIC_ROOT, '.admin'), pathname.slice('/admin/'.length), { cacheControl: 'no-store' });
       return;
     }
     if (pathname === '/') {
