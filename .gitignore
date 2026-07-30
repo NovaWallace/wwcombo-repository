@@ -1,0 +1,19 @@
+# Dependencies and local logs
+node_modules/
+*.log
+npm-debug.log*
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+/config.json
+/server/config.json
+
+# Server runtime data must stay outside the public repository
+/runtime/
+/server/runtime/
+/server/uploads/
+/server/submissions/
+/server/community-data/
+/server/project-assets/
