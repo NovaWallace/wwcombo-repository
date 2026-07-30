@@ -7,11 +7,17 @@
 
 ## 一键安装
 
-最省事的方式是一键安装依赖并启动。脚本会安装 Node.js 20、npm、Git 和项目依赖，然后要求你亲自输入两次管理密码：
+最省事的方式是在服务器 SSH 终端执行下面一条命令。首次部署会要求服务器主人亲自输入两次管理密码；以后重复执行同一条命令会自动拉取更新、保留 `/var/lib/wwcombo` 内的数据和现有密码，然后重启服务：
 
 ```bash
-git clone https://github.com/NovaWallace/wwcombo-repository.git
-cd wwcombo-repository
+curl -fsSL https://raw.githubusercontent.com/NovaWallace/wwcombo-repository/main/server/deploy.sh | sudo bash
+```
+
+脚本默认将仓库放在 `/opt/wwcombo-repository`，监听 `0.0.0.0:9881`，公开地址使用 `https://Nova.fb520.site`，并注册开机自启的 `wwcombo.service`。如果仓库存在未提交改动，脚本会停止更新而不是覆盖这些文件。
+
+已经 clone 主仓库时，也可以继续使用原来的安装方式：
+
+```bash
 sudo bash server/one-click-install.sh --public-url https://Nova.fb520.site --trust-proxy
 ```
 
