@@ -16,6 +16,7 @@ const HOST = String(process.env.WWCOMBO_HOST || '').trim() || '0.0.0.0';
 const PORT = Number(process.env.WWCOMBO_PORT || 9881);
 const PUBLIC_URL = String(process.env.WWCOMBO_PUBLIC_URL || 'https://Nova.fb520.site').replace(/\/+$/, '');
 const TRUST_PROXY = process.env.WWCOMBO_TRUST_PROXY === '1';
+const ADMIN_AUTH_DISABLED = process.env.WWCOMBO_DISABLE_ADMIN_AUTH === '1';
 const SESSION_SECONDS = 12 * 60 * 60;
 const LOGIN_WINDOW_MS = 60 * 1000;
 const MAX_LOGIN_FAILURES = 5;
@@ -38,6 +39,7 @@ const CONTENT_TYPES = new Map([
 ]);
 
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) throw new Error(`Invalid WWCOMBO_PORT: ${process.env.WWCOMBO_PORT}`);
+if (ADMIN_AUTH_DISABLED && !['127.0.0.1', 'localhost', '::1'].includes(HOST)) throw new Error('WWCOMBO_DISABLE_ADMIN_AUTH only supports a loopback host.');
 
 const CONFIG_PATH = path.join(RUNTIME_ROOT, 'config.json');
 const config = JSON.parse(await readFile(CONFIG_PATH, 'utf8'));
@@ -290,6 +292,14 @@ function clientAddress(req) {
 }
 
 function requireSession(req, res, requireCsrf = false) {
+  if (ADMIN_AUTH_DISABLED) {
+    const session = { expiresAt: Number.POSITIVE_INFINITY, csrf: 'local-test-no-auth' };
+    if (requireCsrf && req.headers['x-csrf-token'] !== session.csrf) {
+      sendJson(res, 403, { error: '页面验证已失效，请刷新后重试。' });
+      return null;
+    }
+    return session;
+  }
   const session = readSession(req);
   if (!session) {
     sendJson(res, 401, { error: '请先登录服务器管理后台。' });
@@ -319,6 +329,10 @@ async function publicStatus(session) {
 
 async function handleAdminApi(req, res, pathname) {
   if (req.method === 'POST' && pathname === '/api/server/login') {
+    if (ADMIN_AUTH_DISABLED) {
+      sendJson(res, 200, { ok: true, csrf: 'local-test-no-auth' });
+      return;
+    }
     const address = clientAddress(req);
     const attempt = loginAttempts.get(address) || { failures: 0, blockedUntil: 0 };
     if (attempt.blockedUntil > Date.now()) {
@@ -357,6 +371,10 @@ async function handleAdminApi(req, res, pathname) {
   if (req.method === 'POST' && pathname === '/api/server/password') {
     const session = requireSession(req, res, true);
     if (!session) return;
+    if (ADMIN_AUTH_DISABLED) {
+      sendJson(res, 403, { error: '本地免登录测试模式不使用管理员密码。' });
+      return;
+    }
     const body = await readJsonBody(req);
     await changePassword(body.currentPassword, body.newPassword);
     const replacement = createSession();
@@ -710,6 +728,7 @@ server.listen(PORT, HOST, () => {
   console.log(`[wwcombo] 网站：${PUBLIC_URL}/`);
   console.log(`[wwcombo] 管理后台：${PUBLIC_URL}/admin/`);
   console.log(`[wwcombo] 监听：${HOST}:${PORT}`);
+  if (ADMIN_AUTH_DISABLED) console.log('[wwcombo] 本地维护台免登录模式已开启。');
   console.log(`[wwcombo] 当前版本：${BUILD_INFO.releaseId}`);
 });
 
