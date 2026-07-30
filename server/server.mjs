@@ -457,6 +457,13 @@ async function handleAdminApi(req, res, pathname) {
     return;
   }
 
+  if (req.method === 'PUT' && pathname === '/api/server/community/review-settings') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    sendJson(res, 200, { ok: true, reviewSettings: await community.setReviewSettings(await readJsonBody(req)) });
+    return;
+  }
+
   if (req.method === 'PUT' && pathname === '/api/server/community/smtp') {
     const session = requireSession(req, res, true);
     if (!session) return;

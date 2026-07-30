@@ -7,7 +7,7 @@
     <title>椰果朋克2077维护端</title>
     <link rel="icon" type="image/png" href="/assets/logo.png" />
     <link rel="apple-touch-icon" href="/assets/logo.png" />
-    <link rel="stylesheet" href="/admin/styles.css?v=20260730-5" />
+    <link rel="stylesheet" href="/admin/styles.css?v=20260730-6" />
     <link rel="stylesheet" href="/admin/community-cards.css?v=20260730-1" />
   </head>
   <body>
@@ -52,7 +52,7 @@
         </nav>
 
         <section class="tab-panel active" data-panel="submissions">
-          <div class="section-heading"><div><h2>待审核投稿</h2><p>预审核只负责标出异常，最终是否公开仍由你决定。</p></div><button class="quiet" type="button" data-refresh>刷新</button></div>
+          <div class="section-heading"><div><h2>待审核投稿</h2><p>预审核会检查连续同招式和无法图标化的自定义文字；高风险投稿始终保留给你处理。</p></div><div class="review-heading-actions"><label class="review-automation"><input id="autoApproveLowRisk" type="checkbox" /><span><strong>低风险自动放行</strong><small id="autoApproveLowRiskStatus">关闭</small></span></label><button class="quiet" type="button" data-refresh>刷新</button></div></div>
           <div class="task-list submission-grid" id="submissionList"></div>
         </section>
 
@@ -193,6 +193,6 @@
         <div class="form-actions"><button class="quiet" id="cancelUploadBtn" type="button">取消</button><button class="publish-button" type="submit">上传并更新网站</button></div>
       </form>
     </div>
-    <script src="/admin/app.js?v=20260730-5"></script>
+    <script src="/admin/app.js?v=20260730-6"></script>
   </body>
 </html>

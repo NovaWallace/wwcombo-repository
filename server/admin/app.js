@@ -5,6 +5,7 @@ const els = {
   serviceStatus: byId('serviceStatus'), releaseSummary: byId('releaseSummary'), releaseId: byId('releaseId'), releaseTime: byId('releaseTime'),
   chartCount: byId('chartCount'), listenAddress: byId('listenAddress'), mainCommit: byId('mainCommit'), data1Commit: byId('data1Commit'), data2Commit: byId('data2Commit'),
   updateStatus: byId('updateStatus'), output: byId('outputBox'), submissionCount: byId('submissionCount'), withdrawalCount: byId('withdrawalCount'),
+  autoApproveLowRisk: byId('autoApproveLowRisk'), autoApproveLowRiskStatus: byId('autoApproveLowRiskStatus'),
   chartManageCount: byId('chartManageCount'), chartManageList: byId('chartManageList'), chartSearch: byId('chartSearchInput'), chartCharacter: byId('chartCharacterSelect'), chartTag: byId('chartTagSelect'),
   submissionList: byId('submissionList'), withdrawalList: byId('withdrawalList'), whitelistForm: byId('whitelistForm'), whitelistEmail: byId('whitelistEmail'),
   whitelistList: byId('whitelistList'), quickWhitelist: byId('quickWhitelistBtn'), smtpForm: byId('smtpForm'), smtpHost: byId('smtpHost'),
@@ -184,6 +185,21 @@ function renderWhitelist(emails) {
 }
 async function saveWhitelist(emails) { await api('/api/server/community/whitelist',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({emails})}); await loadStatus(); }
 function renderSmtp(smtp) { if(document.activeElement?.closest('#smtpForm')) return; els.smtpHost.value=smtp.host||''; els.smtpPort.value=smtp.port||465; els.smtpUser.value=smtp.user||''; els.smtpPass.value=''; els.smtpPass.placeholder=smtp.hasPassword?'已保存，留空则不修改':'填写邮箱授权码'; els.smtpFrom.value=smtp.from||''; els.smtpTo.value=smtp.to||''; els.smtpSecure.checked=smtp.secure!==false; }
+function renderReviewSettings(settings={}) { const enabled=settings.autoApproveLowRisk===true; els.autoApproveLowRisk.checked=enabled; els.autoApproveLowRiskStatus.textContent=enabled?'已开启 · 新投稿自动发布':'关闭 · 低风险仍需审核'; els.autoApproveLowRisk.title=enabled?'低风险投稿将自动发布':'低风险投稿仍进入审核队列'; }
+
+async function saveReviewSettings(enabled) {
+  els.autoApproveLowRisk.disabled=true;
+  els.autoApproveLowRiskStatus.textContent='正在保存';
+  try {
+    await api('/api/server/community/review-settings',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({autoApproveLowRisk:enabled})});
+    await loadStatus({quiet:true});
+  } catch(error) {
+    renderReviewSettings(state.status?.community?.reviewSettings||{});
+    els.autoApproveLowRiskStatus.textContent=`保存失败：${error.message}`;
+  } finally {
+    els.autoApproveLowRisk.disabled=false;
+  }
+}
 
 function renderStatus(data) {
   state.status=data; state.csrf=data.csrf||state.csrf; els.loginPanel.hidden=true; els.dashboard.hidden=false; els.topActions.hidden=false;
@@ -191,7 +207,7 @@ function renderStatus(data) {
   els.statusDot.classList.toggle('busy',busy); els.statusDot.classList.toggle('error',failed); els.serviceStatus.textContent=busy?'正在更新仓库':failed?'上次更新失败':'服务运行中';
   els.releaseSummary.textContent=`${Number(data.release?.charts||0)} 个连段 · ${formatDate(data.release?.createdAt)}`; els.releaseId.textContent=data.release?.releaseId||'-'; els.releaseTime.textContent=formatDate(data.release?.createdAt); els.chartCount.textContent=`${Number(data.release?.charts||0)} 个`; els.listenAddress.textContent=`${data.server?.host||'-'}:${data.server?.port||'-'}`; els.mainCommit.textContent=short(data.release?.commits?.repository); els.data1Commit.textContent=short(data.release?.commits?.deta1); els.data2Commit.textContent=short(data.release?.commits?.deta2);
   els.update.disabled=busy; els.update.textContent=busy?'正在更新':'从 GitHub 更新并重启'; els.updateStatus.textContent=busy?'运行中':failed?'失败':update.status==='completed'?'已完成':'等待操作'; const output=[...(update.output||[])]; if(update.error) output.push('',`错误：${update.error}`); els.output.textContent=output.length?output.join('\n'):'尚未执行更新。';
-  const community=data.community||{}; renderSubmissions(community.submissions?.pending||[]); renderManagedCharts(community.currentCharts||[]); renderWithdrawals(community.withdrawals?.pending||[]); renderWhitelist(community.whitelist||[]); renderSmtp(community.smtp||{});
+  const community=data.community||{}; renderSubmissions(community.submissions?.pending||[]); renderManagedCharts(community.currentCharts||[]); renderWithdrawals(community.withdrawals?.pending||[]); renderWhitelist(community.whitelist||[]); renderSmtp(community.smtp||{}); renderReviewSettings(community.reviewSettings||{});
 }
 
 function showLogin(message='') { clearTimeout(state.pollTimer); els.dashboard.hidden=true; els.topActions.hidden=true; els.loginPanel.hidden=false; els.loginMessage.textContent=message; state.csrf=''; }
@@ -304,6 +320,7 @@ els.quickWhitelist.addEventListener('click',()=>{switchTab('whitelist');setTimeo
 els.loginForm.addEventListener('submit',async(event)=>{event.preventDefault();els.loginMessage.textContent='正在登录';try{const data=await api('/api/server/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({password:els.password.value})});state.csrf=data.csrf||'';els.password.value='';await Promise.all([loadIcons(),loadStatus(),loadProjectAssets(),loadAppRelease()]);}catch(error){els.loginMessage.textContent=error.message;}});
 els.logout.addEventListener('click',async()=>{try{await api('/api/server/logout',{method:'POST'});}finally{showLogin('已退出登录。');}});
 els.whitelistForm.addEventListener('submit',async(event)=>{event.preventDefault();const email=els.whitelistEmail.value.trim().toLowerCase();await saveWhitelist([...(state.status?.community?.whitelist||[]),email]);els.whitelistEmail.value='';});
+els.autoApproveLowRisk.addEventListener('change',()=>saveReviewSettings(els.autoApproveLowRisk.checked));
 els.chartSearch?.addEventListener('input',()=>{state.chartQuery=els.chartSearch.value;renderManagedCharts(state.status?.community?.currentCharts||[]);});
 els.chartCharacter?.addEventListener('change',()=>{state.chartCharacter=els.chartCharacter.value;renderManagedCharts(state.status?.community?.currentCharts||[]);});
 els.chartTag?.addEventListener('change',()=>{state.chartTag=els.chartTag.value;renderManagedCharts(state.status?.community?.currentCharts||[]);});

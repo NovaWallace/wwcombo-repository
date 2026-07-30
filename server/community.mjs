@@ -205,6 +205,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const downloadsFile = path.join(root, 'downloads.json');
   const engagementFile = path.join(root, 'engagement.json');
   const smtpFile = path.join(root, 'smtp.json');
+  const reviewSettingsFile = path.join(root, 'review-settings.json');
   const hiddenFile = path.join(root, 'hidden.json');
   let downloadWrite = Promise.resolve();
   let mutationWrite = Promise.resolve();
@@ -226,6 +227,11 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
 
   async function smtpSettings() {
     return record(await readJson(smtpFile, {}));
+  }
+
+  async function reviewSettings() {
+    const value = record(await readJson(reviewSettingsFile, {}));
+    return { autoApproveLowRisk: value.autoApproveLowRisk === true };
   }
 
   async function sendSubmissionNotice(submission) {
@@ -268,6 +274,11 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const queue = await readJson(queueFile, { pending: [], history: [] });
     queue.pending = [...(Array.isArray(queue.pending) ? queue.pending : []), submission];
     await writeJson(queueFile, queue);
+    const moderation = await reviewSettings();
+    if (moderation.autoApproveLowRisk && preflight.lowRisk) {
+      const chart = await approve(id);
+      return { id, status: 'published', chart };
+    }
     if (notify) {
       try {
         submission.notificationError = await sendSubmissionNotice(submission);
@@ -440,6 +451,12 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     return smtpPublic(next);
   }
 
+  async function setReviewSettings(body) {
+    const next = { autoApproveLowRisk: body.autoApproveLowRisk === true };
+    await writeJson(reviewSettingsFile, next);
+    return next;
+  }
+
   function smtpPublic(settings) {
     return { host: settings.host || '', port: Number(settings.port || 465), secure: settings.secure !== false, user: settings.user || '', from: settings.from || '', to: settings.to || '', hasPassword: Boolean(settings.pass) };
   }
@@ -519,11 +536,11 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   }
 
   async function status() {
-    const [queue, published, withdrawals, emails, smtp, downloads, hidden] = await Promise.all([
+    const [queue, published, withdrawals, emails, smtp, moderation, downloads, hidden] = await Promise.all([
       readJson(queueFile, { pending: [], history: [] }),
       readJson(publishedFile, { charts: [] }),
       readJson(withdrawalsFile, { pending: [], history: [] }),
-      whitelist(), smtpSettings(), readJson(downloadsFile, {}), hiddenIds()
+      whitelist(), smtpSettings(), reviewSettings(), readJson(downloadsFile, {}), hiddenIds()
     ]);
     return {
       submissions: { pending: queue.pending || [], history: (queue.history || []).slice(-30).reverse() },
@@ -531,6 +548,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       published: published.charts || [],
       whitelist: emails,
       smtp: smtpPublic(smtp),
+      reviewSettings: moderation,
       downloads: record(downloads),
       hidden
     };
@@ -548,6 +566,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     resolveWithdrawal: (...args) => serializeMutation(() => resolveWithdrawal(...args)),
     setWhitelist: (...args) => serializeMutation(() => setWhitelist(...args)),
     setSmtp: (...args) => serializeMutation(() => setSmtp(...args)),
+    setReviewSettings: (...args) => serializeMutation(() => setReviewSettings(...args)),
     testSmtp,
     incrementDownload,
     recordDownload,

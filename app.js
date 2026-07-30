@@ -540,13 +540,15 @@ async function submitCombo(event) {
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
-    els.uploadFeedback.textContent = t('upload.success');
+    const autoPublished = body.status === 'published';
+    els.uploadFeedback.textContent = t(autoPublished ? 'upload.autoPublished' : 'upload.success');
     els.uploadFeedback.className = 'form-feedback success';
     els.comboFile.value = '';
     els.comboFileName.textContent = t('upload.none');
     state.uploadChart = null;
     state.uploadPackage = null;
     resetUploadAxisPreview();
+    if (autoPublished) void loadIndex();
   } catch (error) {
     els.uploadFeedback.textContent = error instanceof SyntaxError ? t('upload.invalidJson') : error.message;
   } finally {
