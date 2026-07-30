@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { cp, mkdir, open, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, open, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { moveWithRetry, replaceWithRetry } from './fsSafe.mjs';
 
 const SCHEMA_VERSION = 1;
 const LANGUAGES = ['zh-CN', 'en-US', 'ja-JP', 'ko-KR'];
@@ -99,7 +100,7 @@ function normalizeManifest(value) {
 async function writeAtomicJson(target, value) {
   const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
   await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-  await rename(temporary, target);
+  await replaceWithRetry(temporary, target);
 }
 
 function decodeImageDataUrl(value) {
@@ -294,7 +295,7 @@ export function createProjectAssetsService({ runtimeRoot, serverDir }) {
       const storedName = `${sha256.slice(0, 20)}${extension}`;
       const target = path.join(releaseRoot, storedName);
       if (existsSync(target)) await rm(temporary, { force: true });
-      else await rename(temporary, target);
+      else await moveWithRetry(temporary, target);
       const previousName = managedReleaseName(release.download);
       release = {
         ...release,

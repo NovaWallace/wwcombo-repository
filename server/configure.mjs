@@ -1,7 +1,8 @@
 import { randomBytes, scryptSync } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { replaceWithRetry } from './fsSafe.mjs';
 
 function parseArgs(argv) {
   const result = { runtime: '' };
@@ -43,7 +44,7 @@ const config = {
 };
 const temporary = `${configPath}.${process.pid}.tmp`;
 await writeFile(temporary, `${JSON.stringify(config, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
-await rename(temporary, configPath);
+await replaceWithRetry(temporary, configPath);
 await chmod(configPath, 0o600);
 
 console.log(existing ? '管理员密码已重置。' : '管理员密码已设置。');

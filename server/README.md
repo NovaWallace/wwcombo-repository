@@ -7,6 +7,20 @@
 
 ## 一键安装
 
+### Windows 服务器
+
+服务器主人只需 clone 主仓库，然后双击：
+
+```text
+server\windows-deploy.cmd
+```
+
+脚本会自动申请管理员权限、检查或安装 Node.js LTS 与 Git、安装依赖、注册 Windows 开机计划任务、开放 TCP 9881，并启动网站。默认监听 `0.0.0.0:9881`，运行数据保存在 `C:\ProgramData\WWCombo`。重复双击会拉取 GitHub 更新并重新部署。
+
+Windows 部署会将维护端密码明确设置并验证为 `REMOVED_FROM_HISTORY`；也可以在启动脚本前通过 `WWCOMBO_ADMIN_PASSWORD` 环境变量覆盖。脚本会同时验证正确密码可以登录、错误密码返回 401。服务器主人不负责日常审核，维护者在自己的电脑打开 <https://Nova.fb520.site/admin/> 操作。
+
+### Linux 服务器
+
 最省事的方式是在服务器 SSH 终端执行下面一条命令。首次部署会要求服务器主人亲自输入两次管理密码；以后重复执行同一条命令会自动拉取更新、保留 `/var/lib/wwcombo` 内的数据和现有密码，然后重启服务：
 
 ```bash

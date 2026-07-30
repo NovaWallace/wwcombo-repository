@@ -1,9 +1,10 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { cp, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { moveWithRetry, replaceWithRetry } from './fsSafe.mjs';
 
 const execFileAsync = promisify(execFile);
 const PUBLIC_SITE_ENTRIES = ['.nojekyll', 'index.html', 'app.js', 'i18n.js', 'styles.css', 'site.webmanifest', 'assets'];
@@ -117,7 +118,7 @@ async function countFiles(root) {
 async function writeAtomicJson(target, value) {
   const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
   await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-  await rename(temporary, target);
+  await replaceWithRetry(temporary, target);
 }
 
 async function readState(runtimeRoot) {
@@ -241,7 +242,7 @@ export async function buildRelease({ mainRoot, runtimeRoot, onLog }) {
       commits
     };
     await writeFile(path.join(stagingRoot, 'build-info.json'), `${JSON.stringify(buildInfo, null, 2)}\n`, 'utf8');
-    await rename(stagingRoot, releaseRoot);
+    await moveWithRetry(stagingRoot, releaseRoot);
 
     const previousState = await readState(runtimeRoot);
     const state = {

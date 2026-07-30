@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { chmod, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { replaceWithRetry } from './fsSafe.mjs';
 
 const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_STEPS = 5000;
@@ -189,7 +190,7 @@ async function writeJson(file, value, privateFile = true) {
   await mkdir(path.dirname(file), { recursive: true });
   const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
   await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { encoding: 'utf8', mode: privateFile ? 0o600 : 0o644 });
-  await rename(temporary, file);
+  await replaceWithRetry(temporary, file);
   if (privateFile) await chmod(file, 0o600).catch(() => {});
 }
 
