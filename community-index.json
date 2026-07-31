@@ -2,8 +2,224 @@
   "type": "wwcombo-community-index",
   "version": 2,
   "gameVersion": "3.5",
-  "updatedAt": 1785368789404,
+  "updatedAt": 1785474276084,
   "charts": [
+    {
+      "id": "wwc_6ee409ab-5e8c-4558-a5e5-b564aa909b5c",
+      "title": "赞菲光轮椅4终夜启动+循环",
+      "author": "unknown",
+      "submitter": {
+        "nickname": "unknown",
+        "email": "un***@unknown.invalid"
+      },
+      "character": "赞妮",
+      "tags": [
+        "进阶"
+      ],
+      "characters": [
+        "赞妮",
+        "菲比",
+        "漂泊者·衍射"
+      ],
+      "firstCharacter": "菲比",
+      "rounds": 1,
+      "uploadVersion": "3.5",
+      "description": "",
+      "link": "https://b23.tv/I7PfNeq",
+      "durationMs": 93338,
+      "stepCount": 192,
+      "loopSwitchCount": 0,
+      "version": 1,
+      "updatedAt": 1785474249647,
+      "sizeBytes": 132872,
+      "repository": "deta1",
+      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E8%B5%9E%E5%A6%AE/%E8%B5%9E%E5%A6%AE-%E8%B5%9E%E8%8F%B2%E5%85%89%E8%BD%AE%E6%A4%854%E7%BB%88%E5%A4%9C%E5%90%AF%E5%8A%A8%2B%E5%BE%AA%E7%8E%AF-26b0872f.wwcombo.json"
+    },
+    {
+      "id": "wwc_d80b10a4-1618-4611-b311-d046979822e1",
+      "title": "爱达千 5R14光翼",
+      "author": "unknown",
+      "submitter": {
+        "nickname": "unknown",
+        "email": "un***@unknown.invalid"
+      },
+      "character": "爱弥斯",
+      "tags": [
+        "全局"
+      ],
+      "characters": [
+        "爱弥斯",
+        "达妮娅",
+        "千咲"
+      ],
+      "firstCharacter": "千咲",
+      "rounds": 5,
+      "uploadVersion": "3.5",
+      "description": "来自南边，我不会",
+      "link": "https://www.bilibili.com/video/BV17MGb6CENn/?share_source=copy_web&vd_source=4fe0d6f8958dad8181fec938e100dbef",
+      "durationMs": 258075,
+      "stepCount": 293,
+      "loopSwitchCount": 14,
+      "version": 1,
+      "updatedAt": 1785474249627,
+      "sizeBytes": 155282,
+      "repository": "deta1",
+      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E7%88%B1%E5%BC%A5%E6%96%AF/%E7%88%B1%E5%BC%A5%E6%96%AF-5r14-2cb7632b.wwcombo.json"
+    },
+    {
+      "id": "wwc_135f0d08-7383-4b46-86bb-9da7c711676b",
+      "title": "柯折守轮椅",
+      "author": "unknown",
+      "submitter": {
+        "nickname": "unknown",
+        "email": "un***@unknown.invalid"
+      },
+      "character": "珂莱塔",
+      "tags": [
+        "基础"
+      ],
+      "characters": [
+        "珂莱塔",
+        "折枝",
+        "守岸人"
+      ],
+      "firstCharacter": "珂莱塔",
+      "rounds": 1,
+      "uploadVersion": "3.5",
+      "description": "",
+      "link": "https://b23.tv/sNAzerk",
+      "durationMs": 78108,
+      "stepCount": 105,
+      "loopSwitchCount": 0,
+      "version": 1,
+      "updatedAt": 1785474249610,
+      "sizeBytes": 74689,
+      "repository": "deta1",
+      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E7%8F%82%E8%8E%B1%E5%A1%94/%E7%8F%82%E8%8E%B1%E5%A1%94-%E6%9F%AF%E6%8A%98%E5%AE%88%E8%BD%AE%E6%A4%85-306222dd.wwcombo.json"
+    },
+    {
+      "id": "wwc_6c68e01d-90d4-4609-bee2-c066d250e0eb",
+      "title": "嘉露莫启动+2个循环",
+      "author": "unknown",
+      "submitter": {
+        "nickname": "unknown",
+        "email": "un***@unknown.invalid"
+      },
+      "character": "嘉贝莉娜",
+      "tags": [
+        "进阶"
+      ],
+      "characters": [
+        "嘉贝莉娜",
+        "莫宁",
+        "露帕"
+      ],
+      "firstCharacter": "莫宁",
+      "rounds": 1,
+      "uploadVersion": "3.5",
+      "description": "",
+      "link": "",
+      "durationMs": 117489,
+      "stepCount": 156,
+      "loopSwitchCount": 0,
+      "version": 1,
+      "updatedAt": 1785474249583,
+      "sizeBytes": 108245,
+      "repository": "deta1",
+      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E5%98%89%E8%B4%9D%E8%8E%89%E5%A8%9C/%E5%98%89%E8%B4%9D%E8%8E%89%E5%A8%9C-%E5%98%89%E9%9C%B2%E8%8E%AB%E5%90%AF%E5%8A%A8%2B2%E4%B8%AA%E5%BE%AA%E7%8E%AF-d33c45c7.wwcombo.json"
+    },
+    {
+      "id": "wwc_4898e34c-7fb8-4972-9a78-ce3a9fe58b78",
+      "title": "嘉露离启动+循环",
+      "author": "unknown",
+      "submitter": {
+        "nickname": "unknown",
+        "email": "un***@unknown.invalid"
+      },
+      "character": "嘉贝莉娜",
+      "tags": [
+        "进阶",
+        "冒烟"
+      ],
+      "characters": [
+        "嘉贝莉娜",
+        "长离",
+        "露帕"
+      ],
+      "firstCharacter": "嘉贝莉娜",
+      "rounds": 1,
+      "uploadVersion": "3.5",
+      "description": "",
+      "link": "https://b23.tv/4vPBCdF",
+      "durationMs": 80548,
+      "stepCount": 114,
+      "loopSwitchCount": 0,
+      "version": 1,
+      "updatedAt": 1785474249560,
+      "sizeBytes": 78844,
+      "repository": "deta1",
+      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E5%98%89%E8%B4%9D%E8%8E%89%E5%A8%9C/%E5%98%89%E8%B4%9D%E8%8E%89%E5%A8%9C-%E5%98%89%E9%9C%B2%E7%A6%BB%E5%90%AF%E5%8A%A8%2B%E5%BE%AA%E7%8E%AF-05f7cb4c.wwcombo.json"
+    },
+    {
+      "id": "wwc_a4f3074e-6563-4a39-b1af-f54befe699d4",
+      "title": "卡夏千 二链 25秒双下落",
+      "author": "unknown",
+      "submitter": {
+        "nickname": "unknown",
+        "email": "un***@unknown.invalid"
+      },
+      "character": "卡提希娅",
+      "tags": [],
+      "characters": [
+        "卡提希娅",
+        "夏空",
+        "千咲"
+      ],
+      "firstCharacter": "千咲",
+      "rounds": 4,
+      "uploadVersion": "3.5",
+      "description": "01卡需要在变奏进场后多打一套小卡普攻，在大卡快解锁咖喱棒后再打一个ee再咖喱棒。全01情况下dps是9.5。演示视频里重击打断后摇太快会吞剑，这份里已经删掉了那个打断后摇的跳。",
+      "link": "https://www.bilibili.com/video/BV1QnKY6bEGM/?share_source=copy_web&vd_source=4fe0d6f8958dad8181fec938e100dbef",
+      "durationMs": 175969,
+      "stepCount": 255,
+      "loopSwitchCount": 14,
+      "version": 1,
+      "updatedAt": 1785474249535,
+      "sizeBytes": 174430,
+      "repository": "deta1",
+      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E5%8D%A1%E6%8F%90%E5%B8%8C%E5%A8%85/%E5%8D%A1%E6%8F%90%E5%B8%8C%E5%A8%85-%E5%8D%A1%E5%A4%8F%E5%8D%83-%E4%BA%8C%E9%93%BE-25%E7%A7%92%E5%8F%8C%E4%B8%8B%E8%90%BD-4ac17991.wwcombo.json"
+    },
+    {
+      "id": "wwc_6656f9be-7fce-45a5-bde5-87864010ea6e",
+      "title": "凤凰船旗",
+      "author": "unknown",
+      "submitter": {
+        "nickname": "unknown",
+        "email": "un***@unknown.invalid"
+      },
+      "character": "布兰特",
+      "tags": [
+        "进阶"
+      ],
+      "characters": [
+        "布兰特",
+        "长离",
+        "露帕"
+      ],
+      "firstCharacter": "布兰特",
+      "rounds": 1,
+      "uploadVersion": "3.5",
+      "description": "",
+      "link": "",
+      "durationMs": 54055,
+      "stepCount": 71,
+      "loopSwitchCount": 0,
+      "version": 1,
+      "updatedAt": 1785474249511,
+      "sizeBytes": 65721,
+      "repository": "deta1",
+      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E5%B8%83%E5%85%B0%E7%89%B9/%E5%B8%83%E5%85%B0%E7%89%B9-%E5%87%A4%E5%87%B0%E8%88%B9%E6%97%97-b591303d.wwcombo.json"
+    },
     {
       "id": "wwc_9f1668fc-1ca2-4fc8-96ae-d2bff50ae7a1",
       "title": "嘉露离4套",
@@ -34,64 +250,6 @@
       "sizeBytes": 574837,
       "repository": "deta1",
       "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E5%98%89%E8%B4%9D%E8%8E%89%E5%A8%9C/%E5%98%89%E8%B4%9D%E8%8E%89%E5%A8%9C-%E5%98%89%E9%9C%B2%E7%A6%BB4%E5%A5%97-0c4a6259.wwcombo.json"
-    },
-    {
-      "id": "wwc_d80b10a4-1618-4611-b311-d046979822e1",
-      "title": "爱达千 5R14光翼",
-      "submitter": {
-        "nickname": "灵*****",
-        "email": "hl***@foxmail.com"
-      },
-      "character": "爱弥斯",
-      "tags": [
-        "全局"
-      ],
-      "characters": [
-        "爱弥斯",
-        "达妮娅",
-        "千咲"
-      ],
-      "firstCharacter": "千咲",
-      "rounds": 5,
-      "uploadVersion": "3.5",
-      "description": "来自南边，我不会",
-      "link": "https://www.bilibili.com/video/BV17MGb6CENn/?share_source=copy_web&vd_source=4fe0d6f8958dad8181fec938e100dbef",
-      "durationMs": 258075,
-      "stepCount": 293,
-      "loopSwitchCount": 14,
-      "version": 1,
-      "updatedAt": 1785166629049,
-      "sizeBytes": 155250,
-      "repository": "deta1",
-      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E7%88%B1%E5%BC%A5%E6%96%AF/%E7%88%B1%E5%BC%A5%E6%96%AF-5r14-2cb7632b.wwcombo.json"
-    },
-    {
-      "id": "wwc_a4f3074e-6563-4a39-b1af-f54befe699d4",
-      "title": "卡夏千 二链 25秒双下落",
-      "submitter": {
-        "nickname": "灵*****",
-        "email": "hl***@foxmail.com"
-      },
-      "character": "卡提希娅",
-      "tags": [],
-      "characters": [
-        "卡提希娅",
-        "夏空",
-        "千咲"
-      ],
-      "firstCharacter": "千咲",
-      "rounds": 4,
-      "uploadVersion": "3.5",
-      "description": "01卡需要在变奏进场后多打一套小卡普攻，在大卡快解锁咖喱棒后再打一个ee再咖喱棒。全01情况下dps是9.5。演示视频里重击打断后摇太快会吞剑，这份里已经删掉了那个打断后摇的跳。",
-      "link": "https://www.bilibili.com/video/BV1QnKY6bEGM/?share_source=copy_web&vd_source=4fe0d6f8958dad8181fec938e100dbef",
-      "durationMs": 175969,
-      "stepCount": 255,
-      "loopSwitchCount": 14,
-      "version": 1,
-      "updatedAt": 1785158405707,
-      "sizeBytes": 174398,
-      "repository": "deta1",
-      "url": "https://raw.githubusercontent.com/NovaWallace/wwcombo-deta1/main/published/%E5%8D%A1%E6%8F%90%E5%B8%8C%E5%A8%85/%E5%8D%A1%E6%8F%90%E5%B8%8C%E5%A8%85-%E5%8D%A1%E5%A4%8F%E5%8D%83-%E4%BA%8C%E9%93%BE-25%E7%A7%92%E5%8F%8C%E4%B8%8B%E8%90%BD-4ac17991.wwcombo.json"
     },
     {
       "id": "wwc_a1c0be0d-8689-4170-b9aa-318b02c90633",
