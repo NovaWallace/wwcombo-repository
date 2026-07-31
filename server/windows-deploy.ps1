@@ -108,7 +108,8 @@ function Stop-ExistingServer {
   }
 
   $listeners = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
-  foreach ($processId in @($listeners.OwningProcess | Sort-Object -Unique)) {
+  $processIds = @($listeners | ForEach-Object { $_.OwningProcess } | Where-Object { $_ } | Sort-Object -Unique)
+  foreach ($processId in $processIds) {
     if (-not $processId) { continue }
     $process = Get-CimInstance Win32_Process -Filter "ProcessId=$processId" -ErrorAction SilentlyContinue
     if ($process -and $process.CommandLine -match 'server[\\/]server\.mjs') {
