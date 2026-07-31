@@ -9,13 +9,13 @@
 
 ### Windows 服务器
 
-服务器主人只需 clone 主仓库，然后双击：
+服务器主人只需 clone 主仓库，然后双击仓库根目录的：
 
 ```text
-server\windows-deploy.cmd
+一键启动.bat
 ```
 
-脚本会自动申请管理员权限、检查或安装 Node.js LTS 与 Git、安装依赖、注册 Windows 开机计划任务、开放 TCP 9881，并启动网站。默认监听 `0.0.0.0:9881`，运行数据保存在 `C:\ProgramData\WWCombo`。重复双击会拉取 GitHub 更新并重新部署。
+备用入口为 `server\windows-deploy.bat` 或原有的 `server\windows-deploy.cmd`。脚本会自动申请管理员权限、检查或安装 Node.js LTS 与 Git、安装 npm 依赖、注册 Windows 开机计划任务、开放 TCP 9881，并启动网站。默认监听 `0.0.0.0:9881`，运行数据保存在 `C:\ProgramData\WWCombo`。重复双击会拉取 GitHub 更新并重新部署。
 
 Windows 部署会将维护端密码明确设置并验证为 `REMOVED_FROM_HISTORY`；也可以在启动脚本前通过 `WWCOMBO_ADMIN_PASSWORD` 环境变量覆盖。脚本会同时验证正确密码可以登录、错误密码返回 401。服务器主人不负责日常审核，维护者在自己的电脑打开 <https://Nova.fb520.site/admin/> 操作。
 
