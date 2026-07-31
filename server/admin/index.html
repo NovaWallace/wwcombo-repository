@@ -7,7 +7,7 @@
     <title>椰果朋克2077维护端</title>
     <link rel="icon" type="image/png" href="/assets/logo.png" />
     <link rel="apple-touch-icon" href="/assets/logo.png" />
-    <link rel="stylesheet" href="/admin/styles.css?v=20260730-6" />
+    <link rel="stylesheet" href="/admin/styles.css?v=20260731-1" />
     <link rel="stylesheet" href="/admin/community-cards.css?v=20260730-1" />
   </head>
   <body>
@@ -193,6 +193,15 @@
         <div class="form-actions"><button class="quiet" id="cancelUploadBtn" type="button">取消</button><button class="publish-button" type="submit">上传并更新网站</button></div>
       </form>
     </div>
-    <script src="/admin/app.js?v=20260730-6"></script>
+
+    <div class="modal-backdrop confirm-backdrop" id="confirmBackdrop" hidden>
+      <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+        <span>CONFIRM ACTION</span>
+        <h2 id="confirmTitle">确认操作</h2>
+        <p id="confirmMessage"></p>
+        <div class="confirm-actions"><button class="quiet" id="confirmCancelBtn" type="button">取消</button><button class="primary" id="confirmAcceptBtn" type="button">确认</button></div>
+      </section>
+    </div>
+    <script src="/admin/app.js?v=20260731-1"></script>
   </body>
 </html>

@@ -20,6 +20,7 @@ const els = {
   adminAxisScales: [...document.querySelectorAll('[data-admin-axis-scale]')], adminAxisScaleValues: [...document.querySelectorAll('[data-admin-axis-scale-value]')], adminIconSetButtons: [...document.querySelectorAll('[data-admin-icon-set]')],
   uploadBackdrop: byId('uploadBackdrop'), openUpload: byId('openUploadBtn'), closeUpload: byId('closeUploadBtn'), cancelUpload: byId('cancelUploadBtn'),
   uploadForm: byId('adminUploadForm'), uploadUsername: byId('uploadUsername'), uploadEmail: byId('uploadEmail'), uploadFile: byId('uploadFile'), uploadMessage: byId('uploadMessage'),
+  confirmBackdrop: byId('confirmBackdrop'), confirmTitle: byId('confirmTitle'), confirmMessage: byId('confirmMessage'), confirmCancel: byId('confirmCancelBtn'), confirmAccept: byId('confirmAcceptBtn'),
   passwordForm: byId('passwordForm'), currentPassword: byId('currentPassword'), newPassword: byId('newPassword'), confirmPassword: byId('confirmPassword'), passwordMessage: byId('passwordMessage'),
   projectAssetSearch: byId('projectAssetSearch'), projectAssetList: byId('projectAssetList'), projectAssetForm: byId('projectAssetForm'), projectAssetOriginalId: byId('projectAssetOriginalId'),
   projectAssetId: byId('projectAssetId'), projectAssetZh: byId('projectAssetZh'), projectAssetEn: byId('projectAssetEn'), projectAssetJa: byId('projectAssetJa'), projectAssetKo: byId('projectAssetKo'),
@@ -51,7 +52,7 @@ const ADMIN_AXIS_ICON_MAPPINGS = [
   ['mouse-left','普攻','普攻.png',['a','普攻']],['skill','技能','技能.png',['e','技能']],['echo','声骸','声骸.png',['q','声骸']],['liberation','共鸣解放','解放.png',['r','共鸣解放']],['mouse-right','闪避','闪避.png',['s','d','闪避']],['jump','跳跃','跳跃.png',['j','跳跃','跳']],['tool','工具','工具.png',['t','工具']],['intro','变奏','变奏.png',['b','变奏']],['outro','延奏','延奏.png',['y','延奏']],['finisher','处决','处决.png',['f','处决','终结技']],['forward','前走','前走.png',['w','前走']],['iii','3','iii.png',['iii']],['ii','2','ii.png',['ii']],['i','1','i.png',['i']]
 ].map(([id,label,fileName,triggers])=>({ id,label,triggers,englishSrc:`/assets/button-icons/${id}.png`,graphicSrc:PURE_GRAPHIC_ICON_IDS.has(id)?`/assets/graphic-icons/${id}.png`:`/assets/botton/${encodeURIComponent(fileName)}`,gamepadCode:GAMEPAD_ICON_CODES[id] }));
 const ADMIN_AXIS_ICON_TRIGGERS = ADMIN_AXIS_ICON_MAPPINGS.flatMap((mapping)=>mapping.triggers.map((trigger)=>({trigger,mapping}))).sort((left,right)=>right.trigger.length-left.trigger.length);
-const state = { csrf:'', status:null, pollTimer:0, review:null, manageDetail:null, icons:new Map(), chartPackages:new Map(), axisIconSet:'english', axisScale:1.25, chartQuery:'', chartCharacter:'', chartTag:'', projectAssets:null, projectAssetSelectedId:'', projectAssetImageDataUrl:'' };
+const state = { csrf:'', status:null, pollTimer:0, review:null, manageDetail:null, icons:new Map(), chartPackages:new Map(), axisIconSet:'english', axisScale:1.25, chartQuery:'', chartCharacter:'', chartTag:'', projectAssets:null, projectAssetSelectedId:'', projectAssetImageDataUrl:'', confirmationResolve:null };
 
 async function api(url, options = {}) {
   const headers = { ...(options.headers || {}) };
@@ -67,6 +68,9 @@ function formatDuration(value) { const seconds = Math.max(0, Number(value || 0))
 function short(value) { return value ? String(value).slice(0, 12) : '-'; }
 function button(label, className, handler) { const item = document.createElement('button'); item.type='button'; item.className=className; item.textContent=label; item.addEventListener('click', handler); return item; }
 function empty(text) { const item=document.createElement('div'); item.className='empty-row'; item.textContent=text; return item; }
+function syncModalBody() { const open=[els.reviewBackdrop,els.manageDetailBackdrop,els.uploadBackdrop,els.confirmBackdrop].some((item)=>item&&!item.hidden); document.body.classList.toggle('modal-open',open); }
+function closeConfirmation(result=false) { if(els.confirmBackdrop.hidden)return; els.confirmBackdrop.hidden=true; const resolve=state.confirmationResolve; state.confirmationResolve=null; syncModalBody(); if(resolve)resolve(result); }
+function askConfirmation(message, options={}) { if(state.confirmationResolve)closeConfirmation(false); els.confirmTitle.textContent=options.title||'确认操作';els.confirmMessage.textContent=message;els.confirmAccept.textContent=options.confirmText||'确认';els.confirmAccept.className=options.danger===false?'primary':'primary danger';els.confirmBackdrop.hidden=false;document.body.classList.add('modal-open');return new Promise((resolve)=>{state.confirmationResolve=resolve;}); }
 
 function gamepadSvgDataUri(svg) { return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`; }
 function gamepadSingleGlyph(core, iconSet) {
@@ -147,7 +151,7 @@ function managedCharts(charts) {
 }
 
 async function deleteManagedChart(id, title) {
-  if (!id || !confirm(`确认删除「${title || id}」？删除后当前网站会隐藏它。`)) return;
+  if (!id || !(await askConfirmation(`确认删除「${title || id}」？删除后当前网站会隐藏它。`,{title:'删除连段',confirmText:'删除'}))) return;
   await api(`/api/server/charts/${encodeURIComponent(id)}/delete`, { method:'POST' });
   closeManageDetail();
   await loadStatus();
@@ -172,7 +176,7 @@ function taskRow(title, meta, detail, actions=[]) { const row=document.createEle
 function renderWithdrawals(items) { els.withdrawalCount.textContent=items.length; els.withdrawalList.replaceChildren(...(items.length ? items.map((item)=>taskRow(`连段 ${item.comboId}`,`${item.username || '未命名'} · ${item.email || '邮箱未知'} · ${formatDate(item.submittedAt)}`,'邮箱未能与所有权记录匹配，请人工确认。',[button('拒绝','quiet danger',()=>withdrawalAction(item.id,'reject')),button('批准撤回','primary',()=>withdrawalAction(item.id,'approve'))])) : [empty('当前没有需要人工处理的撤回申请。')])); }
 
 async function submissionAction(id, action) { const reason=action==='reject' ? (prompt('可填写拒绝原因（选填）') || '') : ''; await api(`/api/server/submissions/${encodeURIComponent(id)}/${action}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({reason})}); closeReview(); await loadStatus(); }
-async function withdrawalAction(id, action) { if(action==='approve'&&!confirm('确认人工批准这条撤回申请？')) return; await api(`/api/server/withdrawals/${encodeURIComponent(id)}/${action}`,{method:'POST'}); await loadStatus(); }
+async function withdrawalAction(id, action) { if(action==='approve'&&!await askConfirmation('确认人工批准这条撤回申请？',{title:'批准撤回',confirmText:'批准'})) return; await api(`/api/server/withdrawals/${encodeURIComponent(id)}/${action}`,{method:'POST'}); await loadStatus(); }
 
 function renderWhitelist(emails) {
   const children = emails.length ? emails.map((email) => {
@@ -301,7 +305,7 @@ async function saveProjectAsset(event) {
 }
 
 async function deleteProjectAsset() {
-  const id=els.projectAssetOriginalId.value;if(!id||!confirm(`确认删除「${els.projectAssetZh.value||id}」的翻译和底图 API 数据？`))return;
+  const id=els.projectAssetOriginalId.value;if(!id||!await askConfirmation(`确认删除「${els.projectAssetZh.value||id}」的翻译和底图 API 数据？`,{title:'删除角色 API 数据',confirmText:'删除'}))return;
   try { const result=await api(`/api/server/project-assets/${encodeURIComponent(id)}`,{method:'DELETE'});state.projectAssets=result.manifest;state.projectAssetSelectedId='';renderProjectAssetList();const next=result.manifest.characters?.[0];if(next)selectProjectAsset(next.id);else newProjectAsset();els.projectApiRevision.textContent=`版本 ${result.manifest.revision} · ${result.manifest.characters.length} 项 · ${formatDate(result.manifest.updatedAt)}`; } catch(error) { els.projectAssetMessage.textContent=error.message; }
 }
 
@@ -326,7 +330,7 @@ els.chartCharacter?.addEventListener('change',()=>{state.chartCharacter=els.char
 els.chartTag?.addEventListener('change',()=>{state.chartTag=els.chartTag.value;renderManagedCharts(state.status?.community?.currentCharts||[]);});
 els.smtpForm.addEventListener('submit',async(event)=>{event.preventDefault();els.smtpMessage.textContent='正在保存';try{await api('/api/server/community/smtp',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({host:els.smtpHost.value,port:Number(els.smtpPort.value),user:els.smtpUser.value,pass:els.smtpPass.value,from:els.smtpFrom.value,to:els.smtpTo.value,secure:els.smtpSecure.checked})});els.smtpMessage.textContent='设置已保存。';await loadStatus({quiet:true});}catch(error){els.smtpMessage.textContent=error.message;}});
 els.smtpTest.addEventListener('click',async()=>{els.smtpMessage.textContent='正在发送测试邮件';try{await api('/api/server/community/smtp/test',{method:'POST'});els.smtpMessage.textContent='测试邮件已发送。';}catch(error){els.smtpMessage.textContent=error.message;}});
-els.update.addEventListener('click',async()=>{if(!confirm('确认拉取三个 GitHub 仓库并重启网站？私有投稿不会被覆盖。'))return;els.update.disabled=true;try{const result=await api('/api/server/update',{method:'POST'});els.output.textContent=`新版本 ${result.releaseId} 已构建，服务正在重启。`;setTimeout(()=>loadStatus({quiet:true}).catch(()=>{}),1800);}catch(error){els.output.textContent=error.body?.update?.error||error.message;}});
+els.update.addEventListener('click',async()=>{if(!await askConfirmation('确认拉取三个 GitHub 仓库并重启网站？私有投稿不会被覆盖。',{title:'更新服务器',confirmText:'更新',danger:false}))return;els.update.disabled=true;try{const result=await api('/api/server/update',{method:'POST'});els.output.textContent=`新版本 ${result.releaseId} 已构建，服务正在重启。`;setTimeout(()=>loadStatus({quiet:true}).catch(()=>{}),1800);}catch(error){els.output.textContent=error.body?.update?.error||error.message;}});
 els.projectAssetForm.addEventListener('submit',saveProjectAsset);els.deleteProjectAsset.addEventListener('click',deleteProjectAsset);els.newProjectAsset.addEventListener('click',newProjectAsset);els.refreshProjectAssets.addEventListener('click',()=>loadProjectAssets());
 els.appReleaseForm.addEventListener('submit',saveAppRelease);els.uploadAppRelease.addEventListener('click',uploadAppReleasePackage);
 els.projectAssetSearch.addEventListener('input',renderProjectAssetList);els.projectAssetHasBase.addEventListener('change',updateProjectAssetPreview);
@@ -339,7 +343,8 @@ for(const input of els.adminAxisScales)input.addEventListener('input',()=>applyA
 for(const iconButton of els.adminIconSetButtons)iconButton.addEventListener('click',()=>{state.axisIconSet=iconButton.dataset.adminIconSet||'english';renderAxisControls();renderActiveAdminAxes();});
 els.uploadForm.addEventListener('submit',async(event)=>{event.preventDefault();const file=els.uploadFile.files?.[0];if(!file)return;els.uploadMessage.textContent='正在校验并生成网站更新...';try{const content=JSON.parse((await file.text()).replace(/^\ufeff/,''));const profile={username:els.uploadUsername.value.trim(),email:els.uploadEmail.value.trim().toLowerCase()};localStorage.setItem(PROFILE_KEY,JSON.stringify(profile));const result=await api('/api/server/submissions/publish',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...profile,fileName:file.name,content})});els.uploadMessage.textContent=`已发布：${result.chart?.title||file.name}`;setTimeout(()=>{closeUpload();loadStatus();},800);}catch(error){els.uploadMessage.textContent=error.message;}});
 els.passwordForm.addEventListener('submit',async(event)=>{event.preventDefault();if(els.newPassword.value!==els.confirmPassword.value){els.passwordMessage.textContent='两次输入的新密码不一致。';return;}els.passwordMessage.textContent='正在修改';try{const result=await api('/api/server/password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({currentPassword:els.currentPassword.value,newPassword:els.newPassword.value})});state.csrf=result.csrf||state.csrf;els.passwordForm.reset();els.passwordMessage.textContent='密码已修改并由你设置。';}catch(error){els.passwordMessage.textContent=error.message;}});
-for(const backdrop of [els.reviewBackdrop,els.manageDetailBackdrop,els.uploadBackdrop]) backdrop.addEventListener('click',(event)=>{if(event.target!==backdrop)return;if(backdrop===els.reviewBackdrop)closeReview();else if(backdrop===els.manageDetailBackdrop)closeManageDetail();else closeUpload();});
-window.addEventListener('keydown',(event)=>{if(event.key==='Escape'){if(!els.uploadBackdrop.hidden)closeUpload();else if(!els.manageDetailBackdrop.hidden)closeManageDetail();else if(!els.reviewBackdrop.hidden)closeReview();}});
+ for(const backdrop of [els.reviewBackdrop,els.manageDetailBackdrop,els.uploadBackdrop]) backdrop.addEventListener('click',(event)=>{if(event.target!==backdrop)return;if(backdrop===els.reviewBackdrop)closeReview();else if(backdrop===els.manageDetailBackdrop)closeManageDetail();else closeUpload();});
+ els.confirmCancel.addEventListener('click',()=>closeConfirmation(false));els.confirmAccept.addEventListener('click',()=>closeConfirmation(true));els.confirmBackdrop.addEventListener('click',(event)=>{if(event.target===els.confirmBackdrop)closeConfirmation(false);});
+ window.addEventListener('keydown',(event)=>{if(event.key==='Escape'){if(!els.confirmBackdrop.hidden)closeConfirmation(false);else if(!els.uploadBackdrop.hidden)closeUpload();else if(!els.manageDetailBackdrop.hidden)closeManageDetail();else if(!els.reviewBackdrop.hidden)closeReview();}});
 let axisResizeTimer=0;window.addEventListener('resize',()=>{clearTimeout(axisResizeTimer);axisResizeTimer=setTimeout(renderActiveAdminAxes,120);});
 loadStatus().then(()=>Promise.all([loadIcons(),loadProjectAssets(),loadAppRelease()])).catch(()=>{});
