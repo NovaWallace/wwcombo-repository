@@ -31,7 +31,7 @@ const els = {
   projectAssetMessage: byId('projectAssetMessage'), deleteProjectAsset: byId('deleteProjectAssetBtn'), newProjectAsset: byId('newProjectAssetBtn'), refreshProjectAssets: byId('refreshProjectAssetsBtn'),
   copyProjectApi: byId('copyProjectApiBtn'), projectApiUrl: byId('projectApiUrl'), projectApiRevision: byId('projectApiRevision'),
   appReleaseForm: byId('appReleaseForm'), appReleaseVersion: byId('appReleaseVersion'), appReleaseTitle: byId('appReleaseTitle'), appReleaseNotes: byId('appReleaseNotes'), appReleaseChinaUrl: byId('appReleaseChinaUrl'), appReleaseGlobalUrl: byId('appReleaseGlobalUrl'),
-  appReleasePackage: byId('appReleasePackage'), appReleaseCurrent: byId('appReleaseCurrent'), appReleaseMessage: byId('appReleaseMessage'), uploadAppRelease: byId('uploadAppReleaseBtn')
+  appReleaseCurrent: byId('appReleaseCurrent'), appReleaseMessage: byId('appReleaseMessage')
 };
 
 const PROFILE_KEY = 'wwcombo-maintainer-publish-profile-v1';
@@ -311,12 +311,12 @@ async function deleteProjectAsset() {
 
 function formatBytes(value) { const bytes=Math.max(0,Number(value||0));if(bytes<1024)return `${bytes} B`;if(bytes<1024*1024)return `${(bytes/1024).toFixed(1)} KB`;return `${(bytes/1024/1024).toFixed(1)} MB`; }
 function renderAppRelease(release) {
-  state.appRelease=release;els.appReleaseVersion.value=release.version||'0.5.0';els.appReleaseTitle.value=release.title||'';els.appReleaseNotes.value=release.notes||'';els.appReleaseChinaUrl.value=release.downloadLinks?.china||'';els.appReleaseGlobalUrl.value=release.downloadLinks?.global||(release.download?.url&&release.download.url!=='/api/app-release/download'?release.download.url:'');
-  els.appReleaseCurrent.textContent=release.download?`当前下载：${release.download.fileName||release.download.url} · ${release.download.bytes?formatBytes(release.download.bytes):'外部地址'} · 发布于 ${formatDate(release.publishedAt)}`:'尚未上传安装包，也未填写外部下载地址。';
+  const legacyExternal = release.download?.url && release.download.url !== '/api/app-release/download' ? release.download.url : '';
+  state.appRelease=release;els.appReleaseVersion.value=release.version||'0.5.0';els.appReleaseTitle.value=release.title||'';els.appReleaseNotes.value=release.notes||'';els.appReleaseChinaUrl.value=release.downloadLinks?.china||'';els.appReleaseGlobalUrl.value=release.downloadLinks?.global||legacyExternal;
+  els.appReleaseCurrent.textContent=release.downloadLinks?.china||release.downloadLinks?.global?'已配置国内和/或海外下载地址。':'尚未填写国内或海外下载地址。';
 }
 async function loadAppRelease(){const release=await api('/api/server/app-release');renderAppRelease(release);return release;}
 async function saveAppRelease(event){event.preventDefault();els.appReleaseMessage.textContent='正在发布版本信息...';try{const result=await api('/api/server/app-release',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({version:els.appReleaseVersion.value,title:els.appReleaseTitle.value,notes:els.appReleaseNotes.value,chinaDownloadUrl:els.appReleaseChinaUrl.value,globalDownloadUrl:els.appReleaseGlobalUrl.value})});renderAppRelease(result.release);els.appReleaseMessage.textContent='版本 API 已发布，客户端会按语言选择下载地址。';}catch(error){els.appReleaseMessage.textContent=error.message;}}
-function uploadAppReleasePackage(){const file=els.appReleasePackage.files?.[0];if(!file){els.appReleaseMessage.textContent='请先选择 EXE、MSI 或 ZIP 安装包。';return;}if(file.size>500*1024*1024){els.appReleaseMessage.textContent='安装包不能超过 500 MB。';return;}els.uploadAppRelease.disabled=true;const request=new XMLHttpRequest();request.open('PUT','/api/server/app-release/package');request.withCredentials=true;request.setRequestHeader('x-csrf-token',state.csrf);request.setRequestHeader('x-file-name',encodeURIComponent(file.name));request.setRequestHeader('content-type','application/octet-stream');request.upload.onprogress=(event)=>{const percent=event.lengthComputable?Math.round(event.loaded/event.total*100):0;els.appReleaseMessage.textContent=`正在上传 ${file.name}${percent?` · ${percent}%`:''}`;};request.onload=()=>{els.uploadAppRelease.disabled=false;let body={};try{body=JSON.parse(request.responseText||'{}');}catch{}if(request.status<200||request.status>=300){els.appReleaseMessage.textContent=body.error||`上传失败：HTTP ${request.status}`;return;}renderAppRelease(body.release);els.appReleasePackage.value='';els.appReleaseMessage.textContent='安装包已上传。确认版本号和说明后，再点击“发布版本信息”。';};request.onerror=()=>{els.uploadAppRelease.disabled=false;els.appReleaseMessage.textContent='安装包上传失败，请检查网络。';};request.send(file);}
 
 document.querySelectorAll('[data-tab]').forEach((tab)=>tab.addEventListener('click',()=>switchTab(tab.dataset.tab)));
 document.querySelectorAll('[data-refresh]').forEach((item)=>item.addEventListener('click',()=>loadStatus()));
@@ -332,7 +332,7 @@ els.smtpForm.addEventListener('submit',async(event)=>{event.preventDefault();els
 els.smtpTest.addEventListener('click',async()=>{els.smtpMessage.textContent='正在发送测试邮件';try{await api('/api/server/community/smtp/test',{method:'POST'});els.smtpMessage.textContent='测试邮件已发送。';}catch(error){els.smtpMessage.textContent=error.message;}});
 els.update.addEventListener('click',async()=>{if(!await askConfirmation('确认拉取三个 GitHub 仓库并重启网站？私有投稿不会被覆盖。',{title:'更新服务器',confirmText:'更新',danger:false}))return;els.update.disabled=true;try{const result=await api('/api/server/update',{method:'POST'});els.output.textContent=`新版本 ${result.releaseId} 已构建，服务正在重启。`;setTimeout(()=>loadStatus({quiet:true}).catch(()=>{}),1800);}catch(error){els.output.textContent=error.body?.update?.error||error.message;}});
 els.projectAssetForm.addEventListener('submit',saveProjectAsset);els.deleteProjectAsset.addEventListener('click',deleteProjectAsset);els.newProjectAsset.addEventListener('click',newProjectAsset);els.refreshProjectAssets.addEventListener('click',()=>loadProjectAssets());
-els.appReleaseForm.addEventListener('submit',saveAppRelease);els.uploadAppRelease.addEventListener('click',uploadAppReleasePackage);
+els.appReleaseForm.addEventListener('submit',saveAppRelease);
 els.projectAssetSearch.addEventListener('input',renderProjectAssetList);els.projectAssetHasBase.addEventListener('change',updateProjectAssetPreview);
 for(const input of [els.projectAssetCropX,els.projectAssetCropY,els.projectAssetCropW,els.projectAssetCropH])input.addEventListener('input',updateProjectAssetPreview);
 els.projectAssetZh.addEventListener('input',()=>{els.projectAssetTitle.textContent=els.projectAssetZh.value||'新角色';});

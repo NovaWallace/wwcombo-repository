@@ -122,19 +122,24 @@ function managedImageName(src) {
 function normalizeRelease(value, previous = {}) {
   const version = cleanText(value?.version ?? previous.version, 40) || '0.2.0';
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('客户端版本号必须使用 0.2.1 这样的三段数字。');
-  const externalUrl = cleanText(value?.downloadUrl, 1000);
-  if (externalUrl && !/^https?:\/\//i.test(externalUrl)) throw new Error('外部下载地址必须以 http:// 或 https:// 开头。');
+  const suppliedDownload = value?.download && typeof value.download === 'object' ? value.download : null;
+  const previousDownload = previous.download && typeof previous.download === 'object' ? previous.download : null;
+  const previousManagedDownload = previousDownload?.url === '/api/app-release/download';
   const previousLinks = previous.downloadLinks && typeof previous.downloadLinks === 'object' ? previous.downloadLinks : {};
-  const chinaDownloadUrl = cleanText(value?.chinaDownloadUrl ?? previousLinks.china, 1000);
-  const globalDownloadUrl = cleanText(value?.globalDownloadUrl ?? previousLinks.global, 1000);
+  const suppliedLinks = value?.downloadLinks && typeof value.downloadLinks === 'object' ? value.downloadLinks : {};
+  const fallbackChinaUrl = previousLinks.china ?? '';
+  const fallbackGlobalUrl = previous.globalDownloadUrl ?? previousLinks.global ?? (!previousManagedDownload ? previousDownload?.url : '');
+  const requestedChinaUrl = value?.chinaDownloadUrl !== undefined
+    ? value.chinaDownloadUrl
+    : suppliedLinks.china !== undefined ? suppliedLinks.china : fallbackChinaUrl;
+  const requestedGlobalUrl = value?.globalDownloadUrl !== undefined
+    ? value.globalDownloadUrl
+    : suppliedLinks.global !== undefined ? suppliedLinks.global : value?.downloadUrl !== undefined ? value.downloadUrl : fallbackGlobalUrl;
+  const chinaDownloadUrl = cleanText(requestedChinaUrl, 1000);
+  const globalDownloadUrl = cleanText(requestedGlobalUrl, 1000);
   if (chinaDownloadUrl && !/^https?:\/\//i.test(chinaDownloadUrl)) throw new Error('国内下载地址必须以 http:// 或 https:// 开头。');
   if (globalDownloadUrl && !/^https?:\/\//i.test(globalDownloadUrl)) throw new Error('海外下载地址必须以 http:// 或 https:// 开头。');
-  const suppliedDownload = value?.download && typeof value.download === 'object' ? value.download : null;
-  const previousDownload = suppliedDownload || (previous.download && typeof previous.download === 'object' ? previous.download : null);
-  const legacyDownloadUrl = externalUrl || globalDownloadUrl;
-  const download = legacyDownloadUrl
-    ? { url: legacyDownloadUrl, fileName: cleanText(value?.fileName, 160) || previousDownload?.fileName || '', bytes: 0, sha256: '' }
-    : previousDownload;
+  const download = suppliedDownload || (previousManagedDownload ? previousDownload : null);
   return {
     schemaVersion: 1,
     version,
@@ -142,7 +147,10 @@ function normalizeRelease(value, previous = {}) {
     notes: cleanText(value?.notes ?? previous.notes, 4000),
     publishedAt: cleanText(value?.publishedAt ?? previous.publishedAt, 60) || new Date().toISOString(),
     download,
-    downloadLinks: { china: chinaDownloadUrl, global: globalDownloadUrl }
+    downloadLinks: {
+      china: chinaDownloadUrl,
+      global: globalDownloadUrl
+    }
   };
 }
 
