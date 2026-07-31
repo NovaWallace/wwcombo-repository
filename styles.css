@@ -58,6 +58,11 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .submission-button:focus-visible { outline: 2px solid rgba(255, 255, 255, .78); outline-offset: 2px; }
 .submission-button.is-copied { border-color: #63d7aa; background: #238760; }
 .submission-button svg { width: 17px; height: 17px; flex: 0 0 17px; }
+.client-download-button { width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 1px solid #4a5054; border-radius: 4px; background: #171a1d; color: var(--muted-strong); cursor: pointer; transition: background .16s ease, border-color .16s ease, transform .16s ease; }
+.client-download-button:hover, .client-download-button:focus-visible { border-color: #858c91; background: #23272a; color: #fff; outline: 0; }
+.client-download-button:active { transform: translateY(1px); }
+.client-download-button:disabled { cursor: wait; opacity: .55; }
+.client-download-button svg { width: 18px; height: 18px; }
 .profile-button { min-width: 0; height: 40px; display: grid; grid-template-columns: 30px minmax(0, 110px); align-items: center; gap: 8px; padding: 0 9px 0 5px; border: 1px solid #4a5054; border-radius: 4px; background: #171a1d; color: var(--text); cursor: pointer; text-align: left; }
 .profile-button:hover { border-color: #858c91; background: #23272a; }
 .profile-avatar { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: #cf242b; color: #fff; font-size: 13px; font-style: normal; font-weight: 950; text-transform: uppercase; }
@@ -349,6 +354,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
   .theme-toggle, .motion-toggle, .submission-help-button, .language-control { width: 34px; height: 34px; flex-basis: 34px; }
   .profile-button { width:34px; height:34px; grid-template-columns:1fr; padding:1px; border-radius:50%; }
   .profile-copy { display:none; }
+  .client-download-button { width: 36px; height: 36px; }
   .submission-button { width: 36px; min-width: 36px; height: 36px; padding: 0; }
   .submission-button span { display: none; }
   .submission-help-tooltip { position: fixed; top: 66px; right: 14px; left: 14px; width: auto; }
@@ -418,6 +424,8 @@ html[data-theme='day'] .motion-toggle,
 html[data-theme='day'] .language-control,
 html[data-theme='day'] .submission-help-button { border-color: #a8b8bd; background: #f7fafb; color: #425b63; }
 html[data-theme='day'] .profile-button { border-color:#a8b8bd; background:#f7fafb; color:#23383f; }
+html[data-theme='day'] .client-download-button { border-color: #a8b8bd; background: #f7fafb; color: #425b63; }
+html[data-theme='day'] .client-download-button:hover, html[data-theme='day'] .client-download-button:focus-visible { border-color: #698087; background: #e7eff1; color: #15272d; }
 html[data-theme='day'] .profile-button:hover { border-color:#698087; background:#e7eff1; }
 html[data-theme='day'] .theme-toggle:hover,
 html[data-theme='day'] .theme-toggle:focus-visible,

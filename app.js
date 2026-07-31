@@ -1,6 +1,8 @@
 const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/icons/character';
 const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
 const UNKNOWN_CHARACTER_ICON = './assets/unknown-character.jpg';
+const APP_RELEASE_MANIFEST_PATH = '/api/project-assets/v1/app-release.json';
+const APP_RELEASE_FALLBACK_ORIGIN = 'https://Nova.fb520.site';
 const PROFILE_STORAGE_KEY = 'wwcombo-community-profile-v1';
 const AXIS_KEY_SETTINGS_STORAGE_KEY = 'wwcombo-community-axis-key-settings-v1';
 const i18n = window.wwcomboI18n;
@@ -264,7 +266,9 @@ const state = {
   axisScale: 1,
   axisKeySettings: savedKeys.settings,
   axisKeySettingsFile: savedKeys.fileName,
-  chartPackages: new Map()
+  chartPackages: new Map(),
+  appRelease: null,
+  appReleaseState: 'idle'
 };
 if (state.axisKeySettings?.preferences.inputMode === 'gamepad') state.axisIconSet = state.axisKeySettings.preferences.gamepadIconSet;
 
@@ -287,6 +291,7 @@ const els = {
   themeToggle: document.getElementById('themeToggle'),
   submissionButton: document.getElementById('submissionButton'),
   submissionButtonLabel: document.getElementById('submissionButtonLabel'),
+  clientDownloadButton: document.getElementById('clientDownloadButton'),
   profileButton: document.getElementById('profileButton'),
   profileAvatar: document.getElementById('profileAvatar'),
   profileName: document.getElementById('profileName'),
@@ -374,6 +379,28 @@ const requestedSource = params.get('source') || '';
 const sourceUrl = (!isFilePreview && /(^|\/)demo-index\.json(?:$|\?)/i.test(requestedSource))
   ? './community-index.json'
   : requestedSource || (isFilePreview ? './demo-index.json' : './community-index.json');
+
+function appReleaseManifestUrl() {
+  if (location.protocol === 'file:') return `${APP_RELEASE_FALLBACK_ORIGIN}${APP_RELEASE_MANIFEST_PATH}`;
+  if (location.hostname === 'Nova.fb520.site' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') return APP_RELEASE_MANIFEST_PATH;
+  return `${APP_RELEASE_FALLBACK_ORIGIN}${APP_RELEASE_MANIFEST_PATH}`;
+}
+
+function appReleaseDownloadUrl(release, language = i18n.language) {
+  const links = release?.downloadLinks;
+  if (!links || typeof links !== 'object') return '';
+  const value = language === 'zh-CN' ? links.china : links.global;
+  return typeof value === 'string' && /^https?:\/\//i.test(value) ? value : '';
+}
+
+function refreshClientDownloadControl() {
+  if (!els.clientDownloadButton) return;
+  const hasLink = Boolean(appReleaseDownloadUrl(state.appRelease));
+  els.clientDownloadButton.disabled = state.appReleaseState === 'loading';
+  els.clientDownloadButton.setAttribute('aria-busy', state.appReleaseState === 'loading' ? 'true' : 'false');
+  els.clientDownloadButton.title = hasLink ? (i18n.language === 'zh-CN' ? '下载客户端' : 'Download client') : (i18n.language === 'zh-CN' ? '暂未配置客户端下载地址' : 'Client download is not configured');
+  els.clientDownloadButton.setAttribute('aria-label', els.clientDownloadButton.title);
+}
 
 function maskProfileEmail(value) {
   const email = String(value || '').trim().toLowerCase();
@@ -737,7 +764,7 @@ function submitterFor(chart) {
   const nickname = String(chart.submitter?.nickname || '').trim();
   const email = String(chart.submitter?.email || '').trim();
   return {
-    nickname: nickname || t('submitter.historical'),
+    nickname: /^unknown$/i.test(nickname) ? 'known' : nickname || t('submitter.historical'),
     email: email || t('submitter.noEmail'),
     badge: String(chart.submitter?.badge || '').toUpperCase() === 'UP' ? 'UP' : '',
     avatar: String(chart.submitter?.avatar || '').trim()
@@ -794,6 +821,19 @@ async function downloadChart(event, chart) {
   } finally {
     link.removeAttribute('aria-busy');
   }
+}
+
+async function openClientDownload() {
+  const popup = window.open('about:blank', '_blank');
+  if (!state.appRelease) await loadAppRelease();
+  const url = appReleaseDownloadUrl(state.appRelease);
+  if (!url) {
+    popup?.close();
+    refreshClientDownloadControl();
+    return;
+  }
+  if (popup) popup.location.href = url;
+  else window.location.href = url;
 }
 
 function availableCharacters() {
@@ -1502,6 +1542,7 @@ function setStatus(kind, text) {
 function refreshLocalizedView() {
   updateThemeControl();
   updateMotionControl();
+  refreshClientDownloadControl();
   renderProfile();
   renderFilters();
   render();
@@ -1546,6 +1587,23 @@ async function loadCharacterIcons() {
   }
 }
 
+async function loadAppRelease() {
+  state.appReleaseState = 'loading';
+  refreshClientDownloadControl();
+  try {
+    const response = await fetch(appReleaseManifestUrl(), { cache: 'no-cache' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const value = await response.json();
+    if (value?.schemaVersion !== 1 || typeof value.version !== 'string') throw new Error('Invalid app release manifest');
+    state.appRelease = value;
+    state.appReleaseState = 'ready';
+  } catch {
+    state.appRelease = null;
+    state.appReleaseState = 'error';
+  }
+  refreshClientDownloadControl();
+}
+
 async function loadIndex() {
   els.error.hidden = true;
   els.list.hidden = false;
@@ -1585,6 +1643,7 @@ async function loadIndex() {
 els.form.addEventListener('submit', (event) => event.preventDefault());
 els.languageSelect?.addEventListener('change', () => i18n.setLanguage(els.languageSelect.value));
 window.addEventListener('wwcombo-languagechange', refreshLocalizedView);
+els.clientDownloadButton?.addEventListener('click', () => { void openClientDownload(); });
 els.title.addEventListener('input', () => { state.title = els.title.value; render(); });
 els.clearTitle.addEventListener('click', () => { state.title = ''; els.title.value = ''; els.title.focus(); render(); });
 els.characterPickerButton.addEventListener('click', openCharacterPicker);
@@ -1690,3 +1749,4 @@ els.languageSelect.value = i18n.language;
 window.lucide?.createIcons();
 initHeroSpine();
 loadIndex();
+void loadAppRelease();
