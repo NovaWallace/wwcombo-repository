@@ -2,7 +2,6 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $TaskName = 'WWComboCommunityServer'
-$DefaultPassword = 'REMOVED_FROM_HISTORY'
 $HostAddress = '0.0.0.0'
 $Port = 9881
 $PublicUrl = 'https://Nova.fb520.site'
@@ -153,6 +152,33 @@ function Wait-ForLogin {
   throw "The server did not accept the configured administrator password: $($lastError.Exception.Message)"
 }
 
+function Wait-ForServer {
+  $statusUrl = "http://127.0.0.1:$Port/api/server/status"
+  $lastError = $null
+  for ($attempt = 0; $attempt -lt 120; $attempt += 1) {
+    try {
+      Invoke-RestMethod -Method Get -Uri $statusUrl -TimeoutSec 5 | Out-Null
+      return
+    } catch {
+      $lastError = $_
+      if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 401) { return }
+      Start-Sleep -Seconds 1
+    }
+  }
+  throw "The server did not become ready: $($lastError.Exception.Message)"
+}
+
+function Read-PrivatePassword {
+  param([Parameter(Mandatory = $true)][string]$Prompt)
+  $secure = Read-Host $Prompt -AsSecureString
+  $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+  try {
+    return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
+  } finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
+  }
+}
+
 if (-not (Test-Administrator)) {
   Write-Host 'Administrator permission is required. Opening the UAC prompt...'
   $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
@@ -194,13 +220,27 @@ Write-Host 'Installing server dependencies...'
 if ($LASTEXITCODE -ne 0) { throw 'npm install failed.' }
 
 New-Item -ItemType Directory -Path $RuntimeRoot -Force | Out-Null
-$adminPassword = if ($env:WWCOMBO_ADMIN_PASSWORD) { $env:WWCOMBO_ADMIN_PASSWORD } else { $DefaultPassword }
-$env:WWCOMBO_ADMIN_PASSWORD = $adminPassword
-try {
+$configPath = Join-Path $RuntimeRoot 'config.json'
+$adminPassword = [string]$env:WWCOMBO_ADMIN_PASSWORD
+if (-not (Test-Path -LiteralPath $configPath) -and -not $adminPassword) {
+  $adminPassword = Read-PrivatePassword -Prompt 'Set the maintenance console password (at least 10 characters)'
+  $confirmation = Read-PrivatePassword -Prompt 'Enter the maintenance console password again'
+  if ($adminPassword -ne $confirmation) { throw 'The maintenance console passwords do not match.' }
+  if ($adminPassword.Length -lt 10) { throw 'The maintenance console password must contain at least 10 characters.' }
+  $confirmation = $null
+}
+
+if ($adminPassword) {
+  $env:WWCOMBO_ADMIN_PASSWORD = $adminPassword
+  try {
+    & $nodePath (Join-Path $ServerDir 'configure.mjs') --runtime $RuntimeRoot
+    if ($LASTEXITCODE -ne 0) { throw 'Administrator password configuration failed.' }
+  } finally {
+    Remove-Item Env:WWCOMBO_ADMIN_PASSWORD -ErrorAction SilentlyContinue
+  }
+} else {
   & $nodePath (Join-Path $ServerDir 'configure.mjs') --runtime $RuntimeRoot
-  if ($LASTEXITCODE -ne 0) { throw 'Administrator password configuration failed.' }
-} finally {
-  Remove-Item Env:WWCOMBO_ADMIN_PASSWORD -ErrorAction SilentlyContinue
+  if ($LASTEXITCODE -ne 0) { throw 'Existing administrator password configuration could not be loaded.' }
 }
 
 $serviceConfig = [ordered]@{
@@ -233,13 +273,19 @@ if (-not $firewallRule) {
 }
 
 Start-ScheduledTask -TaskName $TaskName
-Write-Host 'Waiting for the server and testing the administrator password...'
-Wait-ForLogin -Password $adminPassword
+if ($adminPassword) {
+  Write-Host 'Waiting for the server and testing the administrator password...'
+  Wait-ForLogin -Password $adminPassword
+  Write-Host 'Administrator password verified locally.'
+} else {
+  Write-Host 'Waiting for the server...'
+  Wait-ForServer
+  Write-Host 'Existing administrator password was preserved.'
+}
 
 Write-Host ''
 Write-Host "User website: $PublicUrl/"
 Write-Host "Maintenance console: $PublicUrl/admin/"
-Write-Host "Administrator password verified: $adminPassword"
 Write-Host "Windows task: $TaskName"
 Write-Host "Private runtime data: $RuntimeRoot"
 Write-Host 'The server owner does not need to perform daily moderation.'

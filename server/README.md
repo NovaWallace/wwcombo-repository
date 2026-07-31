@@ -17,7 +17,7 @@
 
 备用入口为 `server\windows-deploy.bat` 或原有的 `server\windows-deploy.cmd`。脚本会自动申请管理员权限、检查或安装 Node.js LTS 与 Git、安装 npm 依赖、注册 Windows 开机计划任务、开放 TCP 9881，并启动网站。存在 `winget` 时优先使用；Windows Server 没有 `winget` 时，会改从 Node.js 和 Git for Windows 官方地址下载静默安装包。默认监听 `0.0.0.0:9881`，运行数据保存在 `C:\ProgramData\WWCombo`。重复双击会拉取 GitHub 更新并重新部署。
 
-Windows 部署会将维护端密码明确设置并验证为 `REMOVED_FROM_HISTORY`；也可以在启动脚本前通过 `WWCOMBO_ADMIN_PASSWORD` 环境变量覆盖。脚本会同时验证正确密码可以登录、错误密码返回 401。服务器主人不负责日常审核，维护者在自己的电脑打开 <https://Nova.fb520.site/admin/> 操作。
+首次部署会在服务器本地要求输入并确认维护端密码，输入内容不会显示、不会写入仓库，服务器只保存加盐哈希。已有配置再次部署时会保留原密码；自动化环境也可以通过服务器本地的 `WWCOMBO_ADMIN_PASSWORD` 环境变量传入。脚本会验证正确密码可以登录、错误密码返回 401。服务器主人不负责日常审核，维护者在自己的电脑打开 <https://Nova.fb520.site/admin/> 操作。
 
 ### Linux 服务器
 
