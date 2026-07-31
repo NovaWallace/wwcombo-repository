@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": 1,
-  "updatedAt": "2026-07-29T14:53:30.206Z",
+  "revision": 2,
+  "updatedAt": "2026-07-31T15:44:52.457Z",
   "characters": [
     {
       "id": "base_通用",
@@ -32,9 +32,9 @@
       "id": "base_爱弥斯",
       "names": {
         "zh-CN": "爱弥斯",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Aemeath",
+        "ja-JP": "エイメス",
+        "ko-KR": "에이메스"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/5d6d4f5173c5678d1ce2.webp",
@@ -51,15 +51,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_安可",
       "names": {
         "zh-CN": "安可",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Encore",
+        "ja-JP": "アンコ",
+        "ko-KR": "앙코"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/e74198ac1209e53c604d.webp",
@@ -76,15 +77,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_暗主",
       "names": {
         "zh-CN": "暗主",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Rover: Havoc",
+        "ja-JP": "漂泊者・消滅",
+        "ko-KR": "방랑자 · 인멸"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/2e6c029050b88535ab79.png",
@@ -107,9 +109,9 @@
       "id": "base_奥古斯塔",
       "names": {
         "zh-CN": "奥古斯塔",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Augusta",
+        "ja-JP": "オーガスタ",
+        "ko-KR": "아우구스타"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/f960cb5ab1c1e340b13b.webp",
@@ -126,15 +128,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_白芷",
       "names": {
         "zh-CN": "白芷",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Baizhi",
+        "ja-JP": "白芷",
+        "ko-KR": "설지"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/d58a41a29d1d2993e3dc.webp",
@@ -151,15 +154,16 @@
           "right": 86
         },
         "edge": 0
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_卜灵",
       "names": {
         "zh-CN": "卜灵",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Buling",
+        "ja-JP": "卜霊",
+        "ko-KR": "복링"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/b767a227b20bad5934f7.webp",
@@ -176,15 +180,16 @@
           "right": 86
         },
         "edge": 0
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_布兰特",
       "names": {
         "zh-CN": "布兰特",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Brant",
+        "ja-JP": "ブラント",
+        "ko-KR": "브렌트"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/24de5208f53fbeb61d05.webp",
@@ -201,15 +206,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_长离",
       "names": {
         "zh-CN": "长离",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Changli",
+        "ja-JP": "長離",
+        "ko-KR": "장리"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/2cafaba706eaac87c348.webp",
@@ -226,15 +232,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_炽霞",
       "names": {
         "zh-CN": "炽霞",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Chixia",
+        "ja-JP": "熾霞",
+        "ko-KR": "치샤"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/35c814900f3e20ed8316.webp",
@@ -251,15 +258,16 @@
           "right": 86
         },
         "edge": 0
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_椿",
       "names": {
         "zh-CN": "椿",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Camellya",
+        "ja-JP": "ツバキ",
+        "ko-KR": "카멜리아"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/74059aeb753ec5847873.webp",
@@ -276,15 +284,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_达妮娅",
       "names": {
         "zh-CN": "达妮娅",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Denia",
+        "ja-JP": "ダーニャ",
+        "ko-KR": "데니아"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/eeeb13586f5a952cb6ba.webp",
@@ -301,15 +310,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_丹瑾",
       "names": {
         "zh-CN": "丹瑾",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Danjin",
+        "ja-JP": "丹瑾",
+        "ko-KR": "단근"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/20ecc3d814a21de916ac.webp",
@@ -326,15 +336,16 @@
           "right": 86
         },
         "edge": 0
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_灯灯",
       "names": {
         "zh-CN": "灯灯",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Lumi",
+        "ja-JP": "灯灯",
+        "ko-KR": "루미"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/0257f571242f7e54bd62.webp",
@@ -351,15 +362,16 @@
           "right": 86
         },
         "edge": 0
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_绯雪",
       "names": {
         "zh-CN": "绯雪",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Hiyuki",
+        "ja-JP": "緋雪",
+        "ko-KR": "히유키"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/05a8ba430b4db41a9b0d.webp",
@@ -376,15 +388,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_菲比",
       "names": {
         "zh-CN": "菲比",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Phoebe",
+        "ja-JP": "フィービー",
+        "ko-KR": "페비"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/3b6c17c585d60c9644ee.webp",
@@ -401,15 +414,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_风主",
       "names": {
         "zh-CN": "风主",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Rover: Aero",
+        "ja-JP": "漂泊者・気動",
+        "ko-KR": "방랑자 · 기류"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/f3bd8393f5e94370c798.png",
@@ -432,9 +446,9 @@
       "id": "base_弗洛洛",
       "names": {
         "zh-CN": "弗洛洛",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Phrolova",
+        "ja-JP": "フローヴァ",
+        "ko-KR": "플로로"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/f4b4ba27a7a5ce396ad1.webp",
@@ -451,15 +465,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_光主",
       "names": {
         "zh-CN": "光主",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Rover: Spectro",
+        "ja-JP": "漂泊者・回折",
+        "ko-KR": "방랑자 · 회절"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/44d20f3e9e7fe0bf296f.png",
@@ -482,9 +497,9 @@
       "id": "base_忌炎",
       "names": {
         "zh-CN": "忌炎",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Jiyan",
+        "ja-JP": "忌炎",
+        "ko-KR": "기염"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/279c71c9c29842710d21.webp",
@@ -501,15 +516,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_嘉贝丽娜",
       "names": {
         "zh-CN": "嘉贝丽娜",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Galbrena",
+        "ja-JP": "ガルブレーナ",
+        "ko-KR": "갈브레나"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/ab1d4cc8604ea96f7cc0.webp",
@@ -532,9 +548,9 @@
       "id": "base_鉴心",
       "names": {
         "zh-CN": "鉴心",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Jianxin",
+        "ja-JP": "鑑心",
+        "ko-KR": "감심"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/717d80fb2cbbee758353.webp",
@@ -551,15 +567,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_今汐",
       "names": {
         "zh-CN": "今汐",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Jinhsi",
+        "ja-JP": "今汐",
+        "ko-KR": "금희"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/957e878fd4faa12cea21.webp",
@@ -576,15 +593,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_卡卡罗",
       "names": {
         "zh-CN": "卡卡罗",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Calcharo",
+        "ja-JP": "カカロ",
+        "ko-KR": "카카루"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/bc1f3a89361c50c7e720.webp",
@@ -601,15 +619,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_卡提希娅",
       "names": {
         "zh-CN": "卡提希娅",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Cartethyia",
+        "ja-JP": "カルテジア",
+        "ko-KR": "카르티시아"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/cb050491995d3d0c8a94.webp",
@@ -626,15 +645,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_坎特蕾拉",
       "names": {
         "zh-CN": "坎特蕾拉",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Cantarella",
+        "ja-JP": "カンタレラ",
+        "ko-KR": "칸타렐라"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/fb22538aafed7f468cc0.webp",
@@ -651,15 +671,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_珂莱塔",
       "names": {
         "zh-CN": "珂莱塔",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Carlotta",
+        "ja-JP": "カルロッタ",
+        "ko-KR": "카를로타"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/d5882061864bd820cb38.webp",
@@ -676,15 +697,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_雷主",
       "names": {
         "zh-CN": "雷主",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Rover: Electro",
+        "ja-JP": "漂泊者・電導",
+        "ko-KR": "방랑자 · 전도"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/f8794780bd14b631458d.png",
@@ -707,9 +729,9 @@
       "id": "base_丽贝卡",
       "names": {
         "zh-CN": "丽贝卡",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Rebecca",
+        "ja-JP": "レベッカ",
+        "ko-KR": "레베카"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/44c322fd8c5d7952ac7b.webp",
@@ -726,15 +748,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_琳奈",
       "names": {
         "zh-CN": "琳奈",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Lynae",
+        "ja-JP": "リンネー",
+        "ko-KR": "린네"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/cc47a254134a7f880095.webp",
@@ -751,15 +774,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_凌阳",
       "names": {
         "zh-CN": "凌阳",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Lingyang",
+        "ja-JP": "凌陽",
+        "ko-KR": "능양"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/2c47dfa56421e9286d33.webp",
@@ -776,15 +800,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_陆赫兹",
       "names": {
         "zh-CN": "陆赫兹",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Luuk Herssen",
+        "ja-JP": "リューク・ヘルセン",
+        "ko-KR": "루크 · 헤르센"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/a3f10d3c80e6c76f1ab9.webp",
@@ -807,9 +832,9 @@
       "id": "base_露帕",
       "names": {
         "zh-CN": "露帕",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Lupa",
+        "ja-JP": "ルパ",
+        "ko-KR": "루파"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/73de261c8d526f85f983.webp",
@@ -826,15 +851,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_露西",
       "names": {
         "zh-CN": "露西",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Lucy",
+        "ja-JP": "ルーシー",
+        "ko-KR": "루시"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/f0730f54ffa2186baaaa.webp",
@@ -851,15 +877,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_洛可可",
       "names": {
         "zh-CN": "洛可可",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Roccia",
+        "ja-JP": "ロココ",
+        "ko-KR": "로코코"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/14bb0d00a34c3f83a0d0.webp",
@@ -876,15 +903,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_洛瑟拉",
       "names": {
         "zh-CN": "洛瑟拉",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Lucilla",
+        "ja-JP": "ルシラー",
+        "ko-KR": "루실라"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/13fdbeac6450ed58cf8d.webp",
@@ -907,9 +935,9 @@
       "id": "base_莫宁",
       "names": {
         "zh-CN": "莫宁",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Mornye",
+        "ja-JP": "モーニエ",
+        "ko-KR": "모니에"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/454068fde344f50268da.webp",
@@ -926,15 +954,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_莫特斐",
       "names": {
         "zh-CN": "莫特斐",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Mortefi",
+        "ja-JP": "モルトフィー",
+        "ko-KR": "모르테피"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/eebf27800f3bf4e7d287.webp",
@@ -951,15 +980,16 @@
           "right": 86
         },
         "edge": 0
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_千咲",
       "names": {
         "zh-CN": "千咲",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Chisa",
+        "ja-JP": "千咲",
+        "ko-KR": "치사"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/bcab33a536db9f1a0cba.webp",
@@ -976,15 +1006,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_秋水",
       "names": {
         "zh-CN": "秋水",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Aalto",
+        "ja-JP": "アールト",
+        "ko-KR": "알토"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/de891ee48ebe58b77668.webp",
@@ -1001,15 +1032,16 @@
           "right": 86
         },
         "edge": 0
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_仇远",
       "names": {
         "zh-CN": "仇远",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Qiuyuan",
+        "ja-JP": "仇遠",
+        "ko-KR": "구원"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/906a873173d3ebffddcb.webp",
@@ -1026,15 +1058,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_散华",
       "names": {
         "zh-CN": "散华",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Sanhua",
+        "ja-JP": "散華",
+        "ko-KR": "산화"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/923595c9208d7c59d61b.webp",
@@ -1051,15 +1084,16 @@
           "right": 86
         },
         "edge": 0
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_守岸人",
       "names": {
         "zh-CN": "守岸人",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Shorekeeper",
+        "ja-JP": "ショアキーパー",
+        "ko-KR": "파수인"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/ed21adb0ee71573a1d0e.webp",
@@ -1076,15 +1110,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_穗穗",
       "names": {
         "zh-CN": "穗穗",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Suisui",
+        "ja-JP": "穂穂",
+        "ko-KR": "수수"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/99f0b1b5c6be3ffe946e.webp",
@@ -1101,15 +1136,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_桃祈",
       "names": {
         "zh-CN": "桃祈",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Taoqi",
+        "ja-JP": "桃祈",
+        "ko-KR": "도기"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/23664d62b68cf7ca9143.webp",
@@ -1126,15 +1162,16 @@
           "right": 86
         },
         "edge": 0
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_维里奈",
       "names": {
         "zh-CN": "维里奈",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Verina",
+        "ja-JP": "ヴェリーナ",
+        "ko-KR": "벨리나"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/16853dfe94e1be24309c.webp",
@@ -1151,15 +1188,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_西格莉卡",
       "names": {
         "zh-CN": "西格莉卡",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Sigrika",
+        "ja-JP": "シグリカ",
+        "ko-KR": "시그리카"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/ed69f86fdf7b55d9b3b5.webp",
@@ -1176,15 +1214,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_夏空",
       "names": {
         "zh-CN": "夏空",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Ciaccona",
+        "ja-JP": "シャコンヌ",
+        "ko-KR": "샤콘"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/9801db591f3233127835.webp",
@@ -1201,15 +1240,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_相里要",
       "names": {
         "zh-CN": "相里要",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Xiangli Yao",
+        "ja-JP": "相里要",
+        "ko-KR": "상리요"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/b70db05dc1b40ca813e1.webp",
@@ -1226,15 +1266,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_玄翎",
       "names": {
         "zh-CN": "玄翎",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Yangyang: Xuanling",
+        "ja-JP": "秧秧・玄翎",
+        "ko-KR": "양양 · 현령"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/4f2b08ddfa4de7ae3656.webp",
@@ -1257,9 +1298,9 @@
       "id": "base_秧秧",
       "names": {
         "zh-CN": "秧秧",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Yangyang",
+        "ja-JP": "秧秧",
+        "ko-KR": "양양"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/6f215a66d3c6bbcc4616.webp",
@@ -1276,15 +1317,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_吟霖",
       "names": {
         "zh-CN": "吟霖",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Yinlin",
+        "ja-JP": "吟霖",
+        "ko-KR": "음림"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/2ac85a723562babb5a5b.webp",
@@ -1301,15 +1343,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_尤诺",
       "names": {
         "zh-CN": "尤诺",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Iuno",
+        "ja-JP": "ユーノ",
+        "ko-KR": "유노"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/9f4a503fb66a623e39f0.webp",
@@ -1326,15 +1369,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_釉瑚",
       "names": {
         "zh-CN": "釉瑚",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Youhu",
+        "ja-JP": "釉瑚",
+        "ko-KR": "유호"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/18b2a6c594df5222a965.webp",
@@ -1351,15 +1395,16 @@
           "right": 86
         },
         "edge": 0
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_渊武",
       "names": {
         "zh-CN": "渊武",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Yuanwu",
+        "ja-JP": "淵武",
+        "ko-KR": "연무"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/9b178c1c35b5c32c641c.webp",
@@ -1376,15 +1421,16 @@
           "right": 86
         },
         "edge": 0
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_赞妮",
       "names": {
         "zh-CN": "赞妮",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Zani",
+        "ja-JP": "ザンニー",
+        "ko-KR": "젠니"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/c390b62cdcfc9e2eadda.webp",
@@ -1401,15 +1447,16 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     },
     {
       "id": "base_折枝",
       "names": {
         "zh-CN": "折枝",
-        "en-US": "",
-        "ja-JP": "",
-        "ko-KR": ""
+        "en-US": "Zhezhi",
+        "ja-JP": "折枝",
+        "ko-KR": "절지"
       },
       "basePreset": {
         "src": "/api/project-assets/v1/images/2765a15ad56367b63393.webp",
@@ -1426,7 +1473,8 @@
           "right": 78
         },
         "edge": 10
-      }
+      },
+      "updatedAt": "2026-07-31T15:44:52.457Z"
     }
   ]
 }

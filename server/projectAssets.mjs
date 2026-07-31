@@ -189,9 +189,34 @@ export function createProjectAssetsService({ runtimeRoot, serverDir }) {
     }
     if (existsSync(manifestPath)) {
       manifest = normalizeManifest(JSON.parse((await readFile(manifestPath, 'utf8')).replace(/^\ufeff/, '')));
-      const known = new Set(manifest.characters.map((item) => item.id));
+      const now = new Date().toISOString();
+      const seedById = new Map(seed.characters.map((item) => [item.id, item]));
+      let namesChanged = false;
+      const mergedCharacters = manifest.characters.map((item) => {
+        const seeded = seedById.get(item.id);
+        if (!seeded) return item;
+
+        const names = { ...item.names };
+        let changed = false;
+        for (const key of ['en-US', 'ja-JP', 'ko-KR']) {
+          if (!names[key] && seeded.names[key]) {
+            names[key] = seeded.names[key];
+            changed = true;
+            namesChanged = true;
+          }
+        }
+        return changed ? { ...item, names, updatedAt: now } : item;
+      });
+      const known = new Set(mergedCharacters.map((item) => item.id));
       const additions = seed.characters.filter((item) => !known.has(item.id));
-      if (additions.length) await persist({ ...manifest, revision: manifest.revision + 1, updatedAt: new Date().toISOString(), characters: [...manifest.characters, ...additions] });
+      if (namesChanged || additions.length) {
+        manifest = await persist({
+          ...manifest,
+          revision: manifest.revision + 1,
+          updatedAt: now,
+          characters: [...mergedCharacters, ...additions]
+        });
+      }
     } else {
       await persist(seed);
     }
