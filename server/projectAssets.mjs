@@ -124,10 +124,16 @@ function normalizeRelease(value, previous = {}) {
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('客户端版本号必须使用 0.2.1 这样的三段数字。');
   const externalUrl = cleanText(value?.downloadUrl, 1000);
   if (externalUrl && !/^https?:\/\//i.test(externalUrl)) throw new Error('外部下载地址必须以 http:// 或 https:// 开头。');
+  const previousLinks = previous.downloadLinks && typeof previous.downloadLinks === 'object' ? previous.downloadLinks : {};
+  const chinaDownloadUrl = cleanText(value?.chinaDownloadUrl ?? previousLinks.china, 1000);
+  const globalDownloadUrl = cleanText(value?.globalDownloadUrl ?? previousLinks.global, 1000);
+  if (chinaDownloadUrl && !/^https?:\/\//i.test(chinaDownloadUrl)) throw new Error('国内下载地址必须以 http:// 或 https:// 开头。');
+  if (globalDownloadUrl && !/^https?:\/\//i.test(globalDownloadUrl)) throw new Error('海外下载地址必须以 http:// 或 https:// 开头。');
   const suppliedDownload = value?.download && typeof value.download === 'object' ? value.download : null;
   const previousDownload = suppliedDownload || (previous.download && typeof previous.download === 'object' ? previous.download : null);
-  const download = externalUrl
-    ? { url: externalUrl, fileName: cleanText(value?.fileName, 160) || previousDownload?.fileName || '', bytes: 0, sha256: '' }
+  const legacyDownloadUrl = externalUrl || globalDownloadUrl;
+  const download = legacyDownloadUrl
+    ? { url: legacyDownloadUrl, fileName: cleanText(value?.fileName, 160) || previousDownload?.fileName || '', bytes: 0, sha256: '' }
     : previousDownload;
   return {
     schemaVersion: 1,
@@ -135,7 +141,8 @@ function normalizeRelease(value, previous = {}) {
     title: cleanText(value?.title ?? previous.title, 120),
     notes: cleanText(value?.notes ?? previous.notes, 4000),
     publishedAt: cleanText(value?.publishedAt ?? previous.publishedAt, 60) || new Date().toISOString(),
-    download
+    download,
+    downloadLinks: { china: chinaDownloadUrl, global: globalDownloadUrl }
   };
 }
 
