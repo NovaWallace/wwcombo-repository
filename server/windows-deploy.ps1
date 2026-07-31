@@ -10,6 +10,7 @@ $RuntimeRoot = Join-Path $env:ProgramData 'WWCombo'
 $ServerDir = $PSScriptRoot
 $RepositoryRoot = (Resolve-Path (Join-Path $ServerDir '..')).Path
 $RunnerPath = Join-Path $ServerDir 'windows-run.ps1'
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
 function Test-Administrator {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -23,21 +24,61 @@ function Refresh-ProcessPath {
   $env:Path = "$machinePath;$userPath"
 }
 
-function Install-WingetPackage {
+function Install-NodeDirect {
+  Write-Host 'Downloading the current Node.js LTS installer from nodejs.org...'
+  $versions = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' -Headers @{ 'User-Agent' = 'WWCombo-Windows-Installer' }
+  $release = $versions | Where-Object { $_.lts -and ($_.files -contains 'win-x64-msi') } | Select-Object -First 1
+  if (-not $release) { throw 'Could not find a Windows x64 Node.js LTS installer.' }
+
+  $version = [string]$release.version
+  $installer = Join-Path ([IO.Path]::GetTempPath()) "node-$version-x64.msi"
+  $url = "https://nodejs.org/dist/$version/node-$version-x64.msi"
+  try {
+    Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing -Headers @{ 'User-Agent' = 'WWCombo-Windows-Installer' }
+    $process = Start-Process -FilePath 'msiexec.exe' -ArgumentList @('/i', "`"$installer`"", '/qn', '/norestart') -WindowStyle Hidden -Wait -PassThru
+    if ($process.ExitCode -ne 0) { throw "Node.js installer exited with code $($process.ExitCode)." }
+  } finally {
+    Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
+  }
+}
+
+function Install-GitDirect {
+  Write-Host 'Downloading the current Git for Windows installer...'
+  $release = Invoke-RestMethod -Uri 'https://api.github.com/repos/git-for-windows/git/releases/latest' -Headers @{ 'User-Agent' = 'WWCombo-Windows-Installer' }
+  $asset = $release.assets | Where-Object { $_.name -match '^Git-[0-9].*-64-bit\.exe$' } | Select-Object -First 1
+  if (-not $asset) { throw 'Could not find the Git for Windows x64 installer.' }
+
+  $installer = Join-Path ([IO.Path]::GetTempPath()) ([string]$asset.name)
+  try {
+    Invoke-WebRequest -Uri ([string]$asset.browser_download_url) -OutFile $installer -UseBasicParsing -Headers @{ 'User-Agent' = 'WWCombo-Windows-Installer' }
+    $process = Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT', '/NORESTART', '/NOCANCEL', '/SP-') -WindowStyle Hidden -Wait -PassThru
+    if ($process.ExitCode -ne 0) { throw "Git installer exited with code $($process.ExitCode)." }
+  } finally {
+    Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
+  }
+}
+
+function Install-RequiredPackage {
   param(
     [Parameter(Mandatory = $true)][string]$Id,
     [Parameter(Mandatory = $true)][string]$Label
   )
 
   $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
-  if (-not $winget) {
-    throw "$Label is missing and winget is unavailable. Install $Label, then run windows-deploy.cmd again."
+  if ($winget) {
+    Write-Host "Installing $Label with winget..."
+    & $winget.Source install --id $Id --exact --silent --accept-package-agreements --accept-source-agreements
+    if ($LASTEXITCODE -eq 0) {
+      Refresh-ProcessPath
+      return
+    }
+    Write-Warning "winget could not install $Label (exit code $LASTEXITCODE); trying the official installer."
   }
 
-  Write-Host "Installing $Label..."
-  & $winget.Source install --id $Id --exact --silent --accept-package-agreements --accept-source-agreements
-  if ($LASTEXITCODE -ne 0) {
-    throw "winget could not install $Label (exit code $LASTEXITCODE)."
+  switch ($Id) {
+    'OpenJS.NodeJS.LTS' { Install-NodeDirect }
+    'Git.Git' { Install-GitDirect }
+    default { throw "No direct installer is configured for $Label." }
   }
   Refresh-ProcessPath
 }
@@ -51,7 +92,7 @@ function Get-RequiredCommand {
 
   $command = Get-Command $Name -ErrorAction SilentlyContinue
   if (-not $command) {
-    Install-WingetPackage -Id $WingetId -Label $Label
+    Install-RequiredPackage -Id $WingetId -Label $Label
     $command = Get-Command $Name -ErrorAction SilentlyContinue
   }
   if (-not $command) {
@@ -126,7 +167,7 @@ $npmPath = Get-RequiredCommand -Name 'npm.cmd' -WingetId 'OpenJS.NodeJS.LTS' -La
 
 $nodeMajor = [int]((& $nodePath --version).Trim().TrimStart('v').Split('.')[0])
 if ($nodeMajor -lt 18) {
-  Install-WingetPackage -Id 'OpenJS.NodeJS.LTS' -Label 'Node.js LTS'
+  Install-RequiredPackage -Id 'OpenJS.NodeJS.LTS' -Label 'Node.js LTS'
   $nodePath = (Get-Command node.exe).Source
   $npmPath = (Get-Command npm.cmd).Source
   $nodeMajor = [int]((& $nodePath --version).Trim().TrimStart('v').Split('.')[0])
