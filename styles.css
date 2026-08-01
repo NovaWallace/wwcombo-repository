@@ -150,7 +150,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .characters { margin: 5px 0 0; color: var(--cyan); font-size: 12px; font-weight: 800; overflow-wrap: anywhere; }
 .combo-classification { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: flex-end; gap: 8px; }
 .combo-tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
-.combo-grade, .commission-grade { min-width: 0; height: auto; display: inline-block; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--text); font-family: "优设标题黑", "Microsoft YaHei", sans-serif; font-size: 20px; font-weight: 400; line-height: 1; letter-spacing: 0; box-shadow: none; }
+.combo-grade, .commission-grade { min-width: 0; height: auto; display: inline-block; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--text); font-family: "优设标题黑", "Microsoft YaHei", sans-serif; font-size: 40px; font-weight: 400; line-height: 1; letter-spacing: 0; box-shadow: none; }
 .combo-grade[data-grade='C'], .commission-grade[data-grade='C'] { color: #25a65a; }
 .combo-grade[data-grade='B'], .commission-grade[data-grade='B'] { color: #2375d8; }
 .combo-grade[data-grade='A'], .commission-grade[data-grade='A'] { color: #9b4dcc; }
@@ -614,7 +614,7 @@ html[data-theme='day'] .empty-state { border-color: #aebec2; color: #63777e; }
 .commission-status, .commission-detail-status { width: fit-content; padding: 4px 8px; border: 1px solid #b58a37; border-radius: 3px; background: #2a2212; color: #f0cd7c; font-size: 10px; font-weight: 950; }
 .commission-status.completed, .commission-detail-status.completed { border-color: #34795e; background: #10271e; color: #74dbad; }
 .commission-updated { justify-self: end; color: #747b7f; font-size: 10px; }
-.commission-grade { font-size: 21px; }
+.commission-grade { font-size: 42px; }
 .commission-card h3 { margin: 0; font-size: 18px; line-height: 1.35; overflow-wrap: anywhere; }
 .commission-characters { display: flex; flex-wrap: wrap; gap: 7px; }
 .commission-characters > span { display: inline-flex; align-items: center; gap: 6px; color: var(--cyan); font-size: 11px; font-weight: 850; }
