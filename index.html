@@ -18,7 +18,7 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260801-9" />
+    <link rel="stylesheet" href="styles.css?v=20260802-1" />
   </head>
   <body>
     <header class="site-header">
@@ -213,7 +213,10 @@
           <div class="commission-card-head">
             <span class="commission-status"></span>
             <time class="commission-updated"></time>
-            <strong class="commission-grade"></strong>
+            <div class="commission-rank">
+              <strong class="commission-grade"></strong>
+              <div class="commission-interest-stat"><span class="commission-plus-icon" aria-hidden="true">+1</span><strong class="commission-interest-count"></strong></div>
+            </div>
           </div>
           <h3></h3>
           <div class="commission-characters"></div>
@@ -221,7 +224,7 @@
         </div>
         <div class="commission-card-side">
           <div class="commission-owner"><span class="commission-owner-avatar"></span><div><strong></strong><small></small></div><em hidden>UP</em></div>
-          <div class="commission-counts"><span class="commission-interest-count"></span><span class="commission-response-count"></span></div>
+          <div class="commission-counts"><span class="commission-response-count"></span></div>
           <div class="commission-card-actions">
             <button class="commission-interest-button" type="button"><i data-lucide="plus" aria-hidden="true"></i><span>+1</span></button>
             <button class="detail-button commission-detail-button" type="button"><i data-lucide="panel-right-open" aria-hidden="true"></i><span data-i18n="card.details">详情</span></button>
@@ -496,6 +499,6 @@
     <script src="assets/input-icons.js?v=20260801-1"></script>
     <script>window.WWComboInputIcons = WWComboInputIcons;</script>
     <script src="i18n.js?v=20260801-8"></script>
-    <script src="app.js?v=20260801-9"></script>
+    <script src="app.js?v=20260802-1"></script>
   </body>
 </html>

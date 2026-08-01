@@ -747,6 +747,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const item = state.commissions.find((commission) => commission.id === id);
     if (!item) throw new Error('委托不存在。');
     if (item.status === 'completed') throw new Error('这个委托已经完成。');
+    if (normalizeEmail(viewerEmail) === normalizeEmail(record(item.owner).email)) throw new Error('委托者已经计入想要人数。');
     item.interests = record(item.interests);
     if (!item.interests[voterId]) {
       item.interests[voterId] = Date.now();

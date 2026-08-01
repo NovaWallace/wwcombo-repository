@@ -1343,6 +1343,11 @@ function commissionStatusLabel(commission) {
   return t(commission.status === 'completed' ? 'commission.completed' : 'commission.open');
 }
 
+function commissionInterestTotal(commission) {
+  const count = Number(commission?.interestCount || 0);
+  return 1 + (Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0);
+}
+
 function renderCommissionCard(commission) {
   const card = els.commissionTemplate.content.firstElementChild.cloneNode(true);
   i18n.apply(card);
@@ -1372,19 +1377,23 @@ function renderCommissionCard(commission) {
   const badge = card.querySelector('.commission-owner em');
   badge.hidden = !owner.badge;
   badge.textContent = owner.badge || '';
-  card.querySelector('.commission-interest-count').textContent = t('commission.interestCount', { count: Number(commission.interestCount || 0) });
+  const interestTotal = commissionInterestTotal(commission);
+  const interestCount = card.querySelector('.commission-interest-count');
+  interestCount.textContent = String(interestTotal);
+  interestCount.parentElement.setAttribute('aria-label', `${t('commission.interestLabel')}: ${interestTotal}`);
   card.querySelector('.commission-response-count').textContent = t('commission.responseCount', { count: Number(commission.responseCount || 0) });
   const interest = card.querySelector('.commission-interest-button');
-  interest.disabled = commission.status === 'completed' || commission.viewerInterested;
-  interest.classList.toggle('selected', Boolean(commission.viewerInterested));
-  interest.querySelector('span').textContent = commission.viewerInterested ? t('commission.interested') : '+1';
+  const viewerInterested = Boolean(commission.viewerInterested || commission.viewerIsOwner);
+  interest.disabled = commission.status === 'completed' || viewerInterested;
+  interest.classList.toggle('selected', viewerInterested);
+  interest.querySelector('span').textContent = viewerInterested ? t('commission.interested') : '+1';
   interest.addEventListener('click', () => { void addCommissionInterest(commission); });
   card.querySelector('.commission-detail-button').addEventListener('click', () => openCommissionDetail(commission));
   return card;
 }
 
 async function addCommissionInterest(commission) {
-  if (!commission || commission.status === 'completed' || commission.viewerInterested) return;
+  if (!commission || commission.status === 'completed' || commission.viewerInterested || commission.viewerIsOwner) return;
   try {
     const response = await fetch(`/api/community/commissions/${encodeURIComponent(commission.id)}/interest`, {
       method: 'POST',
@@ -1703,13 +1712,15 @@ function renderCommissionDetail() {
   els.commissionDetailOwner.append(ownerAvatar, ownerCopy);
   els.commissionDetailMeta.replaceChildren(
     detailMetaRow(t('commission.tag'), `${gradeForTags(commission.tag || '基础').grade} · ${i18n.localizeTag(commission.tag || '基础')}`),
-    detailMetaRow(t('commission.interestLabel'), String(Number(commission.interestCount || 0))),
+    detailMetaRow(t('commission.interestLabel'), String(commissionInterestTotal(commission))),
     detailMetaRow(t('commission.responseLabel'), String(Number(commission.responseCount || 0))),
     detailMetaRow(t('commission.created'), formatDate(commission.createdAt)),
     detailMetaRow('ID', commission.id || t('common.unknown'))
   );
-  els.commissionInterest.disabled = commission.status === 'completed' || commission.viewerInterested;
-  els.commissionInterest.querySelector('span').textContent = commission.viewerInterested ? t('commission.interested') : t('commission.interest');
+  const viewerInterested = Boolean(commission.viewerInterested || commission.viewerIsOwner);
+  els.commissionInterest.disabled = commission.status === 'completed' || viewerInterested;
+  els.commissionInterest.classList.toggle('selected', viewerInterested);
+  els.commissionInterest.querySelector('span').textContent = viewerInterested ? t('commission.interested') : t('commission.interest');
   els.commissionResponseUpload.disabled = commission.status === 'completed';
   els.commissionWithdraw.hidden = commission.status === 'completed' || !isLikelyCommissionOwner(commission);
   els.commissionWithdraw.disabled = false;

@@ -614,7 +614,11 @@ html[data-theme='day'] .empty-state { border-color: #aebec2; color: #63777e; }
 .commission-status, .commission-detail-status { width: fit-content; padding: 4px 8px; border: 1px solid #b58a37; border-radius: 3px; background: #2a2212; color: #f0cd7c; font-size: 10px; font-weight: 950; }
 .commission-status.completed, .commission-detail-status.completed { border-color: #34795e; background: #10271e; color: #74dbad; }
 .commission-updated { justify-self: end; color: #747b7f; font-size: 10px; }
+.commission-rank { align-self: start; justify-self: end; display: grid; justify-items: end; gap: 9px; }
 .commission-grade { font-size: 42px; }
+.commission-interest-stat { min-height: 42px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.commission-plus-icon { min-width: 46px; min-height: 30px; display: inline-flex; align-items: center; justify-content: center; padding: 1px 11px 0; border: 0; border-radius: 999px; background: #fff; color: #080b0d; font-family: "优设标题黑", "Microsoft YaHei", sans-serif; font-size: 24px; font-weight: 400; line-height: 1; letter-spacing: 0; }
+.commission-interest-count { color: #fff; font-family: "优设标题黑", "Microsoft YaHei", sans-serif; font-size: 42px; font-weight: 400; line-height: 1; letter-spacing: 0; font-variant-numeric: tabular-nums; }
 .commission-card h3 { margin: 0; font-size: 18px; line-height: 1.35; overflow-wrap: anywhere; }
 .commission-characters { display: flex; flex-wrap: wrap; gap: 7px; }
 .commission-characters > span { display: inline-flex; align-items: center; gap: 6px; color: var(--cyan); font-size: 11px; font-weight: 850; }
@@ -627,7 +631,7 @@ html[data-theme='day'] .empty-state { border-color: #aebec2; color: #63777e; }
 .commission-owner strong { font-size: 12px; }
 .commission-owner small { color: var(--muted); font-size: 10px; }
 .commission-owner em { padding: 2px 4px; border: 1px solid #d8ad52; border-radius: 2px; color: #f3cf7d; font-size: 8px; font-style: normal; font-weight: 950; }
-.commission-counts { display: flex; justify-content: space-between; gap: 12px; color: #c8bd91; font-size: 11px; font-weight: 850; }
+.commission-counts { display: flex; justify-content: flex-end; gap: 12px; color: #c8bd91; font-size: 11px; font-weight: 850; }
 .commission-card-actions { display: grid; grid-template-columns: minmax(72px, .7fr) 1fr; gap: 8px; }
 .commission-interest-button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid #595f63; border-radius: 4px; background: #202428; color: var(--muted-strong); font-size: 12px; font-weight: 900; cursor: pointer; }
 .commission-interest-button:hover:not(:disabled) { border-color: #d1aa54; color: #f3d58f; }
@@ -709,6 +713,7 @@ html[data-theme='day'] .commission-card:hover { border-color: #b4932f; backgroun
 html[data-theme='day'] .commission-card.completed { border-color: #69a98d; background: #dff3e8; }
 html[data-theme='day'] .commission-card h3, html[data-theme='day'] .commission-owner strong { color: #17282d; }
 html[data-theme='day'] .commission-excerpt, html[data-theme='day'] .commission-counts { color: #665b32; }
+html[data-theme='day'] .commission-interest-count { color: #080b0d; }
 html[data-theme='day'] .commission-card-side { border-color: rgba(130,102,30,.32); background: rgba(255,255,255,.2); }
 html[data-theme='day'] .commission-status { border-color: #b58a37; background: #fff4d4; color: #76530f; }
 html[data-theme='day'] .commission-status.completed, html[data-theme='day'] .commission-detail-status.completed { background: #e5f5ee; color: #246c50; }
