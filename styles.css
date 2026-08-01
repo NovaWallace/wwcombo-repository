@@ -148,7 +148,8 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .combo-title-row > div:first-child { min-width: 0; }
 .combo-card h3 { margin: 0; color: var(--text); font-size: 17px; line-height: 1.35; overflow-wrap: anywhere; }
 .characters { margin: 5px 0 0; color: var(--cyan); font-size: 12px; font-weight: 800; overflow-wrap: anywhere; }
-.combo-classification { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: flex-end; gap: 8px; }
+.combo-classification { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: flex-end; gap: 10px; }
+.combo-rank { display: grid; justify-items: end; gap: 9px; }
 .combo-tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
 .combo-grade, .commission-grade { min-width: 0; height: auto; display: inline-block; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--text); font-family: "优设标题黑", "Microsoft YaHei", sans-serif; font-size: 40px; font-weight: 400; line-height: 1; letter-spacing: 0; box-shadow: none; }
 .combo-grade[data-grade='C'], .commission-grade[data-grade='C'] { color: #25a65a; }
@@ -158,6 +159,10 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .combo-grade[data-grade='SS'], .commission-grade[data-grade='SS'] { color: #d6ad00; }
 .combo-grade[data-grade='SSS'], .commission-grade[data-grade='SSS'] { color: #e12d36; }
 .combo-grade[hidden] { display: none; }
+.combo-download-stat { min-height: 40px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.combo-download-icon { min-width: 46px; min-height: 30px; display: inline-flex; align-items: center; justify-content: center; padding: 1px 11px 0; border: 0; border-radius: 999px; background: #fff; color: #080b0d; }
+.combo-download-icon svg { width: 21px; height: 21px; stroke-width: 3; }
+.combo-download-count { color: #fff; font-family: "优设标题黑", "Microsoft YaHei", sans-serif; font-size: 40px; font-weight: 400; line-height: 1; letter-spacing: 0; font-variant-numeric: tabular-nums; }
 .combo-tag { padding: 4px 9px; border: 1px solid #5d6368; border-radius: 3px; background: rgba(255,255,255,.035); color: #d8dcde; font-size: 12px; font-weight: 850; line-height: 1.2; }
 .combo-meta { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 15px 0 0; }
 .combo-meta > div { display: flex; align-items: baseline; gap: 7px; }
@@ -714,6 +719,7 @@ html[data-theme='day'] .commission-card.completed { border-color: #69a98d; backg
 html[data-theme='day'] .commission-card h3, html[data-theme='day'] .commission-owner strong { color: #17282d; }
 html[data-theme='day'] .commission-excerpt, html[data-theme='day'] .commission-counts { color: #665b32; }
 html[data-theme='day'] .commission-interest-count { color: #080b0d; }
+html[data-theme='day'] .combo-download-count { color: #080b0d; }
 html[data-theme='day'] .commission-card-side { border-color: rgba(130,102,30,.32); background: rgba(255,255,255,.2); }
 html[data-theme='day'] .commission-status { border-color: #b58a37; background: #fff4d4; color: #76530f; }
 html[data-theme='day'] .commission-status.completed, html[data-theme='day'] .commission-detail-status.completed { background: #e5f5ee; color: #246c50; }

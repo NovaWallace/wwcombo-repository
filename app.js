@@ -1305,6 +1305,10 @@ function renderCard(chart) {
   comboGrade.dataset.grade = grade.grade;
   comboGrade.hidden = !grade.grade;
   if (grade.tag) comboGrade.title = i18n.localizeTag(grade.tag);
+  const downloadCount = Math.max(0, Math.floor(Number(chart.downloadCount || 0)) || 0);
+  const downloadCountNode = card.querySelector('.combo-download-count');
+  downloadCountNode.textContent = String(downloadCount);
+  downloadCountNode.parentElement.setAttribute('aria-label', `${t('meta.downloads')}: ${downloadCount}`);
 
   const detailButton = card.querySelector('.detail-button');
   detailButton.setAttribute('aria-label', `${t('card.details')}: ${chart.title || t('card.untitled')}`);
