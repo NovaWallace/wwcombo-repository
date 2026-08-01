@@ -28,7 +28,7 @@ const els = {
   projectAssetImageWidth: byId('projectAssetImageWidth'), projectAssetImageHeight: byId('projectAssetImageHeight'), projectAssetCropX: byId('projectAssetCropX'), projectAssetCropY: byId('projectAssetCropY'),
   projectAssetCropW: byId('projectAssetCropW'), projectAssetCropH: byId('projectAssetCropH'), projectAssetStretchLeft: byId('projectAssetStretchLeft'), projectAssetStretchRight: byId('projectAssetStretchRight'),
   projectAssetEdge: byId('projectAssetEdge'), projectAssetPreview: byId('projectAssetPreview'), projectAssetTitle: byId('projectAssetTitle'), projectAssetMode: byId('projectAssetMode'),
-  projectAssetMessage: byId('projectAssetMessage'), deleteProjectAsset: byId('deleteProjectAssetBtn'), newProjectAsset: byId('newProjectAssetBtn'), refreshProjectAssets: byId('refreshProjectAssetsBtn'),
+  projectAssetMessage: byId('projectAssetMessage'), deleteProjectAsset: byId('deleteProjectAssetBtn'), newProjectAsset: byId('newProjectAssetBtn'), refreshProjectAssets: byId('refreshProjectAssetsBtn'), syncProjectAssets: byId('syncProjectAssetsBtn'),
   copyProjectApi: byId('copyProjectApiBtn'), projectApiUrl: byId('projectApiUrl'), projectApiRevision: byId('projectApiRevision'),
   appReleaseForm: byId('appReleaseForm'), appReleaseVersion: byId('appReleaseVersion'), appReleaseTitle: byId('appReleaseTitle'), appReleaseNotes: byId('appReleaseNotes'), appReleaseChinaUrl: byId('appReleaseChinaUrl'), appReleaseGlobalUrl: byId('appReleaseGlobalUrl'),
   appReleaseCurrent: byId('appReleaseCurrent'), appReleaseMessage: byId('appReleaseMessage')
@@ -300,8 +300,19 @@ async function saveProjectAsset(event) {
   try {
     const hasBase=els.projectAssetHasBase.checked;
     const body={originalId:els.projectAssetOriginalId.value,id:els.projectAssetId.value,names:{'zh-CN':els.projectAssetZh.value,'en-US':els.projectAssetEn.value,'ja-JP':els.projectAssetJa.value,'ko-KR':els.projectAssetKo.value},imageDataUrl:state.projectAssetImageDataUrl,basePreset:hasBase?{src:els.projectAssetCurrentSrc.value,imageWidth:projectAssetNumber(els.projectAssetImageWidth,426),imageHeight:projectAssetNumber(els.projectAssetImageHeight,426),crop:{x:projectAssetNumber(els.projectAssetCropX,0),y:projectAssetNumber(els.projectAssetCropY,0),w:projectAssetNumber(els.projectAssetCropW,100),h:projectAssetNumber(els.projectAssetCropH,100)},stretch:{left:projectAssetNumber(els.projectAssetStretchLeft,25),right:projectAssetNumber(els.projectAssetStretchRight,75)},edge:projectAssetNumber(els.projectAssetEdge,0)}:null};
-    const result=await api('/api/server/project-assets',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(body)});state.projectAssets=result.manifest;state.projectAssetSelectedId=result.character.id;fillProjectAssetForm(result.character);els.projectApiRevision.textContent=`版本 ${result.manifest.revision} · ${result.manifest.characters.length} 项 · ${formatDate(result.manifest.updatedAt)}`;els.projectAssetMessage.textContent='已保存，公开 API 现在就是这个版本。';
+    const result=await api('/api/server/project-assets',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(body)});state.projectAssets=result.manifest;state.projectAssetSelectedId=result.character.id;fillProjectAssetForm(result.character);els.projectApiRevision.textContent=`版本 ${result.manifest.revision} · ${result.manifest.characters.length} 项 · ${formatDate(result.manifest.updatedAt)}`;els.projectAssetMessage.textContent='当前角色已保存，公开 API 现在就是这个版本。';
   } catch(error) { els.projectAssetMessage.textContent=error.message; }
+}
+
+async function syncProjectAssetNames() {
+  els.syncProjectAssets.disabled=true;els.projectAssetMessage.textContent='正在补齐全部角色的外文名...';
+  try {
+    const result=await api('/api/server/project-assets/sync-seed',{method:'POST'});state.projectAssets=result.manifest;
+    const selected=projectAssetById(state.projectAssetSelectedId)?.id||result.manifest.characters?.[0]?.id||'';renderProjectAssetList();if(selected)selectProjectAsset(selected);else newProjectAsset();
+    els.projectApiRevision.textContent=`版本 ${result.manifest.revision} · ${result.manifest.characters.length} 项 · ${formatDate(result.manifest.updatedAt)}`;
+    els.projectAssetMessage.textContent=result.filledNames||result.addedCharacters?`已补齐 ${result.updatedCharacters} 个角色、${result.filledNames} 个外文名称${result.addedCharacters?`，并新增 ${result.addedCharacters} 个角色`:''}。`:'所有预设角色的外文名已经完整。';
+  } catch(error) { els.projectAssetMessage.textContent=error.message; }
+  finally { els.syncProjectAssets.disabled=false; }
 }
 
 async function deleteProjectAsset() {
@@ -331,7 +342,7 @@ els.chartTag?.addEventListener('change',()=>{state.chartTag=els.chartTag.value;r
 els.smtpForm.addEventListener('submit',async(event)=>{event.preventDefault();els.smtpMessage.textContent='正在保存';try{await api('/api/server/community/smtp',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({host:els.smtpHost.value,port:Number(els.smtpPort.value),user:els.smtpUser.value,pass:els.smtpPass.value,from:els.smtpFrom.value,to:els.smtpTo.value,secure:els.smtpSecure.checked})});els.smtpMessage.textContent='设置已保存。';await loadStatus({quiet:true});}catch(error){els.smtpMessage.textContent=error.message;}});
 els.smtpTest.addEventListener('click',async()=>{els.smtpMessage.textContent='正在发送测试邮件';try{await api('/api/server/community/smtp/test',{method:'POST'});els.smtpMessage.textContent='测试邮件已发送。';}catch(error){els.smtpMessage.textContent=error.message;}});
 els.update.addEventListener('click',async()=>{if(!await askConfirmation('确认拉取三个 GitHub 仓库并重启网站？私有投稿不会被覆盖。',{title:'更新服务器',confirmText:'更新',danger:false}))return;els.update.disabled=true;try{const result=await api('/api/server/update',{method:'POST'});els.output.textContent=`新版本 ${result.releaseId} 已构建，服务正在重启。`;setTimeout(()=>loadStatus({quiet:true}).catch(()=>{}),1800);}catch(error){els.output.textContent=error.body?.update?.error||error.message;}});
-els.projectAssetForm.addEventListener('submit',saveProjectAsset);els.deleteProjectAsset.addEventListener('click',deleteProjectAsset);els.newProjectAsset.addEventListener('click',newProjectAsset);els.refreshProjectAssets.addEventListener('click',()=>loadProjectAssets());
+els.projectAssetForm.addEventListener('submit',saveProjectAsset);els.deleteProjectAsset.addEventListener('click',deleteProjectAsset);els.newProjectAsset.addEventListener('click',newProjectAsset);els.refreshProjectAssets.addEventListener('click',()=>loadProjectAssets());els.syncProjectAssets.addEventListener('click',syncProjectAssetNames);
 els.appReleaseForm.addEventListener('submit',saveAppRelease);
 els.projectAssetSearch.addEventListener('input',renderProjectAssetList);els.projectAssetHasBase.addEventListener('change',updateProjectAssetPreview);
 for(const input of [els.projectAssetCropX,els.projectAssetCropY,els.projectAssetCropW,els.projectAssetCropH])input.addEventListener('input',updateProjectAssetPreview);

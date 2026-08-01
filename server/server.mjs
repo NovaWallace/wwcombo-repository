@@ -512,6 +512,13 @@ async function handleAdminApi(req, res, pathname) {
     return;
   }
 
+  if (req.method === 'POST' && pathname === '/api/server/project-assets/sync-seed') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    sendJson(res, 200, { ok: true, ...(await projectAssets.syncSeedNames()) });
+    return;
+  }
+
   const projectAssetDelete = /^\/api\/server\/project-assets\/([^/]+)$/.exec(pathname);
   if (req.method === 'DELETE' && projectAssetDelete) {
     const session = requireSession(req, res, true);

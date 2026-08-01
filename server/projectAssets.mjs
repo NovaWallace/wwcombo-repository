@@ -168,6 +168,7 @@ export function createProjectAssetsService({ runtimeRoot, serverDir }) {
   const releasePath = path.join(releaseRoot, 'release.json');
   const seedRoot = path.join(serverDir, 'project-assets-seed');
   let manifest = normalizeManifest({ characters: [] });
+  let seedManifest = normalizeManifest({ characters: [] });
   let release = normalizeRelease({ version: '0.2.0', title: 'WW Combo Trainer 0.2.0', notes: '', downloadUrl: '' });
   let writeQueue = Promise.resolve();
 
@@ -181,9 +182,10 @@ export function createProjectAssetsService({ runtimeRoot, serverDir }) {
     await mkdir(imageRoot, { recursive: true });
     await mkdir(releaseRoot, { recursive: true });
     const seedManifestPath = path.join(seedRoot, 'manifest.json');
-    const seed = existsSync(seedManifestPath)
+    seedManifest = existsSync(seedManifestPath)
       ? normalizeManifest(JSON.parse((await readFile(seedManifestPath, 'utf8')).replace(/^\ufeff/, '')))
       : normalizeManifest({ characters: [] });
+    const seed = seedManifest;
     if (existsSync(path.join(seedRoot, 'images'))) {
       await cp(path.join(seedRoot, 'images'), imageRoot, { recursive: true, force: false, errorOnExist: false });
     }
@@ -284,6 +286,43 @@ export function createProjectAssetsService({ runtimeRoot, serverDir }) {
     });
   }
 
+  async function syncSeedNames() {
+    return serialize(async () => {
+      const now = new Date().toISOString();
+      const seedById = new Map(seedManifest.characters.map((item) => [item.id, item]));
+      let updatedCharacters = 0;
+      let filledNames = 0;
+      const characters = manifest.characters.map((item) => {
+        const seeded = seedById.get(item.id);
+        if (!seeded) return item;
+        const names = { ...item.names };
+        let changed = false;
+        for (const key of ['en-US', 'ja-JP', 'ko-KR']) {
+          if (!names[key] && seeded.names[key]) {
+            names[key] = seeded.names[key];
+            filledNames += 1;
+            changed = true;
+          }
+        }
+        if (!changed) return item;
+        updatedCharacters += 1;
+        return { ...item, names, updatedAt: now };
+      });
+      const known = new Set(characters.map((item) => item.id));
+      const additions = seedManifest.characters.filter((item) => !known.has(item.id));
+      if (!updatedCharacters && !additions.length) {
+        return { manifest, updatedCharacters: 0, filledNames: 0, addedCharacters: 0 };
+      }
+      const next = await persist({
+        ...manifest,
+        revision: manifest.revision + 1,
+        updatedAt: now,
+        characters: [...characters, ...additions]
+      });
+      return { manifest: next, updatedCharacters, filledNames, addedCharacters: additions.length };
+    });
+  }
+
   function publicRelease() {
     const { storedName: _storedName, ...download } = release.download || {};
     return { ...release, download: release.download ? download : null };
@@ -348,5 +387,5 @@ export function createProjectAssetsService({ runtimeRoot, serverDir }) {
     });
   }
 
-  return { initialize, publicManifest, adminManifest, upsert, remove, imageRoot, publicRelease, adminRelease, saveRelease, uploadReleasePackage, releaseRoot };
+  return { initialize, publicManifest, adminManifest, upsert, remove, syncSeedNames, imageRoot, publicRelease, adminRelease, saveRelease, uploadReleasePackage, releaseRoot };
 }

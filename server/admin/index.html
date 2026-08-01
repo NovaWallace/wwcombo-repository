@@ -78,7 +78,7 @@
         </section>
 
         <section class="tab-panel" data-panel="project-api" hidden>
-          <div class="section-heading"><div><h2>角色翻译与招式块底图</h2><p>保存后立即更新公开 API，客户端会缓存新版本并在断网时回退到安装包资源。</p></div><button class="quiet" id="refreshProjectAssetsBtn" type="button">刷新</button></div>
+          <div class="section-heading"><div><h2>角色翻译与招式块底图</h2><p>单个角色可在右侧编辑保存；一键补齐只填写当前为空的外文名，不覆盖手动修改。</p></div><div class="section-heading-actions"><button class="primary" id="syncProjectAssetsBtn" type="button">一键补齐全部外文名</button><button class="quiet" id="refreshProjectAssetsBtn" type="button">刷新</button></div></div>
           <div class="api-endpoint"><span>公开接口</span><code id="projectApiUrl">/api/project-assets/v1/manifest.json</code><button class="quiet" id="copyProjectApiBtn" type="button">复制地址</button><small id="projectApiRevision">-</small></div>
           <form class="release-editor" id="appReleaseForm">
             <div class="release-editor-head"><div><span>CLIENT UPDATE</span><h3>客户端版本更新</h3><p>客户端发现更高的正式版本后会提示用户下载。上传的安装包保存在服务器持久目录。</p></div><code>/api/project-assets/v1/app-release.json</code></div>
@@ -120,7 +120,7 @@
                   <input id="projectAssetImageWidth" type="hidden" /><input id="projectAssetImageHeight" type="hidden" /><input id="projectAssetCurrentSrc" type="hidden" />
                 </div>
               </div>
-              <div class="asset-editor-actions"><p class="form-message" id="projectAssetMessage" aria-live="polite"></p><button class="primary" id="saveProjectAssetBtn" type="submit">保存并发布 API</button></div>
+              <div class="asset-editor-actions"><p class="form-message" id="projectAssetMessage" aria-live="polite"></p><button class="primary" id="saveProjectAssetBtn" type="submit">保存当前角色并发布</button></div>
             </form>
           </div>
         </section>
