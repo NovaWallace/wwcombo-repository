@@ -828,8 +828,8 @@ const server = createServer(async (req, res) => {
       await serveFile(req, res, path.join(PUBLIC_ROOT, '.admin'), pathname.slice('/admin/'.length), { cacheControl: 'no-store' });
       return;
     }
-    if (pathname === '/') {
-      await serveFile(req, res, PUBLIC_ROOT, 'index.html');
+    if (pathname === '/' || pathname === '/index.html') {
+      await serveFile(req, res, PUBLIC_ROOT, 'index.html', { cacheControl: 'no-store' });
       return;
     }
     if (pathname === '/community-index.json') {
