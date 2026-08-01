@@ -2630,6 +2630,7 @@ els.profileForm?.addEventListener('submit', (event) => {
   state.profile = { ...state.profile, username: els.profileUsernameInput.value.trim().slice(0, 40), email: els.profileEmailInput.value.trim().toLowerCase().slice(0, 254), avatar: state.profileDraftAvatar };
   try { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.profile)); } catch {}
   renderProfile();
+  if (state.commissionLoadState !== 'idle') void loadCommissions();
   els.profileFeedback.textContent = t('profile.saved');
   els.profileFeedback.className = 'form-feedback success';
   setTimeout(closeProfile, 500);
@@ -2641,6 +2642,7 @@ els.clearProfile?.addEventListener('click', () => {
   els.profileUsernameInput.value = '';
   els.profileEmailInput.value = '';
   renderProfile();
+  if (state.commissionLoadState !== 'idle') void loadCommissions();
 });
 els.profileAvatarGrid?.addEventListener('click', (event) => {
   const button = event.target.closest('.profile-avatar-option');
