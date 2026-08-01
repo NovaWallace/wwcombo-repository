@@ -7,6 +7,7 @@ import { replaceWithRetry } from './fsSafe.mjs';
 const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_STEPS = 5000;
 const MAX_DURATION_MS = 10 * 60 * 1000;
+const MAX_COMMISSION_RESPONSES = 50;
 const ICON_TRIGGERS = [
   '长按共鸣解放', '长按普攻', '长按技能', '长按声骸', '长按解放', '长按闪避', '长按跳跃',
   '共鸣解放', '终结技', '普攻', '重击', '技能', '声骸', '解放', '闪避', '跳跃', '工具', '变奏', '延奏', '处决', '前走',
@@ -36,6 +37,12 @@ function safeName(value, fallback = 'combo') {
 function stableVersion(value) {
   const version = String(value || '').trim();
   return /^\d+\.\d+$/.test(version) ? version : '3.5';
+}
+
+function characterNames(value) {
+  return [...new Set((Array.isArray(value) ? value : [])
+    .filter((item) => typeof item === 'string' && item.trim())
+    .map((item) => item.trim().slice(0, 80)))].slice(0, 3);
 }
 
 function chartDuration(chart) {
@@ -208,6 +215,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const smtpFile = path.join(root, 'smtp.json');
   const reviewSettingsFile = path.join(root, 'review-settings.json');
   const hiddenFile = path.join(root, 'hidden.json');
+  const commissionsFile = path.join(root, 'commissions.json');
+  const commissionResponsesRoot = path.join(root, 'commission-responses');
   let downloadWrite = Promise.resolve();
   let mutationWrite = Promise.resolve();
 
@@ -218,7 +227,11 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   }
 
   async function initialize() {
-    await Promise.all([mkdir(pendingRoot, { recursive: true }), mkdir(publishedRoot, { recursive: true })]);
+    await Promise.all([
+      mkdir(pendingRoot, { recursive: true }),
+      mkdir(publishedRoot, { recursive: true }),
+      mkdir(commissionResponsesRoot, { recursive: true })
+    ]);
   }
 
   async function whitelist() {
@@ -536,12 +549,207 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     });
   }
 
+  function commissionPublic(item, voterId = '', upEmails = new Set()) {
+    const owner = record(item.owner);
+    const responses = (Array.isArray(item.responses) ? item.responses : []).map((response) => {
+      const preview = record(response.preview);
+      const responseEmail = normalizeEmail(response.email);
+      return {
+        id: String(response.id || ''),
+        title: String(preview.title || response.fileName || '未命名连段'),
+        characters: characterNames(preview.characters),
+        tags: Array.isArray(preview.tags) ? preview.tags : [],
+        rounds: Math.max(1, Number(preview.rounds || 1)),
+        durationMs: Math.max(0, Number(preview.durationMs || 0)),
+        stepCount: Math.max(0, Number(preview.stepCount || 0)),
+        loopSwitchCount: Math.max(0, Number(preview.loopSwitchCount || 0)),
+        fileName: String(response.fileName || ''),
+        submittedAt: Number(response.submittedAt || 0),
+        status: response.status === 'accepted' ? 'accepted' : 'submitted',
+        ...(response.comboId ? { comboId: String(response.comboId) } : {}),
+        submitter: {
+          nickname: String(response.username || '未命名用户'),
+          email: publicEmail(responseEmail),
+          ...(response.avatar ? { avatar: String(response.avatar) } : {}),
+          ...(upEmails.has(responseEmail) ? { badge: 'UP' } : {})
+        },
+        packageUrl: `/api/community/commissions/${encodeURIComponent(item.id)}/responses/${encodeURIComponent(response.id)}/package`
+      };
+    });
+    const interests = record(item.interests);
+    const ownerEmail = normalizeEmail(owner.email);
+    return {
+      id: String(item.id || ''),
+      title: String(item.title || '未命名委托'),
+      description: String(item.description || ''),
+      characters: characterNames(item.characters),
+      owner: {
+        nickname: String(owner.username || '未命名用户'),
+        email: publicEmail(ownerEmail),
+        ...(owner.avatar ? { avatar: String(owner.avatar) } : {}),
+        ...(upEmails.has(ownerEmail) ? { badge: 'UP' } : {})
+      },
+      status: item.status === 'completed' ? 'completed' : 'open',
+      createdAt: Number(item.createdAt || 0),
+      updatedAt: Number(item.updatedAt || item.createdAt || 0),
+      interestCount: Object.keys(interests).length,
+      viewerInterested: Boolean(voterId && interests[voterId]),
+      responseCount: responses.length,
+      responses,
+      ...(item.acceptedResponseId ? { acceptedResponseId: String(item.acceptedResponseId) } : {}),
+      ...(item.publishedComboId ? { publishedComboId: String(item.publishedComboId) } : {})
+    };
+  }
+
+  async function commissionState() {
+    const value = record(await readJson(commissionsFile, { version: 1, commissions: [] }));
+    return { version: 1, commissions: Array.isArray(value.commissions) ? value.commissions : [] };
+  }
+
+  async function commissionPublicValue(item, voterId = '') {
+    return commissionPublic(item, voterId, new Set(await whitelist()));
+  }
+
+  async function publicCommissions(voterId = '') {
+    const [state, emails] = await Promise.all([commissionState(), whitelist()]);
+    const upEmails = new Set(emails);
+    return {
+      version: 1,
+      updatedAt: Math.max(0, ...state.commissions.map((item) => Number(item.updatedAt || item.createdAt || 0))),
+      commissions: state.commissions
+        .map((item) => commissionPublic(item, voterId, upEmails))
+        .sort((left, right) => Number(left.status === 'completed') - Number(right.status === 'completed') || right.updatedAt - left.updatedAt)
+    };
+  }
+
+  async function createCommission(body, voterId = '') {
+    const username = String(body.username || '').trim().slice(0, 40);
+    const email = normalizeEmail(body.email);
+    const title = String(body.title || '').trim().slice(0, 120);
+    const description = String(body.description || '').trim().slice(0, 4000);
+    const characters = characterNames(body.characters);
+    if (!username) throw new Error('请先填写用户名。');
+    if (!email) throw new Error('邮箱格式不正确。');
+    if (!title) throw new Error('请填写委托标题。');
+    if (!description) throw new Error('请填写需要的具体流程。');
+    if (!characters.length) throw new Error('请至少选择一名需要的角色。');
+    const now = Date.now();
+    const item = {
+      id: randomUUID(),
+      title,
+      description,
+      characters,
+      owner: { username, email, avatar: String(body.avatar || '').trim().slice(0, 80) },
+      status: 'open',
+      interests: {},
+      responses: [],
+      createdAt: now,
+      updatedAt: now
+    };
+    const state = await commissionState();
+    state.commissions.push(item);
+    await writeJson(commissionsFile, state);
+    return commissionPublicValue(item, voterId);
+  }
+
+  async function addCommissionInterest(id, voterId) {
+    if (!voterId) throw new Error('无法识别当前浏览器。');
+    const state = await commissionState();
+    const item = state.commissions.find((commission) => commission.id === id);
+    if (!item) throw new Error('委托不存在。');
+    if (item.status === 'completed') throw new Error('这个委托已经完成。');
+    item.interests = record(item.interests);
+    if (!item.interests[voterId]) {
+      item.interests[voterId] = Date.now();
+      item.updatedAt = Date.now();
+      await writeJson(commissionsFile, state);
+    }
+    return commissionPublicValue(item, voterId);
+  }
+
+  async function submitCommissionResponse(id, body, address, voterId = '') {
+    const username = String(body.username || '').trim().slice(0, 40);
+    const email = normalizeEmail(body.email);
+    if (!username) throw new Error('请先填写用户名。');
+    if (!email) throw new Error('邮箱格式不正确。');
+    const content = record(body.content);
+    const preview = submissionPreview(content);
+    const preflight = preflightReview(content);
+    const serialized = `${JSON.stringify(content, null, 2)}\n`;
+    if (Buffer.byteLength(serialized) > MAX_FILE_BYTES) throw new Error('连段文件不能超过 1 MB。');
+    const state = await commissionState();
+    const item = state.commissions.find((commission) => commission.id === id);
+    if (!item) throw new Error('委托不存在。');
+    if (item.status === 'completed') throw new Error('这个委托已经完成。');
+    item.responses = Array.isArray(item.responses) ? item.responses : [];
+    if (item.responses.length >= MAX_COMMISSION_RESPONSES) throw new Error('这个委托收到的方案已经达到上限。');
+    const responseId = randomUUID();
+    const storedFile = `${responseId}.wwcombo.json`;
+    const response = {
+      id: responseId,
+      username,
+      email,
+      avatar: String(body.avatar || '').trim().slice(0, 80),
+      fileName: safeName(body.fileName || 'combo.wwcombo.json'),
+      storedFile,
+      preview,
+      preflight,
+      status: 'submitted',
+      submittedAt: Date.now(),
+      address: String(address || '')
+    };
+    const responseRoot = path.join(commissionResponsesRoot, item.id);
+    await mkdir(responseRoot, { recursive: true });
+    await writeFile(path.join(responseRoot, storedFile), serialized, { encoding: 'utf8', mode: 0o600 });
+    item.responses.push(response);
+    item.updatedAt = response.submittedAt;
+    try {
+      await writeJson(commissionsFile, state);
+    } catch (error) {
+      await rm(path.join(responseRoot, storedFile), { force: true }).catch(() => {});
+      throw error;
+    }
+    const publicItem = await commissionPublicValue(item, voterId);
+    return { commission: publicItem, response: publicItem.responses.find((entry) => entry.id === responseId) };
+  }
+
+  async function commissionResponseContent(commissionId, responseId) {
+    const state = await commissionState();
+    const item = state.commissions.find((commission) => commission.id === commissionId);
+    const response = (Array.isArray(item?.responses) ? item.responses : []).find((entry) => entry.id === responseId);
+    if (!item || !response) throw new Error('委托方案不存在。');
+    const storedFile = path.basename(String(response.storedFile || ''));
+    if (!storedFile || storedFile !== response.storedFile) throw new Error('委托方案文件路径不安全。');
+    return JSON.parse(await readFile(path.join(commissionResponsesRoot, item.id, storedFile), 'utf8'));
+  }
+
+  async function adoptCommissionResponse(commissionId, responseId, body, voterId = '') {
+    const email = normalizeEmail(body.email);
+    if (!email) throw new Error('请先登记委托时使用的邮箱。');
+    const state = await commissionState();
+    const item = state.commissions.find((commission) => commission.id === commissionId);
+    if (!item) throw new Error('委托不存在。');
+    if (normalizeEmail(item.owner?.email) !== email) throw new Error('只有委托发布者可以采纳方案。');
+    if (item.status === 'completed') throw new Error('这个委托已经完成。');
+    const response = (Array.isArray(item.responses) ? item.responses : []).find((entry) => entry.id === responseId);
+    if (!response) throw new Error('委托方案不存在。');
+    const now = Date.now();
+    item.status = 'completed';
+    item.acceptedResponseId = response.id;
+    item.completedAt = now;
+    item.updatedAt = now;
+    response.status = 'accepted';
+    response.acceptedAt = now;
+    await writeJson(commissionsFile, state);
+    return { commission: await commissionPublicValue(item, voterId) };
+  }
+
   async function status() {
-    const [queue, published, withdrawals, emails, smtp, moderation, downloads, hidden] = await Promise.all([
+    const [queue, published, withdrawals, emails, smtp, moderation, downloads, hidden, commissions] = await Promise.all([
       readJson(queueFile, { pending: [], history: [] }),
       readJson(publishedFile, { charts: [] }),
       readJson(withdrawalsFile, { pending: [], history: [] }),
-      whitelist(), smtpSettings(), reviewSettings(), readJson(downloadsFile, {}), hiddenIds()
+      whitelist(), smtpSettings(), reviewSettings(), readJson(downloadsFile, {}), hiddenIds(), commissionState()
     ]);
     return {
       submissions: { pending: queue.pending || [], history: (queue.history || []).slice(-30).reverse() },
@@ -551,7 +759,13 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       smtp: smtpPublic(smtp),
       reviewSettings: moderation,
       downloads: record(downloads),
-      hidden
+      hidden,
+      commissions: {
+        total: commissions.commissions.length,
+        open: commissions.commissions.filter((item) => item.status !== 'completed').length,
+        completed: commissions.commissions.filter((item) => item.status === 'completed').length,
+        responses: commissions.commissions.reduce((count, item) => count + (Array.isArray(item.responses) ? item.responses.length : 0), 0)
+      }
     };
   }
 
@@ -573,6 +787,12 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     recordDownload,
     publicEngagement,
     castVote,
+    publicCommissions,
+    createCommission: (...args) => serializeMutation(() => createCommission(...args)),
+    addCommissionInterest: (...args) => serializeMutation(() => addCommissionInterest(...args)),
+    submitCommissionResponse: (...args) => serializeMutation(() => submitCommissionResponse(...args)),
+    commissionResponseContent,
+    adoptCommissionResponse: (...args) => serializeMutation(() => adoptCommissionResponse(...args)),
     status
   };
 }

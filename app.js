@@ -247,6 +247,8 @@ function savedHeroMotionEnabled() {
 const savedKeys = savedAxisKeySettings();
 const state = {
   charts: [],
+  commissions: [],
+  view: 'combos',
   theme: document.documentElement.dataset.theme === 'day' ? 'day' : 'night',
   heroMotionEnabled: savedHeroMotionEnabled(),
   gameVersion: '3.5',
@@ -262,6 +264,16 @@ const state = {
   detailPackage: null,
   uploadChart: null,
   uploadPackage: null,
+  uploadMode: 'community',
+  uploadCommissionId: '',
+  commissionLoadState: 'idle',
+  commissionUpdatedAt: 0,
+  commissionCreateCharacters: [],
+  commissionDetail: null,
+  commissionResponse: null,
+  commissionResponsePackage: null,
+  appDialogResolve: null,
+  appDialogPreviousFocus: null,
   axisIconSet: 'english',
   axisScale: 1,
   axisKeySettings: savedKeys.settings,
@@ -320,6 +332,9 @@ const els = {
   uploadAxisSummary: document.getElementById('uploadAxisSummary'),
   uploadFeedback: document.getElementById('uploadFeedback'),
   confirmUpload: document.getElementById('confirmUploadBtn'),
+  uploadTitle: document.getElementById('uploadTitle'),
+  uploadHint: document.getElementById('uploadHint'),
+  confirmUploadLabel: document.getElementById('confirmUploadLabel'),
   form: document.getElementById('searchForm'),
   title: document.getElementById('titleInput'),
   clearTitle: document.getElementById('clearSearchBtn'),
@@ -335,7 +350,9 @@ const els = {
   clearCharacters: document.getElementById('clearCharactersBtn'),
   confirmCharacters: document.getElementById('confirmCharactersBtn'),
   sort: document.getElementById('sortSelect'),
+  sortField: document.getElementById('sortField'),
   tags: document.getElementById('tagList'),
+  tagFilter: document.getElementById('tagFilter'),
   status: document.getElementById('indexStatus'),
   count: document.getElementById('resultCount'),
   list: document.getElementById('comboList'),
@@ -346,6 +363,48 @@ const els = {
   emptyReset: document.getElementById('emptyResetBtn'),
   retry: document.getElementById('retryBtn'),
   template: document.getElementById('comboTemplate'),
+  commissionTemplate: document.getElementById('commissionTemplate'),
+  comboTab: document.getElementById('comboTabButton'),
+  commissionTab: document.getElementById('commissionTabButton'),
+  resultsTitle: document.getElementById('resultsTitle'),
+  createCommission: document.getElementById('createCommissionBtn'),
+  commissionCreateBackdrop: document.getElementById('commissionCreateBackdrop'),
+  commissionCreateForm: document.getElementById('commissionCreateForm'),
+  closeCommissionCreate: document.getElementById('closeCommissionCreateBtn'),
+  cancelCommissionCreate: document.getElementById('cancelCommissionCreateBtn'),
+  editCommissionProfile: document.getElementById('editCommissionProfileBtn'),
+  commissionCreateAvatar: document.getElementById('commissionCreateAvatar'),
+  commissionCreateUsername: document.getElementById('commissionCreateUsername'),
+  commissionCreateEmail: document.getElementById('commissionCreateEmail'),
+  commissionTitleInput: document.getElementById('commissionTitleInput'),
+  commissionCharacterGrid: document.getElementById('commissionCharacterGrid'),
+  commissionCharacterHint: document.getElementById('commissionCharacterHint'),
+  commissionDescriptionInput: document.getElementById('commissionDescriptionInput'),
+  commissionCreateFeedback: document.getElementById('commissionCreateFeedback'),
+  confirmCommissionCreate: document.getElementById('confirmCommissionCreateBtn'),
+  commissionDetailBackdrop: document.getElementById('commissionDetailBackdrop'),
+  closeCommissionDetail: document.getElementById('closeCommissionDetailBtn'),
+  commissionDetailTitle: document.getElementById('commissionDetailTitle'),
+  commissionDetailStatus: document.getElementById('commissionDetailStatus'),
+  commissionDetailCharacters: document.getElementById('commissionDetailCharacters'),
+  commissionDetailDescription: document.getElementById('commissionDetailDescription'),
+  commissionDetailOwner: document.getElementById('commissionDetailOwner'),
+  commissionDetailMeta: document.getElementById('commissionDetailMeta'),
+  commissionInterest: document.getElementById('commissionInterestBtn'),
+  commissionResponseUpload: document.getElementById('commissionResponseUploadBtn'),
+  commissionResponseSummary: document.getElementById('commissionResponseSummary'),
+  commissionResponseList: document.getElementById('commissionResponseList'),
+  commissionResponseEmpty: document.getElementById('commissionResponseEmpty'),
+  commissionAxisPanel: document.getElementById('commissionAxisPanel'),
+  commissionAxisTitle: document.getElementById('commissionAxisTitle'),
+  commissionAxisPreview: document.getElementById('commissionAxisPreview'),
+  commissionAxisSummary: document.getElementById('commissionAxisSummary'),
+  appDialogBackdrop: document.getElementById('appDialogBackdrop'),
+  appDialogEyebrow: document.getElementById('appDialogEyebrow'),
+  appDialogTitle: document.getElementById('appDialogTitle'),
+  appDialogMessage: document.getElementById('appDialogMessage'),
+  appDialogCancel: document.getElementById('appDialogCancelBtn'),
+  appDialogAccept: document.getElementById('appDialogAcceptBtn'),
   detailBackdrop: document.getElementById('detailBackdrop'),
   closeDetail: document.getElementById('closeDetailBtn'),
   detailTitle: document.getElementById('detailTitle'),
@@ -375,10 +434,53 @@ const els = {
 const collator = new Intl.Collator('zh-CN-u-co-pinyin', { sensitivity: 'base', numeric: true });
 const params = new URLSearchParams(location.search);
 const isFilePreview = location.protocol === 'file:';
+const isEmbeddedClient = params.get('client') === '1' && window.parent !== window;
 const requestedSource = params.get('source') || '';
+
+function syncModalBody() {
+  document.body.style.overflow = document.querySelector('.modal-backdrop:not([hidden])') ? 'hidden' : '';
+}
+
+function closeAppDialog(result = false) {
+  if (els.appDialogBackdrop.hidden) return;
+  els.appDialogBackdrop.hidden = true;
+  const resolve = state.appDialogResolve;
+  const previousFocus = state.appDialogPreviousFocus;
+  state.appDialogResolve = null;
+  state.appDialogPreviousFocus = null;
+  syncModalBody();
+  if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+  if (resolve) resolve(result);
+}
+
+function openAppDialog(message, options = {}) {
+  if (state.appDialogResolve) closeAppDialog(false);
+  const confirmation = Boolean(options.confirmation);
+  state.appDialogPreviousFocus = document.activeElement;
+  els.appDialogEyebrow.textContent = confirmation ? 'CONFIRM ACTION' : 'NOTICE';
+  els.appDialogTitle.textContent = options.title || t(confirmation ? 'dialog.confirm' : 'dialog.notice');
+  els.appDialogMessage.textContent = String(message || '');
+  els.appDialogCancel.hidden = !confirmation;
+  els.appDialogCancel.textContent = options.cancelText || t('common.cancel');
+  els.appDialogAccept.textContent = options.confirmText || t(confirmation ? 'common.done' : 'common.done');
+  els.appDialogAccept.classList.toggle('danger', Boolean(options.danger));
+  els.appDialogBackdrop.hidden = false;
+  syncModalBody();
+  requestAnimationFrame(() => els.appDialogAccept.focus());
+  return new Promise((resolve) => { state.appDialogResolve = resolve; });
+}
+
+function showAppMessage(message, options = {}) {
+  return openAppDialog(message, options);
+}
+
+function askAppConfirmation(message, options = {}) {
+  return openAppDialog(message, { ...options, confirmation: true });
+}
 const sourceUrl = (!isFilePreview && /(^|\/)demo-index\.json(?:$|\?)/i.test(requestedSource))
   ? './community-index.json'
   : requestedSource || (isFilePreview ? './demo-index.json' : './community-index.json');
+state.view = params.get('view') === 'commissions' ? 'commissions' : 'combos';
 
 function appReleaseManifestUrl() {
   if (location.protocol === 'file:') return `${APP_RELEASE_FALLBACK_ORIGIN}${APP_RELEASE_MANIFEST_PATH}`;
@@ -395,6 +497,10 @@ function appReleaseDownloadUrl(release, language = i18n.language) {
 
 function refreshClientDownloadControl() {
   if (!els.clientDownloadButton) return;
+  if (isEmbeddedClient) {
+    els.clientDownloadButton.style.display = 'none';
+    return;
+  }
   const hasLink = Boolean(appReleaseDownloadUrl(state.appRelease));
   els.clientDownloadButton.disabled = state.appReleaseState === 'loading';
   els.clientDownloadButton.setAttribute('aria-busy', state.appReleaseState === 'loading' ? 'true' : 'false');
@@ -433,6 +539,9 @@ function renderProfile() {
   renderProfileAvatarNode(els.uploadAvatar, state.profile.avatar);
   els.uploadUsername.textContent = ready ? state.profile.username : t('profile.guest');
   els.uploadEmail.textContent = ready ? maskProfileEmail(state.profile.email) : t('profile.missing');
+  renderProfileAvatarNode(els.commissionCreateAvatar, state.profile.avatar);
+  els.commissionCreateUsername.textContent = ready ? state.profile.username : t('profile.guest');
+  els.commissionCreateEmail.textContent = ready ? maskProfileEmail(state.profile.email) : t('profile.missing');
   if (els.profileAvatarChoice) els.profileAvatarChoice.textContent = state.profile.avatar || t('profile.avatarNone');
   renderProfileAvatarGrid();
 }
@@ -452,10 +561,10 @@ function openProfile() {
 function closeProfile() {
   state.profileDraftAvatar = state.profile.avatar;
   els.profileBackdrop.hidden = true;
-  if (els.uploadBackdrop.hidden && els.detailBackdrop.hidden && els.characterPickerBackdrop.hidden) document.body.style.overflow = '';
+  syncModalBody();
 }
 
-function openUpload() {
+function openUpload(commissionId = '') {
   if (!state.profile.username || !state.profile.email) {
     openProfile();
     els.profileFeedback.textContent = t('profile.required');
@@ -463,6 +572,15 @@ function openUpload() {
   }
   state.uploadChart = null;
   state.uploadPackage = null;
+  state.uploadMode = commissionId ? 'commission' : 'community';
+  state.uploadCommissionId = commissionId;
+  if (commissionId && !els.commissionDetailBackdrop.hidden) {
+    els.commissionDetailBackdrop.inert = true;
+    els.commissionDetailBackdrop.setAttribute('aria-hidden', 'true');
+  }
+  els.uploadTitle.textContent = t(commissionId ? 'commission.uploadResponse' : 'upload.title');
+  els.uploadHint.textContent = t(commissionId ? 'commission.uploadHint' : 'upload.hint');
+  els.confirmUploadLabel.textContent = t(commissionId ? 'commission.submitResponse' : 'upload.submit');
   renderProfile();
   renderAxisIconSet();
   syncAxisScaleControls();
@@ -480,8 +598,12 @@ function closeUpload() {
   uploadPreviewToken += 1;
   state.uploadChart = null;
   state.uploadPackage = null;
+  state.uploadMode = 'community';
+  state.uploadCommissionId = '';
   els.uploadBackdrop.hidden = true;
-  if (els.profileBackdrop.hidden && els.detailBackdrop.hidden && els.characterPickerBackdrop.hidden) document.body.style.overflow = '';
+  els.commissionDetailBackdrop.inert = false;
+  els.commissionDetailBackdrop.removeAttribute('aria-hidden');
+  syncModalBody();
 }
 
 function uploadedIndexChart(pack, fileName = '') {
@@ -560,22 +682,28 @@ async function submitCombo(event) {
   els.uploadFeedback.textContent = t('upload.sending');
   try {
     const content = JSON.parse((await file.text()).replace(/^\ufeff/, ''));
-    const response = await fetch('/api/community/submit', {
+    const commissionId = state.uploadMode === 'commission' ? state.uploadCommissionId : '';
+    const response = await fetch(commissionId ? `/api/community/commissions/${encodeURIComponent(commissionId)}/responses` : '/api/community/submit', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ username: state.profile.username, email: state.profile.email, avatar: state.profile.avatar, fileName: file.name, content })
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
-    const autoPublished = body.status === 'published';
-    els.uploadFeedback.textContent = t(autoPublished ? 'upload.autoPublished' : 'upload.success');
+    const autoPublished = !commissionId && body.status === 'published';
+    els.uploadFeedback.textContent = t(commissionId ? 'commission.responseSuccess' : autoPublished ? 'upload.autoPublished' : 'upload.success');
     els.uploadFeedback.className = 'form-feedback success';
     els.comboFile.value = '';
     els.comboFileName.textContent = t('upload.none');
     state.uploadChart = null;
     state.uploadPackage = null;
     resetUploadAxisPreview();
-    if (autoPublished) void loadIndex();
+    if (commissionId && body.commission) {
+      replaceCommission(body.commission);
+      state.commissionDetail = body.commission;
+      renderCommissionDetail();
+      render();
+    } else if (autoPublished) void loadIndex();
   } catch (error) {
     els.uploadFeedback.textContent = error instanceof SyntaxError ? t('upload.invalidJson') : error.message;
   } finally {
@@ -805,7 +933,18 @@ async function downloadChart(event, chart) {
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const blobUrl = URL.createObjectURL(await response.blob());
+    const source = await response.text();
+    if (isEmbeddedClient) {
+      const requestId = crypto.randomUUID?.() || `community-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const payload = JSON.parse(source.replace(/^\uFEFF/, ''));
+      pendingClientImports.add(requestId);
+      window.parent.postMessage({ type: 'wwcombo:community-import', version: 1, requestId, filename: filenameFor(chart), payload }, '*');
+      chart.canVote = true;
+      renderVoteControls(chart);
+      render();
+      return;
+    }
+    const blobUrl = URL.createObjectURL(new Blob([source], { type: response.headers.get('content-type') || 'application/json;charset=utf-8' }));
     const anchor = document.createElement('a');
     anchor.href = blobUrl;
     anchor.download = filenameFor(chart);
@@ -816,12 +955,35 @@ async function downloadChart(event, chart) {
     chart.canVote = true;
     renderVoteControls(chart);
     render();
-  } catch {
-    location.href = url;
+  } catch (error) {
+    if (isEmbeddedClient) void showAppMessage(t('detail.importFailed', { error: error instanceof Error ? error.message : String(error) }));
+    else location.href = url;
   } finally {
     link.removeAttribute('aria-busy');
   }
 }
+
+const pendingClientImports = new Set();
+
+function updateEmbeddedClientControls(imported = false) {
+  if (!isEmbeddedClient) return;
+  document.documentElement.dataset.clientEmbedded = 'true';
+  if (els.clientDownloadButton) els.clientDownloadButton.style.display = 'none';
+  const label = els.detailDownload?.querySelector('span');
+  if (label) label.textContent = t(imported ? 'detail.importedClient' : 'detail.importClient');
+}
+
+window.addEventListener('message', (event) => {
+  if (!isEmbeddedClient || event.source !== window.parent || !event.data || typeof event.data !== 'object') return;
+  const result = event.data;
+  if (result.type !== 'wwcombo:community-import-result' || result.version !== 1 || typeof result.requestId !== 'string' || !pendingClientImports.delete(result.requestId)) return;
+  if (!result.ok) {
+    void showAppMessage(t('detail.importFailed', { error: String(result.detail || t('common.unknown')) }));
+    return;
+  }
+  updateEmbeddedClientControls(true);
+  setTimeout(() => updateEmbeddedClientControls(false), 1800);
+});
 
 async function openClientDownload() {
   const popup = window.open('about:blank', '_blank');
@@ -837,7 +999,12 @@ async function openClientDownload() {
 }
 
 function availableCharacters() {
-  return uniqueSorted([...state.characterIcons.keys(), ...state.charts.flatMap(chartCharacters)]);
+  return uniqueSorted([
+    ...state.characterIcons.keys(),
+    ...state.charts.flatMap(chartCharacters),
+    ...state.commissions.flatMap(commissionCharacters),
+    ...state.commissions.flatMap((commission) => (commission.responses || []).flatMap((response) => response.characters || []))
+  ]);
 }
 
 function renderProfileAvatarGrid() {
@@ -935,12 +1102,22 @@ function openCharacterPicker() {
 function closeCharacterPicker() {
   els.characterPickerBackdrop.hidden = true;
   els.characterPickerButton.setAttribute('aria-expanded', 'false');
-  if (els.detailBackdrop.hidden) document.body.style.overflow = '';
+  syncModalBody();
   els.characterPickerButton.focus();
 }
 
 function renderFilters() {
   renderCharacterTrigger();
+  const commissionView = state.view === 'commissions';
+  els.sortField.hidden = commissionView;
+  els.tagFilter.hidden = commissionView;
+  els.createCommission.hidden = !commissionView;
+  els.resultsTitle.textContent = t(commissionView ? 'plaza.commissions' : 'results.title');
+  els.title.placeholder = t(commissionView ? 'commission.searchPlaceholder' : 'search.titlePlaceholder');
+  els.comboTab.classList.toggle('active', !commissionView);
+  els.comboTab.setAttribute('aria-selected', String(!commissionView));
+  els.commissionTab.classList.toggle('active', commissionView);
+  els.commissionTab.setAttribute('aria-selected', String(commissionView));
   const tags = uniqueSorted(state.charts.flatMap((chart) => Array.isArray(chart.tags) ? chart.tags : []));
   els.tags.replaceChildren();
   const all = document.createElement('button');
@@ -1026,6 +1203,342 @@ function renderCard(chart) {
   return card;
 }
 
+function replaceCommission(commission) {
+  const index = state.commissions.findIndex((item) => item.id === commission.id);
+  if (index >= 0) state.commissions.splice(index, 1, commission);
+  else state.commissions.unshift(commission);
+  state.commissionUpdatedAt = Math.max(state.commissionUpdatedAt, Number(commission.updatedAt || commission.createdAt || Date.now()));
+  if (state.view === 'commissions') setStatus('ready', commissionReadyStatus());
+}
+
+function commissionReadyStatus() {
+  return state.commissionUpdatedAt
+    ? t('commission.ready', { count: state.commissions.length, date: formatDate(state.commissionUpdatedAt) })
+    : t('commission.results', { count: state.commissions.length });
+}
+
+function commissionCharacters(commission) {
+  return Array.isArray(commission?.characters) ? commission.characters.filter(Boolean).slice(0, MAX_SELECTED_CHARACTERS) : [];
+}
+
+function filteredCommissions() {
+  const titleQuery = normalizeText(state.title);
+  return state.commissions.filter((commission) => {
+    const titleMatches = !titleQuery || normalizeText(commission.title).includes(titleQuery);
+    const characterMatches = state.characters.every((name) => commissionCharacters(commission).includes(name));
+    return titleMatches && characterMatches;
+  }).sort((left, right) => Number(left.status === 'completed') - Number(right.status === 'completed') || Number(right.updatedAt || 0) - Number(left.updatedAt || 0));
+}
+
+function commissionStatusLabel(commission) {
+  return t(commission.status === 'completed' ? 'commission.completed' : 'commission.open');
+}
+
+function renderCommissionCard(commission) {
+  const card = els.commissionTemplate.content.firstElementChild.cloneNode(true);
+  i18n.apply(card);
+  card.classList.toggle('completed', commission.status === 'completed');
+  const status = card.querySelector('.commission-status');
+  status.textContent = commissionStatusLabel(commission);
+  status.classList.toggle('completed', commission.status === 'completed');
+  card.querySelector('.commission-updated').textContent = formatDate(commission.updatedAt);
+  card.querySelector('h3').textContent = commission.title || t('commission.untitled');
+  card.querySelector('.commission-excerpt').textContent = commission.description || '';
+  const characters = card.querySelector('.commission-characters');
+  for (const name of commissionCharacters(commission)) {
+    const item = document.createElement('span');
+    item.append(avatarElement(name), document.createTextNode(name));
+    characters.appendChild(item);
+  }
+  const owner = commission.owner || {};
+  const ownerAvatar = card.querySelector('.commission-owner-avatar');
+  renderProfileAvatarNode(ownerAvatar, owner.avatar, String(owner.nickname || '?').slice(0, 1));
+  card.querySelector('.commission-owner strong').textContent = owner.nickname || t('common.unknown');
+  card.querySelector('.commission-owner small').textContent = owner.email || '';
+  const badge = card.querySelector('.commission-owner em');
+  badge.hidden = !owner.badge;
+  badge.textContent = owner.badge || '';
+  card.querySelector('.commission-interest-count').textContent = t('commission.interestCount', { count: Number(commission.interestCount || 0) });
+  card.querySelector('.commission-response-count').textContent = t('commission.responseCount', { count: Number(commission.responseCount || 0) });
+  const interest = card.querySelector('.commission-interest-button');
+  interest.disabled = commission.status === 'completed' || commission.viewerInterested;
+  interest.classList.toggle('selected', Boolean(commission.viewerInterested));
+  interest.querySelector('span').textContent = commission.viewerInterested ? t('commission.interested') : '+1';
+  interest.addEventListener('click', () => { void addCommissionInterest(commission); });
+  card.querySelector('.commission-detail-button').addEventListener('click', () => openCommissionDetail(commission));
+  return card;
+}
+
+async function addCommissionInterest(commission) {
+  if (!commission || commission.status === 'completed' || commission.viewerInterested) return;
+  try {
+    const response = await fetch(`/api/community/commissions/${encodeURIComponent(commission.id)}/interest`, { method: 'POST', credentials: 'same-origin' });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+    replaceCommission(body.commission);
+    if (state.commissionDetail?.id === body.commission.id) state.commissionDetail = body.commission;
+    render();
+    if (state.commissionDetail?.id === body.commission.id) renderCommissionDetail();
+  } catch (error) {
+    void showAppMessage(t('commission.interestFailed', { error: error.message }));
+  }
+}
+
+function renderCommissionCreateCharacters() {
+  els.commissionCharacterGrid.replaceChildren();
+  for (const name of availableCharacters()) {
+    const selected = state.commissionCreateCharacters.includes(name);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `commission-character-option${selected ? ' selected' : ''}`;
+    button.dataset.character = name;
+    button.setAttribute('aria-pressed', String(selected));
+    button.append(avatarElement(name), document.createTextNode(name));
+    els.commissionCharacterGrid.appendChild(button);
+  }
+  els.commissionCharacterHint.textContent = t('commission.characterCount', { count: state.commissionCreateCharacters.length, max: MAX_SELECTED_CHARACTERS });
+}
+
+function openCommissionCreate() {
+  if (!state.profile.username || !state.profile.email) {
+    openProfile();
+    els.profileFeedback.textContent = t('profile.required');
+    return;
+  }
+  state.commissionCreateCharacters = [];
+  els.commissionTitleInput.value = '';
+  els.commissionDescriptionInput.value = '';
+  els.commissionCreateFeedback.textContent = '';
+  els.commissionCreateFeedback.className = 'form-feedback';
+  renderProfile();
+  renderCommissionCreateCharacters();
+  els.commissionCreateBackdrop.hidden = false;
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => els.commissionTitleInput.focus());
+}
+
+function closeCommissionCreate() {
+  els.commissionCreateBackdrop.hidden = true;
+  syncModalBody();
+}
+
+async function submitCommission(event) {
+  event.preventDefault();
+  if (!state.commissionCreateCharacters.length) {
+    els.commissionCreateFeedback.textContent = t('commission.characterRequired');
+    return;
+  }
+  els.confirmCommissionCreate.disabled = true;
+  els.commissionCreateFeedback.textContent = t('commission.publishing');
+  try {
+    const response = await fetch('/api/community/commissions', {
+      method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        username: state.profile.username, email: state.profile.email, avatar: state.profile.avatar,
+        title: els.commissionTitleInput.value.trim(), description: els.commissionDescriptionInput.value.trim(),
+        characters: state.commissionCreateCharacters
+      })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+    replaceCommission(body.commission);
+    closeCommissionCreate();
+    render();
+    openCommissionDetail(body.commission);
+  } catch (error) {
+    els.commissionCreateFeedback.textContent = error.message;
+  } finally {
+    els.confirmCommissionCreate.disabled = false;
+  }
+}
+
+function isLikelyCommissionOwner(commission) {
+  return Boolean(state.profile.email && commission?.owner?.email && commission.owner.email === maskProfileEmail(state.profile.email));
+}
+
+function responseIndexChart(response) {
+  return {
+    id: response.id,
+    title: response.title,
+    characters: response.characters,
+    character: response.characters?.[0] || '',
+    tags: response.tags || [],
+    rounds: response.rounds || 1,
+    durationMs: response.durationMs || 0,
+    loopSwitchCount: response.loopSwitchCount || 0,
+    url: response.packageUrl
+  };
+}
+
+async function previewCommissionResponse(commission, response) {
+  state.commissionResponse = response;
+  els.commissionAxisPanel.hidden = false;
+  els.commissionAxisTitle.textContent = response.title || t('upload.previewTitle');
+  els.commissionAxisSummary.textContent = t('axis.loading');
+  els.commissionAxisPreview.innerHTML = '<div class="axis-loading"><span></span><span></span><span></span></div>';
+  renderCommissionDetail();
+  try {
+    const pack = await loadChartPackage({ url: response.packageUrl });
+    if (state.commissionDetail?.id !== commission.id || state.commissionResponse?.id !== response.id) return;
+    state.commissionResponsePackage = pack;
+    renderAxisPreview(pack, responseIndexChart(response), { preview: els.commissionAxisPreview, summary: els.commissionAxisSummary });
+  } catch (error) {
+    els.commissionAxisPreview.innerHTML = '';
+    const failure = document.createElement('div');
+    failure.className = 'axis-error';
+    failure.textContent = t('axis.failed', { error: error.message });
+    els.commissionAxisPreview.appendChild(failure);
+    els.commissionAxisSummary.textContent = t('axis.unavailable');
+  }
+}
+
+async function downloadCommissionResponse(response) {
+  try {
+    const request = await fetch(response.packageUrl, { credentials: 'same-origin' });
+    if (!request.ok) throw new Error(`HTTP ${request.status}`);
+    const source = await request.text();
+    const blobUrl = URL.createObjectURL(new Blob([source], { type: 'application/json;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = blobUrl;
+    anchor.download = response.fileName || `${response.title || 'commission-response'}.wwcombo.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  } catch (error) {
+    void showAppMessage(t('commission.downloadFailed', { error: error.message }));
+  }
+}
+
+async function adoptCommissionResponse(commission, response) {
+  if (!state.profile.email) {
+    openProfile();
+    return;
+  }
+  if (!await askAppConfirmation(t('commission.adoptConfirm', { title: response.title || t('upload.previewTitle') }), { danger: true })) return;
+  try {
+    const request = await fetch(`/api/community/commissions/${encodeURIComponent(commission.id)}/responses/${encodeURIComponent(response.id)}/adopt`, {
+      method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: state.profile.email })
+    });
+    const body = await request.json().catch(() => ({}));
+    if (!request.ok) throw new Error(body.error || `HTTP ${request.status}`);
+    replaceCommission(body.commission);
+    state.commissionDetail = body.commission;
+    render();
+    renderCommissionDetail();
+  } catch (error) {
+    void showAppMessage(t('commission.adoptFailed', { error: error.message }));
+  }
+}
+
+function renderCommissionResponseCard(commission, response) {
+  const card = document.createElement('article');
+  const accepted = response.id === commission.acceptedResponseId || response.status === 'accepted';
+  card.className = `commission-response-card${accepted ? ' accepted' : ''}${state.commissionResponse?.id === response.id ? ' selected' : ''}`;
+  const head = document.createElement('div');
+  head.className = 'commission-response-card-head';
+  const title = document.createElement('h4');
+  title.textContent = response.title || t('upload.previewTitle');
+  head.appendChild(title);
+  if (accepted) {
+    const mark = document.createElement('span');
+    mark.textContent = t('commission.accepted');
+    head.appendChild(mark);
+  }
+  const characters = document.createElement('div');
+  characters.className = 'commission-response-characters';
+  for (const name of response.characters || []) characters.appendChild(avatarElement(name));
+  const submitter = document.createElement('p');
+  submitter.textContent = `${response.submitter?.nickname || t('common.unknown')} · ${response.submitter?.email || ''}`;
+  const meta = document.createElement('small');
+  meta.textContent = `${t('unit.rounds', { count: Number(response.rounds || 1) })} · ${t('unit.switches', { count: Number(response.loopSwitchCount || 0) })} · ${formatDate(response.submittedAt)}`;
+  const actions = document.createElement('div');
+  actions.className = 'commission-response-actions';
+  const preview = document.createElement('button');
+  preview.type = 'button';
+  preview.className = 'secondary-button';
+  preview.innerHTML = '<i data-lucide="workflow" aria-hidden="true"></i>';
+  preview.appendChild(document.createTextNode(t('commission.previewResponse')));
+  preview.addEventListener('click', () => { void previewCommissionResponse(commission, response); });
+  const download = document.createElement('button');
+  download.type = 'button';
+  download.className = 'secondary-button';
+  download.innerHTML = '<i data-lucide="download" aria-hidden="true"></i>';
+  download.appendChild(document.createTextNode(t('detail.download')));
+  download.addEventListener('click', () => { void downloadCommissionResponse(response); });
+  actions.append(preview, download);
+  if (commission.status !== 'completed' && isLikelyCommissionOwner(commission)) {
+    const adopt = document.createElement('button');
+    adopt.type = 'button';
+    adopt.className = 'primary-button';
+    adopt.innerHTML = '<i data-lucide="check" aria-hidden="true"></i>';
+    adopt.appendChild(document.createTextNode(t('commission.adopt')));
+    adopt.addEventListener('click', () => { void adoptCommissionResponse(commission, response); });
+    actions.appendChild(adopt);
+  }
+  card.append(head, characters, submitter, meta, actions);
+  return card;
+}
+
+function renderCommissionDetail() {
+  const commission = state.commissionDetail;
+  if (!commission) return;
+  els.commissionDetailTitle.textContent = commission.title || t('commission.untitled');
+  els.commissionDetailStatus.textContent = commissionStatusLabel(commission);
+  els.commissionDetailStatus.classList.toggle('completed', commission.status === 'completed');
+  els.commissionDetailCharacters.replaceChildren();
+  for (const name of commissionCharacters(commission)) {
+    const item = document.createElement('span');
+    item.className = 'detail-character';
+    item.append(avatarElement(name), document.createTextNode(name));
+    els.commissionDetailCharacters.appendChild(item);
+  }
+  els.commissionDetailDescription.textContent = commission.description || '';
+  els.commissionDetailOwner.replaceChildren();
+  const ownerAvatar = document.createElement('span');
+  ownerAvatar.className = 'profile-avatar';
+  renderProfileAvatarNode(ownerAvatar, commission.owner?.avatar, String(commission.owner?.nickname || '?').slice(0, 1));
+  const ownerCopy = document.createElement('span');
+  ownerCopy.innerHTML = `<strong></strong><small></small>`;
+  ownerCopy.querySelector('strong').textContent = `${commission.owner?.nickname || t('common.unknown')}${commission.owner?.badge ? ` · ${commission.owner.badge}` : ''}`;
+  ownerCopy.querySelector('small').textContent = commission.owner?.email || '';
+  els.commissionDetailOwner.append(ownerAvatar, ownerCopy);
+  els.commissionDetailMeta.replaceChildren(
+    detailMetaRow(t('commission.interestLabel'), String(Number(commission.interestCount || 0))),
+    detailMetaRow(t('commission.responseLabel'), String(Number(commission.responseCount || 0))),
+    detailMetaRow(t('commission.created'), formatDate(commission.createdAt)),
+    detailMetaRow('ID', commission.id || t('common.unknown'))
+  );
+  els.commissionInterest.disabled = commission.status === 'completed' || commission.viewerInterested;
+  els.commissionInterest.querySelector('span').textContent = commission.viewerInterested ? t('commission.interested') : t('commission.interest');
+  els.commissionResponseUpload.disabled = commission.status === 'completed';
+  els.commissionResponseSummary.textContent = t('commission.responseCount', { count: Number(commission.responseCount || 0) });
+  els.commissionResponseList.replaceChildren(...(commission.responses || []).map((response) => renderCommissionResponseCard(commission, response)));
+  els.commissionResponseEmpty.hidden = Boolean(commission.responses?.length);
+  els.commissionResponseList.hidden = !commission.responses?.length;
+  if (!state.commissionResponse) els.commissionAxisPanel.hidden = true;
+  window.lucide?.createIcons();
+}
+
+function openCommissionDetail(commission) {
+  state.commissionDetail = commission;
+  state.commissionResponse = null;
+  state.commissionResponsePackage = null;
+  els.commissionAxisPanel.hidden = true;
+  renderCommissionDetail();
+  els.commissionDetailBackdrop.hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCommissionDetail() {
+  state.commissionDetail = null;
+  state.commissionResponse = null;
+  state.commissionResponsePackage = null;
+  els.commissionDetailBackdrop.hidden = true;
+  syncModalBody();
+}
+
 function detailMetaRow(label, value) {
   const row = document.createElement('div');
   const term = document.createElement('dt');
@@ -1086,7 +1599,7 @@ async function castVote(chart, vote) {
     render();
   } catch (error) {
     renderVoteControls(chart);
-    alert(t('vote.failed', { error: error.message }));
+    void showAppMessage(t('vote.failed', { error: error.message }));
   }
 }
 
@@ -1289,9 +1802,9 @@ async function importAxisKeySettings(file) {
     renderAxisIconSet();
     renderAxisKeymapButtons();
     renderActiveAxisPreviews();
-    alert(t('axis.keysImported', { file: file.name }));
+    void showAppMessage(t('axis.keysImported', { file: file.name }));
   } catch {
-    alert(t('axis.keysInvalid'));
+    void showAppMessage(t('axis.keysInvalid'));
   } finally {
     els.axisKeymapInput.value = '';
   }
@@ -1306,6 +1819,9 @@ function syncAxisScaleControls() {
 function renderActiveAxisPreviews() {
   if (state.detailChart && state.detailPackage) renderAxisPreview(state.detailPackage, state.detailChart);
   renderUploadAxisPreview();
+  if (state.commissionResponse && state.commissionResponsePackage) {
+    renderAxisPreview(state.commissionResponsePackage, responseIndexChart(state.commissionResponse), { preview: els.commissionAxisPreview, summary: els.commissionAxisSummary });
+  }
 }
 
 function renderAxisPreview(pack, indexChart, targets = {}) {
@@ -1414,7 +1930,7 @@ async function requestWithdrawal(chart) {
     els.profileFeedback.textContent = t('profile.withdrawRequired');
     return;
   }
-  if (!confirm(t('withdraw.confirm', { title: chart.title || t('card.untitled') }))) return;
+  if (!await askAppConfirmation(t('withdraw.confirm', { title: chart.title || t('card.untitled') }), { danger: true })) return;
   els.detailWithdraw.disabled = true;
   try {
     const response = await fetch('/api/community/withdraw', {
@@ -1424,13 +1940,13 @@ async function requestWithdrawal(chart) {
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
-    alert(body.status === 'withdrawn' ? t('withdraw.done') : t('withdraw.pending'));
+    await showAppMessage(body.status === 'withdrawn' ? t('withdraw.done') : t('withdraw.pending'));
     if (body.status === 'withdrawn') {
       closeDetails();
       await loadIndex();
     }
   } catch (error) {
-    alert(t('withdraw.failed', { error: error.message }));
+    void showAppMessage(t('withdraw.failed', { error: error.message }));
   } finally {
     els.detailWithdraw.disabled = false;
   }
@@ -1491,7 +2007,7 @@ function closeDetails() {
   state.detailChart = null;
   state.detailPackage = null;
   els.detailBackdrop.hidden = true;
-  if (els.characterPickerBackdrop.hidden) document.body.style.overflow = '';
+  syncModalBody();
 }
 
 function syncUrl() {
@@ -1501,7 +2017,8 @@ function syncUrl() {
     ['q', state.title],
     ['characters', state.characters.join(',')],
     ['tag', state.tag],
-    ['sort', state.sort === 'version' ? '' : state.sort]
+    ['sort', state.sort === 'version' ? '' : state.sort],
+    ['view', state.view === 'commissions' ? 'commissions' : '']
   ];
   for (const [key, value] of values) {
     if (value) next.set(key, value);
@@ -1511,11 +2028,15 @@ function syncUrl() {
 }
 
 function render() {
-  const charts = filteredCharts();
-  els.list.replaceChildren(...charts.map(renderCard));
-  els.count.textContent = t('unit.results', { count: charts.length });
-  els.empty.hidden = charts.length > 0;
-  els.list.hidden = charts.length === 0;
+  const commissionView = state.view === 'commissions';
+  const items = commissionView ? filteredCommissions() : filteredCharts();
+  els.list.classList.toggle('commission-list', commissionView);
+  els.list.replaceChildren(...items.map((item) => commissionView ? renderCommissionCard(item) : renderCard(item)));
+  els.count.textContent = t(commissionView ? 'commission.results' : 'unit.results', { count: items.length });
+  els.empty.querySelector('strong').textContent = t(commissionView ? 'commission.empty' : 'empty.title');
+  els.empty.querySelector('span').textContent = t(commissionView ? 'commission.emptyHint' : 'empty.body');
+  els.empty.hidden = items.length > 0;
+  els.list.hidden = items.length === 0;
   els.clearTitle.classList.toggle('visible', Boolean(state.title));
   els.sort.value = state.sort;
   renderCharacterTrigger();
@@ -1532,6 +2053,30 @@ function resetFilters() {
   els.title.value = '';
   renderCharacterPicker();
   render();
+}
+
+function setCommunityView(view) {
+  const next = view === 'commissions' ? 'commissions' : 'combos';
+  if (state.view === next) return;
+  state.view = next;
+  state.tag = '';
+  els.error.hidden = true;
+  renderFilters();
+  render();
+  if (next === 'commissions' && state.commissionLoadState === 'idle') void loadCommissions();
+  if (next === 'commissions') {
+    if (state.commissionLoadState === 'loading') setStatus('', t('commission.loading'));
+    else if (state.commissionLoadState === 'ready') setStatus('ready', commissionReadyStatus());
+    else if (state.commissionLoadState === 'error') {
+      els.error.hidden = false;
+      els.errorMessage.textContent = t('commission.loadError', { error: t('error.later') });
+      setStatus('error', t('commission.loadFailed'));
+    }
+  } else if (state.indexLoadState === 'ready') setStatus('ready', t('status.ready', { count: state.charts.length, date: formatDate(state.indexUpdatedAt) }));
+  else if (state.indexLoadState === 'error') {
+    els.error.hidden = false;
+    setStatus('error', t('status.indexFailed'));
+  }
 }
 
 function setStatus(kind, text) {
@@ -1552,15 +2097,25 @@ function refreshLocalizedView() {
     renderCharacterPicker();
   }
   if (state.detailChart) void openDetails(state.detailChart);
+  if (state.commissionDetail) renderCommissionDetail();
   if (!els.uploadBackdrop.hidden) {
+    const commissionUpload = state.uploadMode === 'commission';
+    els.uploadTitle.textContent = t(commissionUpload ? 'commission.uploadResponse' : 'upload.title');
+    els.uploadHint.textContent = t(commissionUpload ? 'commission.uploadHint' : 'upload.hint');
+    els.confirmUploadLabel.textContent = t(commissionUpload ? 'commission.submitResponse' : 'upload.submit');
     renderAxisIconSet();
     syncAxisScaleControls();
     if (state.uploadChart && state.uploadPackage) renderUploadAxisPreview();
     else resetUploadAxisPreview();
   }
-  if (state.indexLoadState === 'loading') setStatus('', t('status.loading'));
+  if (state.view === 'commissions') {
+    if (state.commissionLoadState === 'loading' || state.commissionLoadState === 'idle') setStatus('', t('commission.loading'));
+    else if (state.commissionLoadState === 'ready') setStatus('ready', commissionReadyStatus());
+    else setStatus('error', t('commission.loadFailed'));
+  } else if (state.indexLoadState === 'loading') setStatus('', t('status.loading'));
   else if (state.indexLoadState === 'ready') setStatus('ready', t('status.ready', { count: state.charts.length, date: formatDate(state.indexUpdatedAt) }));
   else setStatus('error', t('status.indexFailed'));
+  updateEmbeddedClientControls(false);
   window.lucide?.createIcons();
 }
 
@@ -1605,10 +2160,10 @@ async function loadAppRelease() {
 }
 
 async function loadIndex() {
-  els.error.hidden = true;
+  if (state.view === 'combos') els.error.hidden = true;
   els.list.hidden = false;
   state.indexLoadState = 'loading';
-  setStatus('', t('status.loading'));
+  if (state.view === 'combos') setStatus('', t('status.loading'));
   try {
     const response = await fetch(sourceUrl, { cache: 'no-cache' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -1626,21 +2181,71 @@ async function loadIndex() {
     els.title.value = state.title;
     renderFilters();
     render();
-    setStatus('ready', t('status.ready', { count: state.charts.length, date: formatDate(data.updatedAt) }));
+    if (state.view === 'combos') setStatus('ready', t('status.ready', { count: state.charts.length, date: formatDate(data.updatedAt) }));
     void loadCharacterIcons();
   } catch (error) {
     state.charts = [];
     state.indexLoadState = 'error';
-    els.list.replaceChildren();
-    els.list.hidden = true;
-    els.empty.hidden = true;
-    els.error.hidden = false;
-    els.errorMessage.textContent = t('status.readFailed', { source: sourceUrl, error: error.message });
-    setStatus('error', t('status.indexFailed'));
+    if (state.view === 'combos') {
+      els.list.replaceChildren();
+      els.list.hidden = true;
+      els.empty.hidden = true;
+      els.error.hidden = false;
+      els.errorMessage.textContent = t('status.readFailed', { source: sourceUrl, error: error.message });
+      setStatus('error', t('status.indexFailed'));
+    }
+  }
+}
+
+async function loadCommissions() {
+  state.commissionLoadState = 'loading';
+  if (state.view === 'commissions') setStatus('', t('commission.loading'));
+  try {
+    const response = await fetch('/api/community/commissions', { cache: 'no-cache', credentials: 'same-origin' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if (!Array.isArray(data.commissions)) throw new Error(t('status.invalidIndex'));
+    state.commissions = data.commissions;
+    state.commissionUpdatedAt = Number(data.updatedAt || 0);
+    state.commissionLoadState = 'ready';
+    renderFilters();
+    render();
+    if (state.view === 'commissions') setStatus('ready', commissionReadyStatus());
+  } catch (error) {
+    state.commissions = [];
+    state.commissionLoadState = 'error';
+    if (state.view === 'commissions') {
+      els.list.replaceChildren();
+      els.list.hidden = true;
+      els.empty.hidden = true;
+      els.error.hidden = false;
+      els.errorMessage.textContent = t('commission.loadError', { error: error.message });
+      setStatus('error', t('commission.loadFailed'));
+    }
   }
 }
 
 els.form.addEventListener('submit', (event) => event.preventDefault());
+els.comboTab?.addEventListener('click', () => setCommunityView('combos'));
+els.commissionTab?.addEventListener('click', () => setCommunityView('commissions'));
+els.createCommission?.addEventListener('click', openCommissionCreate);
+els.closeCommissionCreate?.addEventListener('click', closeCommissionCreate);
+els.cancelCommissionCreate?.addEventListener('click', closeCommissionCreate);
+els.commissionCreateBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.commissionCreateBackdrop) closeCommissionCreate(); });
+els.editCommissionProfile?.addEventListener('click', () => { closeCommissionCreate(); openProfile(); });
+els.commissionCharacterGrid?.addEventListener('click', (event) => {
+  const button = event.target.closest('.commission-character-option');
+  const name = button?.dataset.character || '';
+  if (!name) return;
+  if (state.commissionCreateCharacters.includes(name)) state.commissionCreateCharacters = state.commissionCreateCharacters.filter((item) => item !== name);
+  else if (state.commissionCreateCharacters.length < MAX_SELECTED_CHARACTERS) state.commissionCreateCharacters = [...state.commissionCreateCharacters, name];
+  renderCommissionCreateCharacters();
+});
+els.commissionCreateForm?.addEventListener('submit', submitCommission);
+els.closeCommissionDetail?.addEventListener('click', closeCommissionDetail);
+els.commissionDetailBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.commissionDetailBackdrop) closeCommissionDetail(); });
+els.commissionInterest?.addEventListener('click', () => { if (state.commissionDetail) void addCommissionInterest(state.commissionDetail); });
+els.commissionResponseUpload?.addEventListener('click', () => { if (state.commissionDetail) openUpload(state.commissionDetail.id); });
 els.languageSelect?.addEventListener('change', () => i18n.setLanguage(els.languageSelect.value));
 window.addEventListener('wwcombo-languagechange', refreshLocalizedView);
 els.clientDownloadButton?.addEventListener('click', () => { void openClientDownload(); });
@@ -1686,19 +2291,25 @@ for (const input of els.axisZoomControls) {
 let axisResizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(axisResizeTimer);
-  if ((!state.detailChart || !state.detailPackage) && (!state.uploadChart || !state.uploadPackage)) return;
+  if ((!state.detailChart || !state.detailPackage) && (!state.uploadChart || !state.uploadPackage) && (!state.commissionResponse || !state.commissionResponsePackage)) return;
   axisResizeTimer = setTimeout(renderActiveAxisPreviews, 120);
 });
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
-  if (!els.uploadBackdrop.hidden) closeUpload();
+  if (!els.appDialogBackdrop.hidden) closeAppDialog(false);
+  else if (!els.uploadBackdrop.hidden) closeUpload();
   else if (!els.profileBackdrop.hidden) closeProfile();
+  else if (!els.commissionDetailBackdrop.hidden) closeCommissionDetail();
+  else if (!els.commissionCreateBackdrop.hidden) closeCommissionCreate();
   else if (!els.detailBackdrop.hidden) closeDetails();
   else if (!els.characterPickerBackdrop.hidden) closeCharacterPicker();
 });
+els.appDialogCancel?.addEventListener('click', () => closeAppDialog(false));
+els.appDialogAccept?.addEventListener('click', () => closeAppDialog(true));
+els.appDialogBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.appDialogBackdrop) closeAppDialog(false); });
 els.reset.addEventListener('click', resetFilters);
 els.emptyReset.addEventListener('click', resetFilters);
-els.retry.addEventListener('click', loadIndex);
+els.retry.addEventListener('click', () => { els.error.hidden = true; if (state.view === 'commissions') void loadCommissions(); else void loadIndex(); });
 els.themeToggle?.addEventListener('click', () => {
   setTheme(state.theme === 'day' ? 'night' : 'day');
 });
@@ -1731,7 +2342,7 @@ els.profileAvatarGrid?.addEventListener('click', (event) => {
   state.profileDraftAvatar = button.dataset.avatar || '';
   renderProfileAvatarGrid();
 });
-els.submissionButton?.addEventListener('click', openUpload);
+els.submissionButton?.addEventListener('click', () => openUpload());
 els.closeUpload?.addEventListener('click', closeUpload);
 els.cancelUpload?.addEventListener('click', closeUpload);
 els.uploadBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.uploadBackdrop) closeUpload(); });
@@ -1741,12 +2352,18 @@ els.comboFile?.addEventListener('change', () => {
 });
 els.uploadForm?.addEventListener('submit', submitCombo);
 
+if (isEmbeddedClient) {
+  i18n.setLanguage(params.get('lang'), false);
+  setTheme(params.get('theme'), false);
+}
 updateThemeControl();
 updateMotionControl();
+updateEmbeddedClientControls(false);
 renderProfile();
 renderAxisKeymapButtons();
 els.languageSelect.value = i18n.language;
 window.lucide?.createIcons();
 initHeroSpine();
 loadIndex();
+void loadCommissions();
 void loadAppRelease();

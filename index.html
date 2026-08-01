@@ -18,7 +18,7 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260729-30" />
+    <link rel="stylesheet" href="styles.css?v=20260801-3" />
   </head>
   <body>
     <header class="site-header">
@@ -115,7 +115,7 @@
               <i data-lucide="chevron-down" aria-hidden="true"></i>
             </button>
 
-            <label class="select-field">
+            <label class="select-field" id="sortField">
               <span data-i18n="field.sort">排序</span>
               <select id="sortSelect">
                 <option value="version" data-i18n="sort.version">版本顺序（新的优先）</option>
@@ -131,11 +131,19 @@
         <div class="content-width">
           <div class="results-head">
             <div>
+              <div class="community-tabs" role="tablist" aria-label="社区内容" data-i18n-aria-label="plaza.tabsAria">
+                <button class="active" id="comboTabButton" type="button" role="tab" aria-selected="true" data-view="combos" data-i18n="plaza.combos">社区连段</button>
+                <button id="commissionTabButton" type="button" role="tab" aria-selected="false" data-view="commissions" data-i18n="plaza.commissions">委托广场</button>
+              </div>
               <h2 id="resultsTitle" data-i18n="results.title">社区连段</h2>
               <p id="resultCount">0 个结果</p>
             </div>
             <div class="results-tools">
-              <div class="tag-filter" aria-labelledby="tagFilterLabel">
+              <button id="createCommissionBtn" class="create-commission-button" type="button" hidden>
+                <i data-lucide="plus" aria-hidden="true"></i>
+                <span data-i18n="commission.create">发布委托</span>
+              </button>
+              <div class="tag-filter" id="tagFilter" aria-labelledby="tagFilterLabel">
                 <span id="tagFilterLabel" data-i18n="field.tag">标签</span>
                 <div id="tagList" class="tag-list"></div>
               </div>
@@ -199,6 +207,28 @@
       </article>
     </template>
 
+    <template id="commissionTemplate">
+      <article class="commission-card">
+        <div class="commission-card-main">
+          <div class="commission-card-head">
+            <span class="commission-status"></span>
+            <time class="commission-updated"></time>
+          </div>
+          <h3></h3>
+          <div class="commission-characters"></div>
+          <p class="commission-excerpt"></p>
+        </div>
+        <div class="commission-card-side">
+          <div class="commission-owner"><span class="commission-owner-avatar"></span><div><strong></strong><small></small></div><em hidden>UP</em></div>
+          <div class="commission-counts"><span class="commission-interest-count"></span><span class="commission-response-count"></span></div>
+          <div class="commission-card-actions">
+            <button class="commission-interest-button" type="button"><i data-lucide="plus" aria-hidden="true"></i><span>+1</span></button>
+            <button class="detail-button commission-detail-button" type="button"><i data-lucide="panel-right-open" aria-hidden="true"></i><span data-i18n="card.details">详情</span></button>
+          </div>
+        </div>
+      </article>
+    </template>
+
     <div class="modal-backdrop" id="profileBackdrop" hidden>
       <section class="account-dialog" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
         <header class="modal-header">
@@ -222,7 +252,7 @@
     <div class="modal-backdrop" id="uploadBackdrop" hidden>
       <section class="upload-dialog upload-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
         <header class="modal-header">
-          <div><h2 id="uploadTitle" data-i18n="upload.title">上传连段</h2><p data-i18n="upload.hint">文件会进入控制台审核，通过后公开。</p></div>
+          <div><h2 id="uploadTitle" data-i18n="upload.title">上传连段</h2><p id="uploadHint" data-i18n="upload.hint">文件会进入控制台审核，通过后公开。</p></div>
           <button class="icon-button" id="closeUploadBtn" type="button" aria-label="关闭"><i data-lucide="x" aria-hidden="true"></i></button>
         </header>
         <div class="upload-layout">
@@ -230,7 +260,7 @@
             <div class="upload-identity"><span class="profile-avatar" id="uploadAvatar">?</span><div><strong id="uploadUsername">-</strong><small id="uploadEmail">-</small></div><button type="button" id="editUploadProfileBtn" data-i18n="profile.edit">修改资料</button></div>
             <label class="file-drop" for="comboFileInput"><i data-lucide="file-json" aria-hidden="true"></i><strong data-i18n="upload.choose">选择 .wwcombo.json 文件</strong><span id="comboFileName" data-i18n="upload.none">尚未选择文件</span><input id="comboFileInput" type="file" accept=".json,.wwcombo.json,application/json" required /></label>
             <div class="form-feedback" id="uploadFeedback" aria-live="polite"></div>
-            <footer class="modal-footer"><button type="button" id="cancelUploadBtn" data-i18n="common.cancel">取消</button><button class="primary-button" id="confirmUploadBtn" type="submit"><i data-lucide="upload" aria-hidden="true"></i><span data-i18n="upload.submit">提交审核</span></button></footer>
+            <footer class="modal-footer"><button type="button" id="cancelUploadBtn" data-i18n="common.cancel">取消</button><button class="primary-button" id="confirmUploadBtn" type="submit"><i data-lucide="upload" aria-hidden="true"></i><span id="confirmUploadLabel" data-i18n="upload.submit">提交审核</span></button></footer>
           </form>
           <section class="axis-preview-panel upload-axis-panel" id="uploadAxisSection" aria-labelledby="uploadAxisTitle">
             <div class="axis-preview-head">
@@ -247,6 +277,66 @@
               </div>
             </div>
             <div class="axis-preview" id="uploadAxisPreview"><div class="axis-empty" data-i18n="upload.previewEmpty">导入后会在这里预览连段图</div></div>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="commissionCreateBackdrop" hidden>
+      <section class="commission-create-dialog" role="dialog" aria-modal="true" aria-labelledby="commissionCreateTitle">
+        <header class="modal-header">
+          <div><h2 id="commissionCreateTitle" data-i18n="commission.create">发布委托</h2><p data-i18n="commission.createHint">说明想要的角色与流程，其他用户可以提交方案。</p></div>
+          <button class="icon-button" id="closeCommissionCreateBtn" type="button" aria-label="关闭"><i data-lucide="x" aria-hidden="true"></i></button>
+        </header>
+        <form class="commission-create-form" id="commissionCreateForm">
+          <div class="upload-identity"><span class="profile-avatar" id="commissionCreateAvatar">?</span><div><strong id="commissionCreateUsername">-</strong><small id="commissionCreateEmail">-</small></div><button type="button" id="editCommissionProfileBtn" data-i18n="profile.edit">修改资料</button></div>
+          <label><span data-i18n="commission.title">委托标题</span><input id="commissionTitleInput" maxlength="120" required /></label>
+          <fieldset class="commission-character-fieldset">
+            <legend data-i18n="commission.characters">需要角色（最多 3 名）</legend>
+            <div class="commission-character-grid" id="commissionCharacterGrid"></div>
+            <small id="commissionCharacterHint" data-i18n="commission.characterHint">至少选择 1 名角色。</small>
+          </fieldset>
+          <label><span data-i18n="commission.description">流程具体描述</span><textarea id="commissionDescriptionInput" maxlength="4000" rows="7" required></textarea></label>
+          <div class="form-feedback" id="commissionCreateFeedback" aria-live="polite"></div>
+          <footer class="modal-footer"><button type="button" id="cancelCommissionCreateBtn" data-i18n="common.cancel">取消</button><button class="primary-button" id="confirmCommissionCreateBtn" type="submit"><i data-lucide="send" aria-hidden="true"></i><span data-i18n="commission.publish">发布委托</span></button></footer>
+        </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop detail-backdrop" id="commissionDetailBackdrop" hidden>
+      <section class="commission-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="commissionDetailTitle">
+        <header class="modal-header detail-header">
+          <div><p class="eyebrow">COMMISSION DETAIL</p><h2 id="commissionDetailTitle" data-i18n="commission.detail">委托详情</h2></div>
+          <button class="icon-button" id="closeCommissionDetailBtn" type="button" aria-label="关闭"><i data-lucide="x" aria-hidden="true"></i></button>
+        </header>
+        <div class="commission-detail-layout">
+          <aside class="commission-detail-info">
+            <span class="commission-detail-status" id="commissionDetailStatus"></span>
+            <div class="detail-characters" id="commissionDetailCharacters"></div>
+            <section class="detail-section"><h3 data-i18n="commission.description">流程具体描述</h3><p id="commissionDetailDescription"></p></section>
+            <section class="detail-section"><h3 data-i18n="commission.owner">委托人</h3><div class="commission-detail-owner" id="commissionDetailOwner"></div></section>
+            <dl class="detail-meta" id="commissionDetailMeta"></dl>
+            <div class="commission-detail-actions">
+              <button class="secondary-button" id="commissionInterestBtn" type="button"><i data-lucide="plus" aria-hidden="true"></i><span data-i18n="commission.interest">我也想要 +1</span></button>
+              <button class="primary-button" id="commissionResponseUploadBtn" type="button"><i data-lucide="upload" aria-hidden="true"></i><span data-i18n="commission.uploadResponse">上传方案</span></button>
+            </div>
+            <p class="commission-detail-note" data-i18n="commission.adoptNote">采纳只标记完成，不会自动发布到连段社区。</p>
+          </aside>
+          <section class="commission-response-panel">
+            <div class="commission-response-head"><div><h3 data-i18n="commission.responses">收到的方案</h3><p id="commissionResponseSummary"></p></div></div>
+            <div class="commission-response-list" id="commissionResponseList"></div>
+            <div class="commission-response-empty" id="commissionResponseEmpty"><i data-lucide="inbox" aria-hidden="true"></i><span data-i18n="commission.noResponses">还没有人提交方案。</span></div>
+            <section class="commission-axis-panel" id="commissionAxisPanel" hidden>
+              <div class="axis-preview-head">
+                <div><h3 id="commissionAxisTitle" data-i18n="axis.title">连段图</h3><p id="commissionAxisSummary" data-i18n="axis.loading">正在读取连段数据</p></div>
+                <div class="axis-preview-options">
+                  <label class="axis-zoom-control" for="commissionAxisZoom"><i data-lucide="zoom-in" aria-hidden="true"></i><input id="commissionAxisZoom" data-axis-zoom type="range" min="80" max="180" step="10" value="100" /><output data-axis-zoom-value for="commissionAxisZoom">100%</output></label>
+                  <div class="axis-icon-set" role="group" aria-label="招式图标样式" data-i18n-aria-label="axis.iconStyle"><button class="active" type="button" data-icon-set="english" aria-pressed="true" data-i18n="axis.letters">字母</button><button type="button" data-icon-set="graphic" aria-pressed="false" data-i18n="axis.graphics">图形</button><button type="button" data-icon-set="xbox" aria-pressed="false">Xbox</button><button type="button" data-icon-set="playstation" aria-pressed="false">PS</button></div>
+                  <button class="axis-keymap-import" type="button" data-axis-keymap-import><i data-lucide="keyboard" aria-hidden="true"></i><span data-i18n="axis.importKeys">导入按键设置</span></button>
+                </div>
+              </div>
+              <div class="axis-preview" id="commissionAxisPreview"></div>
+            </section>
           </section>
         </div>
       </section>
@@ -352,13 +442,25 @@
       </section>
     </div>
 
+    <div class="modal-backdrop app-dialog-backdrop" id="appDialogBackdrop" hidden>
+      <section class="app-dialog" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle" aria-describedby="appDialogMessage">
+        <p class="eyebrow" id="appDialogEyebrow">NOTICE</p>
+        <h2 id="appDialogTitle" data-i18n="dialog.notice">提示</h2>
+        <p id="appDialogMessage"></p>
+        <footer class="modal-footer">
+          <button id="appDialogCancelBtn" type="button" data-i18n="common.cancel">取消</button>
+          <button class="primary-button" id="appDialogAcceptBtn" type="button" data-i18n="common.done">完成</button>
+        </footer>
+      </section>
+    </div>
+
     <input id="axisKeymapInput" class="sr-only" type="file" accept=".json,.wwkeys.json,application/json" />
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
     <script src="assets/input-icons.js?v=20260730-2"></script>
     <script>window.WWComboInputIcons = WWComboInputIcons;</script>
-    <script src="i18n.js?v=20260730-33"></script>
-    <script src="app.js?v=20260730-35"></script>
+    <script src="i18n.js?v=20260801-3"></script>
+    <script src="app.js?v=20260801-3"></script>
   </body>
 </html>

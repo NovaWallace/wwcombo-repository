@@ -587,6 +587,60 @@ async function publicIndex(voterId = '') {
 }
 
 async function handleCommunityApi(req, res, pathname) {
+  if (req.method === 'GET' && pathname === '/api/community/commissions') {
+    const identity = readVoterIdentity(req) || createVoterIdentity();
+    sendJson(res, 200, await community.publicCommissions(identity.id), { 'set-cookie': voterCookie(req, identity.token) });
+    return;
+  }
+  if (req.method === 'POST' && pathname === '/api/community/commissions') {
+    const address = clientAddress(req);
+    if (!acceptSubmissionFrom(address)) return sendJson(res, 429, { error: '操作过于频繁，请稍后再试。' });
+    const identity = readVoterIdentity(req) || createVoterIdentity();
+    const commission = await community.createCommission(await readJsonBody(req, 32 * 1024), identity.id);
+    sendJson(res, 201, { commission }, { 'set-cookie': voterCookie(req, identity.token) });
+    return;
+  }
+  const commissionInterest = /^\/api\/community\/commissions\/([^/]+)\/interest$/.exec(pathname);
+  if (req.method === 'POST' && commissionInterest) {
+    const identity = readVoterIdentity(req) || createVoterIdentity();
+    const commission = await community.addCommissionInterest(decodeURIComponent(commissionInterest[1]), identity.id);
+    sendJson(res, 200, { commission }, { 'set-cookie': voterCookie(req, identity.token) });
+    return;
+  }
+  const commissionResponses = /^\/api\/community\/commissions\/([^/]+)\/responses$/.exec(pathname);
+  if (req.method === 'POST' && commissionResponses) {
+    const address = clientAddress(req);
+    if (!acceptSubmissionFrom(address)) return sendJson(res, 429, { error: '操作过于频繁，请稍后再试。' });
+    const identity = readVoterIdentity(req) || createVoterIdentity();
+    const result = await community.submitCommissionResponse(
+      decodeURIComponent(commissionResponses[1]),
+      await readJsonBody(req, 1400 * 1024),
+      address,
+      identity.id
+    );
+    sendJson(res, 201, result, { 'set-cookie': voterCookie(req, identity.token) });
+    return;
+  }
+  const commissionResponsePackage = /^\/api\/community\/commissions\/([^/]+)\/responses\/([^/]+)\/package$/.exec(pathname);
+  if (req.method === 'GET' && commissionResponsePackage) {
+    sendJson(res, 200, await community.commissionResponseContent(
+      decodeURIComponent(commissionResponsePackage[1]),
+      decodeURIComponent(commissionResponsePackage[2])
+    ));
+    return;
+  }
+  const commissionAdoption = /^\/api\/community\/commissions\/([^/]+)\/responses\/([^/]+)\/adopt$/.exec(pathname);
+  if (req.method === 'POST' && commissionAdoption) {
+    const identity = readVoterIdentity(req) || createVoterIdentity();
+    const result = await community.adoptCommissionResponse(
+      decodeURIComponent(commissionAdoption[1]),
+      decodeURIComponent(commissionAdoption[2]),
+      await readJsonBody(req, 8 * 1024),
+      identity.id
+    );
+    sendJson(res, 200, result, { 'set-cookie': voterCookie(req, identity.token) });
+    return;
+  }
   if (req.method === 'POST' && pathname === '/api/community/submit') {
     const address = clientAddress(req);
     if (!acceptSubmissionFrom(address)) return sendJson(res, 429, { error: '投稿过于频繁，请稍后再试。' });
