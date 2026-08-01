@@ -625,7 +625,7 @@ async function publicIndex(voterId = '') {
 async function handleCommunityApi(req, res, pathname) {
   if (req.method === 'GET' && pathname === '/api/community/commissions') {
     const identity = readVoterIdentity(req) || createVoterIdentity();
-    sendJson(res, 200, await community.publicCommissions(identity.id), { 'set-cookie': voterCookie(req, identity.token) });
+    sendJson(res, 200, await community.publicCommissions(identity.id, req.headers['x-wwcombo-profile-email']), { 'set-cookie': voterCookie(req, identity.token) });
     return;
   }
   if (req.method === 'POST' && pathname === '/api/community/commissions') {
@@ -639,7 +639,7 @@ async function handleCommunityApi(req, res, pathname) {
   const commissionInterest = /^\/api\/community\/commissions\/([^/]+)\/interest$/.exec(pathname);
   if (req.method === 'POST' && commissionInterest) {
     const identity = readVoterIdentity(req) || createVoterIdentity();
-    const commission = await community.addCommissionInterest(decodeURIComponent(commissionInterest[1]), identity.id);
+    const commission = await community.addCommissionInterest(decodeURIComponent(commissionInterest[1]), identity.id, req.headers['x-wwcombo-profile-email']);
     sendJson(res, 200, { commission }, { 'set-cookie': voterCookie(req, identity.token) });
     return;
   }
@@ -672,6 +672,18 @@ async function handleCommunityApi(req, res, pathname) {
       decodeURIComponent(commissionResponsePackage[1]),
       decodeURIComponent(commissionResponsePackage[2])
     ));
+    return;
+  }
+  const commissionResponseWithdrawal = /^\/api\/community\/commissions\/([^/]+)\/responses\/([^/]+)\/withdraw$/.exec(pathname);
+  if (req.method === 'POST' && commissionResponseWithdrawal) {
+    const identity = readVoterIdentity(req) || createVoterIdentity();
+    const result = await community.withdrawCommissionResponse(
+      decodeURIComponent(commissionResponseWithdrawal[1]),
+      decodeURIComponent(commissionResponseWithdrawal[2]),
+      await readJsonBody(req, 8 * 1024),
+      identity.id
+    );
+    sendJson(res, 200, result, { 'set-cookie': voterCookie(req, identity.token) });
     return;
   }
   const commissionAdoption = /^\/api\/community\/commissions\/([^/]+)\/responses\/([^/]+)\/adopt$/.exec(pathname);

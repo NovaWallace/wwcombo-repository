@@ -201,6 +201,8 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .modal-footer button, .primary-button, .secondary-button { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 14px; border: 1px solid var(--line); border-radius: 4px; background: #24282c; color: var(--text); font-size: 12px; font-weight: 900; text-decoration: none; cursor: pointer; }
 .primary-button { border-color: #ff5960; background: var(--red); color: #fff; }
 .primary-button:hover { background: var(--red-hover); }
+.secondary-button.danger { border-color: #a83c42; color: #ff858a; }
+.secondary-button.danger:hover { border-color: #e65d63; background: #4a2024; color: #fff; }
 .secondary-button:hover, .modal-footer button:hover { border-color: #777d81; background: #30353a; }
 .primary-button svg, .secondary-button svg { width: 16px; height: 16px; }
 .account-form,.upload-form { display:grid; gap:15px; padding:20px 22px 0; overflow:auto; }
@@ -510,6 +512,8 @@ html[data-theme='day'] .modal-footer button,
 html[data-theme='day'] .secondary-button { border-color: #afbec2; background: #edf3f4; color: #243a41; }
 html[data-theme='day'] .secondary-button:hover,
 html[data-theme='day'] .modal-footer button:hover { border-color: #758a90; background: #dfe9eb; }
+html[data-theme='day'] .secondary-button.danger { border-color: #c76369; background: #fff3f3; color: #a9252d; }
+html[data-theme='day'] .secondary-button.danger:hover { border-color: #b9363e; background: #f4dfe1; color: #801a20; }
 html[data-theme='day'] .primary-button { border-color: #d64a53; background: #c93740; color: #ffffff; }
 
 html[data-theme='day'] .detail-info { border-color: #d4dfe1; background: #ffffff; }

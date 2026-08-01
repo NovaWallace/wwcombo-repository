@@ -631,8 +631,9 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     return { feedbackSubmitted: true, canFeedback: false };
   }
 
-  function commissionPublic(item, voterId = '', upEmails = new Set()) {
+  function commissionPublic(item, voterId = '', upEmails = new Set(), viewerEmail = '') {
     const owner = record(item.owner);
+    const viewer = normalizeEmail(viewerEmail);
     const responses = (Array.isArray(item.responses) ? item.responses : []).map((response) => {
       const preview = record(response.preview);
       const responseEmail = normalizeEmail(response.email);
@@ -648,6 +649,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
         fileName: String(response.fileName || ''),
         submittedAt: Number(response.submittedAt || 0),
         status: response.status === 'accepted' ? 'accepted' : 'submitted',
+        viewerIsSubmitter: Boolean(viewer && responseEmail === viewer),
         ...(response.comboId ? { comboId: String(response.comboId) } : {}),
         submitter: {
           nickname: String(response.username || '未命名用户'),
@@ -672,6 +674,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
         ...(owner.avatar ? { avatar: String(owner.avatar) } : {}),
         ...(upEmails.has(ownerEmail) ? { badge: 'UP' } : {})
       },
+      viewerIsOwner: Boolean(viewer && ownerEmail === viewer),
       status: item.status === 'completed' ? 'completed' : 'open',
       createdAt: Number(item.createdAt || 0),
       updatedAt: Number(item.updatedAt || item.createdAt || 0),
@@ -689,18 +692,18 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     return { version: 1, commissions: Array.isArray(value.commissions) ? value.commissions : [] };
   }
 
-  async function commissionPublicValue(item, voterId = '') {
-    return commissionPublic(item, voterId, new Set(await whitelist()));
+  async function commissionPublicValue(item, voterId = '', viewerEmail = '') {
+    return commissionPublic(item, voterId, new Set(await whitelist()), viewerEmail);
   }
 
-  async function publicCommissions(voterId = '') {
+  async function publicCommissions(voterId = '', viewerEmail = '') {
     const [state, emails] = await Promise.all([commissionState(), whitelist()]);
     const upEmails = new Set(emails);
     return {
       version: 1,
       updatedAt: Math.max(0, ...state.commissions.map((item) => Number(item.updatedAt || item.createdAt || 0))),
       commissions: state.commissions
-        .map((item) => commissionPublic(item, voterId, upEmails))
+        .map((item) => commissionPublic(item, voterId, upEmails, viewerEmail))
         .sort((left, right) => Number(left.status === 'completed') - Number(right.status === 'completed') || right.updatedAt - left.updatedAt)
     };
   }
@@ -735,10 +738,10 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const state = await commissionState();
     state.commissions.push(item);
     await writeJson(commissionsFile, state);
-    return commissionPublicValue(item, voterId);
+    return commissionPublicValue(item, voterId, email);
   }
 
-  async function addCommissionInterest(id, voterId) {
+  async function addCommissionInterest(id, voterId, viewerEmail = '') {
     if (!voterId) throw new Error('无法识别当前浏览器。');
     const state = await commissionState();
     const item = state.commissions.find((commission) => commission.id === id);
@@ -750,7 +753,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       item.updatedAt = Date.now();
       await writeJson(commissionsFile, state);
     }
-    return commissionPublicValue(item, voterId);
+    return commissionPublicValue(item, voterId, viewerEmail);
   }
 
   async function submitCommissionResponse(id, body, address, voterId = '') {
@@ -805,7 +808,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       response.notificationError = error.message || String(error);
     }
     if (response.notificationError) await writeJson(commissionsFile, state);
-    const publicItem = await commissionPublicValue(item, voterId);
+    const publicItem = await commissionPublicValue(item, voterId, email);
     return { commission: publicItem, response: publicItem.responses.find((entry) => entry.id === responseId) };
   }
 
@@ -863,8 +866,35 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     }
     await writeJson(commissionsFile, state);
     return {
-      commission: await commissionPublicValue(item, voterId),
+      commission: await commissionPublicValue(item, voterId, email),
       moderation: { id: moderation.id, status: moderation.status, ...(moderation.chart?.id ? { comboId: moderation.chart.id } : {}) }
+    };
+  }
+
+  async function withdrawCommissionResponse(commissionId, responseId, body, voterId = '') {
+    const email = normalizeEmail(body.email);
+    if (!email) throw new Error('请先登记提交方案时使用的邮箱。');
+    const state = await commissionState();
+    const item = state.commissions.find((commission) => commission.id === commissionId);
+    if (!item) throw new Error('委托不存在。');
+    if (item.status === 'completed') throw new Error('已完成委托的方案不能撤回。');
+    const responses = Array.isArray(item.responses) ? item.responses : [];
+    const index = responses.findIndex((entry) => entry.id === responseId);
+    if (index < 0) throw new Error('委托方案不存在。');
+    const response = responses[index];
+    if (normalizeEmail(response.email) !== email) throw new Error('只有方案上传者可以撤回方案。');
+    if (response.status === 'accepted') throw new Error('已采纳的方案不能撤回。');
+    const storedFile = path.basename(String(response.storedFile || ''));
+    if (!storedFile || storedFile !== response.storedFile) throw new Error('委托方案文件路径不安全。');
+    responses.splice(index, 1);
+    item.responses = responses;
+    item.updatedAt = Date.now();
+    await writeJson(commissionsFile, state);
+    await rm(path.join(commissionResponsesRoot, item.id, storedFile), { force: true }).catch(() => {});
+    return {
+      commission: await commissionPublicValue(item, voterId, email),
+      responseId,
+      status: 'withdrawn'
     };
   }
 
@@ -933,6 +963,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     submitCommissionResponse: (...args) => serializeMutation(() => submitCommissionResponse(...args)),
     commissionResponseContent,
     adoptCommissionResponse: (...args) => serializeMutation(() => adoptCommissionResponse(...args)),
+    withdrawCommissionResponse: (...args) => serializeMutation(() => withdrawCommissionResponse(...args)),
     withdrawCommission: (...args) => serializeMutation(() => withdrawCommission(...args)),
     status
   };

@@ -1377,7 +1377,11 @@ function renderCommissionCard(commission) {
 async function addCommissionInterest(commission) {
   if (!commission || commission.status === 'completed' || commission.viewerInterested) return;
   try {
-    const response = await fetch(`/api/community/commissions/${encodeURIComponent(commission.id)}/interest`, { method: 'POST', credentials: 'same-origin' });
+    const response = await fetch(`/api/community/commissions/${encodeURIComponent(commission.id)}/interest`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: state.profile.email ? { 'x-wwcombo-profile-email': state.profile.email } : {}
+    });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
     replaceCommission(body.commission);
@@ -1468,7 +1472,11 @@ async function submitCommission(event) {
 }
 
 function isLikelyCommissionOwner(commission) {
-  return Boolean(state.profile.email && commission?.owner?.email && commission.owner.email === maskProfileEmail(state.profile.email));
+  return commission?.viewerIsOwner === true;
+}
+
+function isCommissionResponseSubmitter(response) {
+  return response?.viewerIsSubmitter === true;
 }
 
 function responseDetailChart(pack, response) {
@@ -1549,6 +1557,33 @@ async function adoptCommissionResponse(commission, response) {
   }
 }
 
+async function withdrawCommissionResponse(commission, response) {
+  if (!state.profile.email) {
+    openProfile();
+    return;
+  }
+  if (!await askAppConfirmation(t('commission.responseWithdrawConfirm', { title: response.title || t('upload.previewTitle') }), { danger: true })) return;
+  try {
+    const request = await fetch(`/api/community/commissions/${encodeURIComponent(commission.id)}/responses/${encodeURIComponent(response.id)}/withdraw`, {
+      method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: state.profile.email })
+    });
+    const body = await request.json().catch(() => ({}));
+    if (!request.ok) throw new Error(body.error || `HTTP ${request.status}`);
+    replaceCommission(body.commission);
+    state.commissionDetail = body.commission;
+    if (state.commissionResponse?.id === response.id) {
+      state.commissionResponse = null;
+      state.commissionResponsePackage = null;
+    }
+    render();
+    renderCommissionDetail();
+    await showAppMessage(t('commission.responseWithdrawDone'));
+  } catch (error) {
+    void showAppMessage(t('commission.responseWithdrawFailed', { error: error.message }));
+  }
+}
+
 async function withdrawCommission(commission) {
   if (!state.profile.email) {
     openProfile();
@@ -1613,7 +1648,15 @@ function renderCommissionResponseCard(commission, response) {
   download.appendChild(document.createTextNode(t('detail.download')));
   download.addEventListener('click', () => { void downloadCommissionResponse(response); });
   actions.append(preview, download);
-  if (commission.status !== 'completed' && isLikelyCommissionOwner(commission)) {
+  if (commission.status !== 'completed' && isCommissionResponseSubmitter(response)) {
+    const withdraw = document.createElement('button');
+    withdraw.type = 'button';
+    withdraw.className = 'secondary-button danger';
+    withdraw.innerHTML = '<i data-lucide="undo-2" aria-hidden="true"></i>';
+    withdraw.appendChild(document.createTextNode(t('commission.responseWithdraw')));
+    withdraw.addEventListener('click', () => { void withdrawCommissionResponse(commission, response); });
+    actions.appendChild(withdraw);
+  } else if (commission.status !== 'completed' && isLikelyCommissionOwner(commission)) {
     const adopt = document.createElement('button');
     adopt.type = 'button';
     adopt.className = 'primary-button';
@@ -2447,7 +2490,11 @@ async function loadCommissions() {
   state.commissionLoadState = 'loading';
   if (state.view === 'commissions') setStatus('', t('commission.loading'));
   try {
-    const response = await fetch('/api/community/commissions', { cache: 'no-cache', credentials: 'same-origin' });
+    const response = await fetch('/api/community/commissions', {
+      cache: 'no-cache',
+      credentials: 'same-origin',
+      headers: state.profile.email ? { 'x-wwcombo-profile-email': state.profile.email } : {}
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (!Array.isArray(data.commissions)) throw new Error(t('status.invalidIndex'));
