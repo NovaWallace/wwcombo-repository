@@ -5,6 +5,8 @@ const APP_RELEASE_MANIFEST_PATH = '/api/project-assets/v1/app-release.json';
 const APP_RELEASE_FALLBACK_ORIGIN = 'https://Nova.fb520.site';
 const PROFILE_STORAGE_KEY = 'wwcombo-community-profile-v1';
 const AXIS_KEY_SETTINGS_STORAGE_KEY = 'wwcombo-community-axis-key-settings-v1';
+const EMBEDDED_VOTER_TOKEN_STORAGE_KEY = 'wwcombo-community-client-voter-v1';
+const EMBEDDED_IMPORTED_COMBOS_STORAGE_KEY = 'wwcombo-community-client-imports-v1';
 const i18n = window.wwcomboI18n;
 if (!i18n) throw new Error('Community i18n runtime is unavailable.');
 const t = (key, values) => i18n.t(key, values);
@@ -273,6 +275,7 @@ const state = {
   commissionDetail: null,
   commissionResponse: null,
   commissionResponsePackage: null,
+  feedbackChart: null,
   appDialogResolve: null,
   appDialogPreviousFocus: null,
   axisIconSet: 'english',
@@ -421,8 +424,16 @@ const els = {
   detailDownload: document.getElementById('detailDownload'),
   detailWithdraw: document.getElementById('detailWithdraw'),
   detailUpvote: document.getElementById('detailUpvote'),
-  detailDownvote: document.getElementById('detailDownvote'),
+  detailFeedback: document.getElementById('detailFeedback'),
   detailVoteHint: document.getElementById('detailVoteHint'),
+  feedbackBackdrop: document.getElementById('feedbackBackdrop'),
+  feedbackForm: document.getElementById('feedbackForm'),
+  feedbackReason: document.getElementById('feedbackReason'),
+  feedbackReasonCount: document.getElementById('feedbackReasonCount'),
+  feedbackFormStatus: document.getElementById('feedbackFormStatus'),
+  closeFeedback: document.getElementById('closeFeedbackBtn'),
+  cancelFeedback: document.getElementById('cancelFeedbackBtn'),
+  submitFeedback: document.getElementById('submitFeedbackBtn'),
   axisIconSetButtons: [...document.querySelectorAll('[data-icon-set]')],
   axisZoom: document.getElementById('axisZoom'),
   axisZoomValue: document.getElementById('axisZoomValue'),
@@ -439,6 +450,63 @@ const params = new URLSearchParams(location.search);
 const isFilePreview = location.protocol === 'file:';
 const isEmbeddedClient = params.get('client') === '1' && window.parent !== window;
 const requestedSource = params.get('source') || '';
+
+function sameOriginUrl(value) {
+  try {
+    return new URL(value, location.href).origin === location.origin;
+  } catch {
+    return false;
+  }
+}
+
+function savedEmbeddedVoterToken() {
+  if (!isEmbeddedClient) return '';
+  try {
+    const token = String(localStorage.getItem(EMBEDDED_VOTER_TOKEN_STORAGE_KEY) || '').trim();
+    return token.length <= 512 ? token : '';
+  } catch {
+    return '';
+  }
+}
+
+function saveEmbeddedVoterToken(token) {
+  if (!isEmbeddedClient || !token || token.length > 512) return;
+  try {
+    localStorage.setItem(EMBEDDED_VOTER_TOKEN_STORAGE_KEY, token);
+  } catch {}
+}
+
+function embeddedVoterHeaders(url, headers = {}) {
+  if (!isEmbeddedClient || !sameOriginUrl(url)) return headers;
+  const token = savedEmbeddedVoterToken();
+  return token ? { ...headers, 'x-wwcombo-voter': token } : headers;
+}
+
+function rememberEmbeddedVoterToken(response, url) {
+  if (!isEmbeddedClient || !sameOriginUrl(url)) return;
+  const token = String(response.headers.get('x-wwcombo-voter-token') || '').trim();
+  if (token) saveEmbeddedVoterToken(token);
+}
+
+function savedEmbeddedImportedCombos() {
+  if (!isEmbeddedClient) return new Set();
+  try {
+    const values = JSON.parse(localStorage.getItem(EMBEDDED_IMPORTED_COMBOS_STORAGE_KEY) || '[]');
+    return new Set(Array.isArray(values) ? values.filter((value) => typeof value === 'string' && value.trim()).slice(-500) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+const embeddedImportedCombos = savedEmbeddedImportedCombos();
+
+function rememberEmbeddedImportedCombo(comboId) {
+  if (!isEmbeddedClient || !comboId) return;
+  embeddedImportedCombos.add(comboId);
+  try {
+    localStorage.setItem(EMBEDDED_IMPORTED_COMBOS_STORAGE_KEY, JSON.stringify([...embeddedImportedCombos].slice(-500)));
+  } catch {}
+}
 
 function syncModalBody() {
   document.body.style.overflow = document.querySelector('.modal-backdrop:not([hidden])') ? 'hidden' : '';
@@ -940,15 +1008,18 @@ async function downloadChart(event, chart) {
   event.preventDefault();
   link.setAttribute('aria-busy', 'true');
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: 'same-origin', headers: embeddedVoterHeaders(url) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    rememberEmbeddedVoterToken(response, url);
     const source = await response.text();
     if (isEmbeddedClient) {
       const requestId = crypto.randomUUID?.() || `community-${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const payload = JSON.parse(source.replace(/^\uFEFF/, ''));
-      pendingClientImports.add(requestId);
+      pendingClientImports.set(requestId, String(chart.id || ''));
       window.parent.postMessage({ type: 'wwcombo:community-import', version: 1, requestId, filename: filenameFor(chart), payload }, '*');
-      chart.canVote = true;
+      chart.viewerDownloaded = true;
+      chart.canVote = !chart.viewerVote;
+      chart.canFeedback = !chart.feedbackSubmitted;
       renderVoteControls(chart);
       render();
       return;
@@ -961,7 +1032,9 @@ async function downloadChart(event, chart) {
     anchor.click();
     anchor.remove();
     setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-    chart.canVote = true;
+    chart.viewerDownloaded = true;
+    chart.canVote = !chart.viewerVote;
+    chart.canFeedback = !chart.feedbackSubmitted;
     renderVoteControls(chart);
     render();
   } catch (error) {
@@ -972,7 +1045,7 @@ async function downloadChart(event, chart) {
   }
 }
 
-const pendingClientImports = new Set();
+const pendingClientImports = new Map();
 
 function updateEmbeddedClientControls(imported = false) {
   if (!isEmbeddedClient) return;
@@ -985,13 +1058,16 @@ function updateEmbeddedClientControls(imported = false) {
 window.addEventListener('message', (event) => {
   if (!isEmbeddedClient || event.source !== window.parent || !event.data || typeof event.data !== 'object') return;
   const result = event.data;
-  if (result.type !== 'wwcombo:community-import-result' || result.version !== 1 || typeof result.requestId !== 'string' || !pendingClientImports.delete(result.requestId)) return;
+  if (result.type !== 'wwcombo:community-import-result' || result.version !== 1 || typeof result.requestId !== 'string') return;
+  const comboId = pendingClientImports.get(result.requestId);
+  if (comboId === undefined) return;
+  pendingClientImports.delete(result.requestId);
   if (!result.ok) {
     void showAppMessage(t('detail.importFailed', { error: String(result.detail || t('common.unknown')) }));
     return;
   }
-  updateEmbeddedClientControls(true);
-  setTimeout(() => updateEmbeddedClientControls(false), 1800);
+  rememberEmbeddedImportedCombo(comboId);
+  if (String(state.detailChart?.id || '') === comboId) updateEmbeddedClientControls(true);
 });
 
 async function openClientDownload() {
@@ -1178,7 +1254,7 @@ function renderCard(chart) {
   card.querySelector('.duration').textContent = formatDuration(chart.durationMs);
   card.querySelector('.steps').textContent = t('unit.switches', { count: Number(chart.loopSwitchCount || 0) });
   card.querySelector('.updated').textContent = formatDate(chart.updatedAt);
-  card.querySelector('.votes').textContent = t('vote.summary', { up: Number(chart.votes?.up || 0), down: Number(chart.votes?.down || 0) });
+  card.querySelector('.votes').textContent = t('vote.summary', { up: Number(chart.votes?.up || 0) });
   card.querySelector('.submitter-name').textContent = submitter.nickname;
   card.querySelector('.submitter-email').textContent = submitter.email;
   const submitterAvatar = card.querySelector('.submitter-avatar');
@@ -1612,24 +1688,35 @@ function renderDetailTags(chart) {
 
 function renderVoteControls(chart) {
   const vote = chart.viewerVote === 'up' || chart.viewerVote === 'down' ? chart.viewerVote : '';
+  const downloaded = chart.viewerDownloaded === true || chart.canVote === true || chart.canFeedback === true;
   const canVote = chart.canVote === true && !vote;
+  const feedbackSubmitted = chart.feedbackSubmitted === true;
+  const canFeedback = chart.canFeedback === true && !feedbackSubmitted;
   els.detailUpvote.querySelector('[data-vote-count]').textContent = String(Number(chart.votes?.up || 0));
-  els.detailDownvote.querySelector('[data-vote-count]').textContent = String(Number(chart.votes?.down || 0));
   els.detailUpvote.classList.toggle('selected', vote === 'up');
-  els.detailDownvote.classList.toggle('selected', vote === 'down');
   els.detailUpvote.disabled = !canVote;
-  els.detailDownvote.disabled = !canVote;
-  els.detailVoteHint.textContent = t(vote ? 'vote.done' : canVote ? 'vote.ready' : 'vote.downloadRequired');
+  els.detailFeedback.classList.toggle('selected', feedbackSubmitted);
+  els.detailFeedback.disabled = !canFeedback;
+  els.detailFeedback.querySelector('span').textContent = t(feedbackSubmitted ? 'feedback.sent' : 'feedback.button');
+  const hintKey = !downloaded
+    ? 'vote.downloadRequired'
+    : feedbackSubmitted && vote
+      ? 'vote.done'
+      : feedbackSubmitted
+        ? 'feedback.sentHint'
+        : vote
+          ? 'feedback.ready'
+          : 'vote.ready';
+  els.detailVoteHint.textContent = t(hintKey);
 }
 
-async function castVote(chart, vote) {
-  if (!chart?.id || !['up', 'down'].includes(vote) || chart.viewerVote) return;
+async function castVote(chart) {
+  if (!chart?.id || chart.viewerVote) return;
   els.detailUpvote.disabled = true;
-  els.detailDownvote.disabled = true;
   try {
     const response = await fetch('/api/community/vote', {
-      method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ comboId: chart.id, vote })
+      method: 'POST', credentials: 'same-origin', headers: embeddedVoterHeaders('/api/community/vote', { 'content-type': 'application/json' }),
+      body: JSON.stringify({ comboId: chart.id, vote: 'up' })
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
@@ -1641,6 +1728,70 @@ async function castVote(chart, vote) {
   } catch (error) {
     renderVoteControls(chart);
     void showAppMessage(t('vote.failed', { error: error.message }));
+  }
+}
+
+function closeFeedback() {
+  state.feedbackChart = null;
+  els.feedbackBackdrop.hidden = true;
+  syncModalBody();
+}
+
+function updateFeedbackCount() {
+  els.feedbackReasonCount.value = `${els.feedbackReason.value.length} / 1000`;
+  els.feedbackReasonCount.textContent = els.feedbackReasonCount.value;
+}
+
+function openFeedback(chart) {
+  if (!chart?.id) return;
+  if (chart.feedbackSubmitted) {
+    void showAppMessage(t('feedback.sentHint'));
+    return;
+  }
+  if (!chart.canFeedback) {
+    void showAppMessage(t('feedback.downloadRequired'));
+    return;
+  }
+  state.feedbackChart = chart;
+  els.feedbackReason.value = '';
+  els.feedbackFormStatus.textContent = '';
+  els.feedbackFormStatus.className = '';
+  updateFeedbackCount();
+  els.feedbackBackdrop.hidden = false;
+  syncModalBody();
+  requestAnimationFrame(() => els.feedbackReason.focus());
+}
+
+async function submitFeedback(event) {
+  event.preventDefault();
+  const chart = state.feedbackChart;
+  const reason = els.feedbackReason.value.trim();
+  if (!chart?.id || reason.length < 5) {
+    els.feedbackFormStatus.textContent = t('feedback.tooShort');
+    els.feedbackFormStatus.className = 'error';
+    return;
+  }
+  els.submitFeedback.disabled = true;
+  els.feedbackFormStatus.textContent = t('feedback.sending');
+  els.feedbackFormStatus.className = '';
+  try {
+    const response = await fetch('/api/community/feedback', {
+      method: 'POST', credentials: 'same-origin', headers: embeddedVoterHeaders('/api/community/feedback', { 'content-type': 'application/json' }),
+      body: JSON.stringify({ comboId: chart.id, reason })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+    chart.feedbackSubmitted = true;
+    chart.canFeedback = false;
+    closeFeedback();
+    renderVoteControls(chart);
+    render();
+    void showAppMessage(t('feedback.success'));
+  } catch (error) {
+    els.feedbackFormStatus.textContent = t('feedback.failed', { error: error.message });
+    els.feedbackFormStatus.className = 'error';
+  } finally {
+    els.submitFeedback.disabled = false;
   }
 }
 
@@ -2027,11 +2178,12 @@ async function openDetails(chart, options = {}) {
   els.detailDownload.onclick = responseMode
     ? (event) => { event.preventDefault(); void downloadCommissionResponse(options.response); }
     : (event) => downloadChart(event, chart);
+  if (!responseMode) updateEmbeddedClientControls(embeddedImportedCombos.has(String(chart.id || '')));
   els.detailVoteSection.hidden = responseMode;
   els.detailWithdraw.hidden = responseMode;
   els.detailWithdraw.onclick = () => requestWithdrawal(chart);
-  els.detailUpvote.onclick = () => { void castVote(chart, 'up'); };
-  els.detailDownvote.onclick = () => { void castVote(chart, 'down'); };
+  els.detailUpvote.onclick = () => { void castVote(chart); };
+  els.detailFeedback.onclick = () => openFeedback(chart);
   if (!responseMode) renderVoteControls(chart);
   els.detailBackdrop.hidden = false;
   document.body.style.overflow = 'hidden';
@@ -2178,7 +2330,7 @@ function refreshLocalizedView() {
   } else if (state.indexLoadState === 'loading') setStatus('', t('status.loading'));
   else if (state.indexLoadState === 'ready') setStatus('ready', t('status.ready', { count: state.charts.length, date: formatDate(state.indexUpdatedAt) }));
   else setStatus('error', t('status.indexFailed'));
-  updateEmbeddedClientControls(false);
+  updateEmbeddedClientControls(Boolean(state.detailChart && embeddedImportedCombos.has(String(state.detailChart.id || ''))));
   window.lucide?.createIcons();
 }
 
@@ -2228,7 +2380,7 @@ async function loadIndex() {
   state.indexLoadState = 'loading';
   if (state.view === 'combos') setStatus('', t('status.loading'));
   try {
-    const response = await fetch(sourceUrl, { cache: 'no-cache' });
+    const response = await fetch(sourceUrl, { cache: 'no-cache', credentials: 'same-origin', headers: embeddedVoterHeaders(sourceUrl) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (data.type !== 'wwcombo-community-index' || !Array.isArray(data.charts)) throw new Error(t('status.invalidIndex'));
@@ -2361,6 +2513,7 @@ window.addEventListener('resize', () => {
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
   if (!els.appDialogBackdrop.hidden) closeAppDialog(false);
+  else if (!els.feedbackBackdrop.hidden) closeFeedback();
   else if (!els.uploadBackdrop.hidden) closeUpload();
   else if (!els.profileBackdrop.hidden) closeProfile();
   else if (!els.detailBackdrop.hidden) closeDetails();
@@ -2371,6 +2524,11 @@ document.addEventListener('keydown', (event) => {
 els.appDialogCancel?.addEventListener('click', () => closeAppDialog(false));
 els.appDialogAccept?.addEventListener('click', () => closeAppDialog(true));
 els.appDialogBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.appDialogBackdrop) closeAppDialog(false); });
+els.feedbackForm?.addEventListener('submit', submitFeedback);
+els.feedbackReason?.addEventListener('input', updateFeedbackCount);
+els.closeFeedback?.addEventListener('click', closeFeedback);
+els.cancelFeedback?.addEventListener('click', closeFeedback);
+els.feedbackBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.feedbackBackdrop) closeFeedback(); });
 els.reset.addEventListener('click', resetFilters);
 els.emptyReset.addEventListener('click', resetFilters);
 els.retry.addEventListener('click', () => { els.error.hidden = true; if (state.view === 'commissions') void loadCommissions(); else void loadIndex(); });

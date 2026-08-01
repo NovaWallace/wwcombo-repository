@@ -498,13 +498,14 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const operation = downloadWrite.then(async () => {
       const [counts, engagement] = await Promise.all([
         readJson(downloadsFile, {}),
-        readJson(engagementFile, { counts: {}, downloads: {}, votes: {} })
+        readJson(engagementFile, { counts: {}, downloads: {}, votes: {}, feedbacks: {} })
       ]);
       const normalizedCounts = record(counts);
       normalizedCounts[comboId] = Math.max(0, Number(normalizedCounts[comboId] || 0)) + 1;
       engagement.counts = record(engagement.counts);
       engagement.downloads = record(engagement.downloads);
       engagement.votes = record(engagement.votes);
+      engagement.feedbacks = record(engagement.feedbacks);
       if (voterId) engagement.downloads[voterId] = { ...record(engagement.downloads[voterId]), [comboId]: Date.now() };
       await Promise.all([writeJson(downloadsFile, normalizedCounts), writeJson(engagementFile, engagement)]);
       return normalizedCounts[comboId];
@@ -514,20 +515,22 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   }
 
   async function publicEngagement(voterId = '') {
-    const engagement = await readJson(engagementFile, { counts: {}, downloads: {}, votes: {} });
+    const engagement = await readJson(engagementFile, { counts: {}, downloads: {}, votes: {}, feedbacks: {} });
     const counts = record(engagement.counts);
     const downloaded = record(record(engagement.downloads)[voterId]);
     const voterVotes = record(record(engagement.votes)[voterId]);
-    return { counts, downloaded, voterVotes };
+    const voterFeedbacks = record(record(engagement.feedbacks)[voterId]);
+    return { counts, downloaded, voterVotes, voterFeedbacks };
   }
 
   async function castVote(comboId, voterId, vote) {
-    if (!comboId || !voterId || !['up', 'down'].includes(vote)) throw new Error('评价参数不正确。');
+    if (!comboId || !voterId || vote !== 'up') throw new Error('评价参数不正确。');
     return serializeMutation(async () => {
-      const engagement = await readJson(engagementFile, { counts: {}, downloads: {}, votes: {} });
+      const engagement = await readJson(engagementFile, { counts: {}, downloads: {}, votes: {}, feedbacks: {} });
       engagement.counts = record(engagement.counts);
       engagement.downloads = record(engagement.downloads);
       engagement.votes = record(engagement.votes);
+      engagement.feedbacks = record(engagement.feedbacks);
       if (!record(engagement.downloads[voterId])[comboId]) {
         const error = new Error('请先下载该连段，再进行评价。');
         error.statusCode = 403;
@@ -547,6 +550,63 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       await writeJson(engagementFile, engagement);
       return { votes: next, viewerVote: vote, canVote: false };
     });
+  }
+
+  async function sendComboFeedback(comboId, voterId, reasonValue) {
+    const reason = String(reasonValue || '').trim().slice(0, 1000);
+    if (!comboId || !voterId) throw new Error('反馈参数不正确。');
+    if (reason.length < 5) throw new Error('反馈理由至少需要 5 个字符。');
+    const engagement = await readJson(engagementFile, { counts: {}, downloads: {}, votes: {}, feedbacks: {} });
+    engagement.counts = record(engagement.counts);
+    engagement.downloads = record(engagement.downloads);
+    engagement.votes = record(engagement.votes);
+    engagement.feedbacks = record(engagement.feedbacks);
+    if (!record(engagement.downloads[voterId])[comboId]) {
+      const error = new Error('请先下载该连段，再向上传者发送反馈。');
+      error.statusCode = 403;
+      throw error;
+    }
+    const voterFeedbacks = record(engagement.feedbacks[voterId]);
+    if (voterFeedbacks[comboId]) {
+      const error = new Error('你已经反馈过这个连段。');
+      error.statusCode = 409;
+      throw error;
+    }
+
+    const [owners, published, settings] = await Promise.all([
+      readJson(ownersFile, {}),
+      readJson(publishedFile, { charts: [] }),
+      smtpSettings()
+    ]);
+    const ownerEmail = normalizeEmail(record(owners)[comboId]?.email);
+    if (!ownerEmail || ownerEmail.endsWith('.invalid')) {
+      const error = new Error('该连段没有可用的上传者邮箱，暂时无法发送反馈。');
+      error.statusCode = 409;
+      throw error;
+    }
+    if (!settings.host || !settings.user || !settings.pass) {
+      const error = new Error('站点邮件服务尚未配置，暂时无法发送反馈。');
+      error.statusCode = 503;
+      throw error;
+    }
+    const publishedItem = (Array.isArray(published.charts) ? published.charts : []).find((item) => item.chart?.id === comboId);
+    const title = String(publishedItem?.chart?.title || comboId).replace(/[\r\n]+/g, ' ').trim().slice(0, 120) || comboId;
+    const { createTransport } = await import('nodemailer');
+    const transport = createTransport({
+      host: settings.host,
+      port: Number(settings.port || 465),
+      secure: settings.secure !== false,
+      auth: { user: settings.user, pass: settings.pass }
+    });
+    await transport.sendMail({
+      from: settings.from || settings.user,
+      to: ownerEmail,
+      subject: `[椰果朋克2077] 连段反馈：${title}`,
+      text: `你的连段收到了一条匿名反馈。\n\n连段：${title}\nID：${comboId}\n\n反馈内容：\n${reason}\n\n此邮件由椰果朋克2077社区自动发送，请勿直接回复站点邮箱。`
+    });
+    engagement.feedbacks[voterId] = { ...voterFeedbacks, [comboId]: Date.now() };
+    await writeJson(engagementFile, engagement);
+    return { feedbackSubmitted: true, canFeedback: false };
   }
 
   function commissionPublic(item, voterId = '', upEmails = new Set()) {
@@ -802,6 +862,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     recordDownload,
     publicEngagement,
     castVote,
+    sendComboFeedback: (...args) => serializeMutation(() => sendComboFeedback(...args)),
     publicCommissions,
     createCommission: (...args) => serializeMutation(() => createCommission(...args)),
     addCommissionInterest: (...args) => serializeMutation(() => addCommissionInterest(...args)),

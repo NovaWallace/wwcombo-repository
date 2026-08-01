@@ -97,6 +97,10 @@
           </div>
 
           <form class="search-controls" id="searchForm" role="search">
+            <div class="community-tabs" role="tablist" aria-label="社区内容" data-i18n-aria-label="plaza.tabsAria">
+              <button class="active" id="comboTabButton" type="button" role="tab" aria-selected="true" data-view="combos" data-i18n="plaza.combos">社区连段</button>
+              <button id="commissionTabButton" type="button" role="tab" aria-selected="false" data-view="commissions" data-i18n="plaza.commissions">委托广场</button>
+            </div>
             <label class="search-field">
               <span class="sr-only" data-i18n="search.titleLabel">按标题搜索</span>
               <i data-lucide="search" aria-hidden="true"></i>
@@ -131,10 +135,6 @@
         <div class="content-width">
           <div class="results-head">
             <div>
-              <div class="community-tabs" role="tablist" aria-label="社区内容" data-i18n-aria-label="plaza.tabsAria">
-                <button class="active" id="comboTabButton" type="button" role="tab" aria-selected="true" data-view="combos" data-i18n="plaza.combos">社区连段</button>
-                <button id="commissionTabButton" type="button" role="tab" aria-selected="false" data-view="commissions" data-i18n="plaza.commissions">委托广场</button>
-              </div>
               <h2 id="resultsTitle" data-i18n="results.title">社区连段</h2>
               <p id="resultCount">0 个结果</p>
             </div>
@@ -398,9 +398,9 @@
               <h3 data-i18n="vote.rating">评价</h3>
               <div class="vote-actions">
                 <button id="detailUpvote" type="button"><i data-lucide="thumbs-up" aria-hidden="true"></i><span data-vote-count="up">0</span></button>
-                <button id="detailDownvote" type="button"><i data-lucide="thumbs-down" aria-hidden="true"></i><span data-vote-count="down">0</span></button>
+                <button id="detailFeedback" class="feedback-button" type="button"><i data-lucide="thumbs-down" aria-hidden="true"></i><span data-i18n="feedback.button">反馈</span></button>
               </div>
-              <p class="vote-hint" id="detailVoteHint" data-i18n="vote.downloadRequired">下载后可以赞或踩，每个浏览器只能选择一次。</p>
+              <p class="vote-hint" id="detailVoteHint" data-i18n="vote.downloadRequired">下载后可以点赞或发送一次匿名反馈。</p>
             </section>
             <div class="detail-links">
               <a id="detailSourceLink" class="secondary-button" target="_blank" rel="noreferrer" hidden>
@@ -443,6 +443,28 @@
       </section>
     </div>
 
+    <div class="modal-backdrop feedback-backdrop" id="feedbackBackdrop" hidden>
+      <section class="feedback-dialog" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle" aria-describedby="feedbackHint">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">COMBO FEEDBACK</p>
+            <h2 id="feedbackTitle" data-i18n="feedback.title">向上传者反馈</h2>
+            <p id="feedbackHint" data-i18n="feedback.hint">反馈会匿名发送到上传者邮箱，每个浏览器对同一连段只能发送一次。</p>
+          </div>
+          <button class="icon-button" id="closeFeedbackBtn" type="button" aria-label="关闭" data-i18n-aria-label="common.close"><i data-lucide="x" aria-hidden="true"></i></button>
+        </header>
+        <form id="feedbackForm" class="feedback-form">
+          <label for="feedbackReason" data-i18n="feedback.reason">反馈理由</label>
+          <textarea id="feedbackReason" minlength="5" maxlength="1000" required placeholder="请具体说明问题或建议" data-i18n-placeholder="feedback.placeholder"></textarea>
+          <div class="feedback-form-meta"><span id="feedbackFormStatus" aria-live="polite"></span><output id="feedbackReasonCount" for="feedbackReason">0 / 1000</output></div>
+          <footer class="modal-footer">
+            <button id="cancelFeedbackBtn" type="button" data-i18n="common.cancel">取消</button>
+            <button class="primary-button" id="submitFeedbackBtn" type="submit"><i data-lucide="send" aria-hidden="true"></i><span data-i18n="feedback.submit">发送反馈</span></button>
+          </footer>
+        </form>
+      </section>
+    </div>
+
     <div class="modal-backdrop app-dialog-backdrop" id="appDialogBackdrop" hidden>
       <section class="app-dialog" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle" aria-describedby="appDialogMessage">
         <p class="eyebrow" id="appDialogEyebrow">NOTICE</p>
@@ -461,7 +483,7 @@
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
     <script src="assets/input-icons.js?v=20260730-2"></script>
     <script>window.WWComboInputIcons = WWComboInputIcons;</script>
-    <script src="i18n.js?v=20260801-4"></script>
-    <script src="app.js?v=20260801-4"></script>
+    <script src="i18n.js?v=20260801-5"></script>
+    <script src="app.js?v=20260801-5"></script>
   </body>
 </html>

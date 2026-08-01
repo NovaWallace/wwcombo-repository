@@ -252,8 +252,9 @@ function createVoterIdentity() {
   return { id, token: `${id}.${signature(`voter.${id}`)}` };
 }
 
-function readVoterIdentity(req) {
-  const [id, suppliedSignature, ...extra] = (cookieMap(req).get('wwcombo_voter') || '').split('.');
+function voterIdentityFromToken(value) {
+  const token = Array.isArray(value) ? value[0] : String(value || '');
+  const [id, suppliedSignature, ...extra] = token.split('.');
   if (!id || !suppliedSignature || extra.length) return null;
   const expectedSignature = signature(`voter.${id}`);
   const supplied = Buffer.from(suppliedSignature);
@@ -262,9 +263,17 @@ function readVoterIdentity(req) {
   return { id, token: `${id}.${suppliedSignature}` };
 }
 
+function readVoterIdentity(req) {
+  return voterIdentityFromToken(cookieMap(req).get('wwcombo_voter') || '');
+}
+
+function readPublicVoterIdentity(req) {
+  return voterIdentityFromToken(req.headers['x-wwcombo-voter']) || readVoterIdentity(req);
+}
+
 function voterCookie(req, token) {
   const secure = Boolean(req.socket.encrypted) || (TRUST_PROXY && req.headers['x-forwarded-proto'] === 'https');
-  return `wwcombo_voter=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${VOTER_COOKIE_SECONDS}${secure ? '; Secure' : ''}`;
+  return `wwcombo_voter=${token}; Path=/; HttpOnly; SameSite=${secure ? 'None' : 'Lax'}; Max-Age=${VOTER_COOKIE_SECONDS}${secure ? '; Secure' : ''}`;
 }
 
 function verifyPassword(password) {
@@ -555,6 +564,7 @@ async function handleAdminApi(req, res, pathname) {
 
 const serverStartedAt = Date.now();
 const submissionAttempts = new Map();
+const feedbackAttempts = new Map();
 
 function acceptSubmissionFrom(address) {
   const now = Date.now();
@@ -562,6 +572,15 @@ function acceptSubmissionFrom(address) {
   if (attempts.length >= 5) return false;
   attempts.push(now);
   submissionAttempts.set(address, attempts);
+  return true;
+}
+
+function acceptFeedbackFrom(address) {
+  const now = Date.now();
+  const attempts = (feedbackAttempts.get(address) || []).filter((time) => now - time < 10 * 60 * 1000);
+  if (attempts.length >= 10) return false;
+  attempts.push(now);
+  feedbackAttempts.set(address, attempts);
   return true;
 }
 
@@ -581,7 +600,10 @@ async function publicIndex(voterId = '') {
       down: Math.max(0, Number(engagement.counts[chart.id]?.down || 0))
     },
     viewerVote: engagement.voterVotes[chart.id] || '',
-    canVote: Boolean(engagement.downloaded[chart.id] && !engagement.voterVotes[chart.id])
+    viewerDownloaded: Boolean(engagement.downloaded[chart.id]),
+    feedbackSubmitted: Boolean(engagement.voterFeedbacks[chart.id]),
+    canVote: Boolean(engagement.downloaded[chart.id] && !engagement.voterVotes[chart.id]),
+    canFeedback: Boolean(engagement.downloaded[chart.id] && !engagement.voterFeedbacks[chart.id])
   }));
   return index;
 }
@@ -662,11 +684,27 @@ async function handleCommunityApi(req, res, pathname) {
     return;
   }
   if (req.method === 'POST' && pathname === '/api/community/vote') {
-    const voter = readVoterIdentity(req);
+    const voter = readPublicVoterIdentity(req);
     if (!voter) return sendJson(res, 403, { error: '请先下载该连段，再进行评价。' });
     const body = await readJsonBody(req, 4 * 1024);
     try {
       sendJson(res, 200, await community.castVote(String(body.comboId || '').trim(), voter.id, body.vote));
+    } catch (error) {
+      sendJson(res, Number(error.statusCode || 400), { error: error.message || String(error) });
+    }
+    return;
+  }
+  if (req.method === 'POST' && pathname === '/api/community/feedback') {
+    const voter = readPublicVoterIdentity(req);
+    if (!voter) return sendJson(res, 403, { error: '请先下载该连段，再向上传者发送反馈。' });
+    if (!acceptFeedbackFrom(clientAddress(req))) return sendJson(res, 429, { error: '反馈发送过于频繁，请稍后再试。' });
+    const body = await readJsonBody(req, 8 * 1024);
+    try {
+      sendJson(res, 200, await community.sendComboFeedback(
+        String(body.comboId || '').trim(),
+        voter.id,
+        body.reason
+      ));
     } catch (error) {
       sendJson(res, Number(error.statusCode || 400), { error: error.message || String(error) });
     }
@@ -681,13 +719,14 @@ async function handleCommunityApi(req, res, pathname) {
     const relativeChartPath = decodeURIComponent(String(chart.url).slice(1));
     const chartFile = safeTarget(PUBLIC_ROOT, relativeChartPath);
     if (!chartFile || !(await stat(chartFile).catch(() => null))?.isFile()) return sendText(res, 404, 'Not found');
-    let identity = readVoterIdentity(req);
+    let identity = readPublicVoterIdentity(req);
     if (req.method === 'GET') {
       identity ||= createVoterIdentity();
       await community.recordDownload(comboId, identity.id);
     }
     await serveFile(req, res, PUBLIC_ROOT, relativeChartPath, {
-      headers: identity ? { 'set-cookie': voterCookie(req, identity.token) } : {}
+      cacheControl: 'no-store',
+      headers: identity ? { 'set-cookie': voterCookie(req, identity.token), 'x-wwcombo-voter-token': identity.token } : {}
     });
     return;
   }
@@ -768,7 +807,7 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (pathname === '/community-index.json') {
-      sendJson(res, 200, await publicIndex(readVoterIdentity(req)?.id || ''));
+      sendJson(res, 200, await publicIndex(readPublicVoterIdentity(req)?.id || ''));
       return;
     }
     if (PUBLIC_ROOT_FILES.has(pathname)) {
