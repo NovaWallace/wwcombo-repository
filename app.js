@@ -209,6 +209,13 @@ function keyboardMouseIconSource(code) {
   return gamepadSvgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} 128">${keys}${plus}</svg>`);
 }
 
+function keyboardMouseIconWidthScale(code) {
+  if (window.WWComboInputIcons?.keyboardMouseIconWidthScale) {
+    return window.WWComboInputIcons.keyboardMouseIconWidthScale(code);
+  }
+  return String(code || '').includes('+') ? 49 / AXIS_ICON_SIZE : 1;
+}
+
 function normalizeAxisKeySettings(value) {
   if (!value || typeof value !== 'object' || value.kind !== 'wwcombo-input-settings' || ![1, 2].includes(value.schemaVersion)) throw new Error('invalid-key-settings');
   if (!Array.isArray(value.keyboardMouseBindings) || !Array.isArray(value.gamepadBindings)) throw new Error('invalid-key-settings');
@@ -1909,13 +1916,13 @@ function axisLabelMatchesMove(label, moveId) {
 function axisStepDisplay(step, labels) {
   const label = axisStepLabel(step, labels);
   const custom = String(labels[step.id] || '').trim();
-  if (!state.axisKeySettings || !axisLabelMatchesMove(custom, step.moveId) || state.axisIconSet === 'graphic') return { label, iconSrc: '', wide: false };
+  if (!state.axisKeySettings || !axisLabelMatchesMove(custom, step.moveId) || state.axisIconSet === 'graphic') return { label, iconSrc: '', iconWidthScale: 1 };
   if (state.axisIconSet === 'english') {
     const code = axisBindingCode(step.moveId, 'keyboard');
-    return { label, iconSrc: code ? keyboardMouseIconSource(code) || '' : '', wide: code.includes('+') };
+    return { label, iconSrc: code ? keyboardMouseIconSource(code) || '' : '', iconWidthScale: keyboardMouseIconWidthScale(code) };
   }
   const code = axisBindingCode(step.moveId, 'gamepad');
-  return { label, iconSrc: code ? gamepadIconSource(code, state.axisIconSet) || '' : '', wide: code.includes('+') };
+  return { label, iconSrc: code ? gamepadIconSource(code, state.axisIconSet) || '' : '', iconWidthScale: code.includes('+') ? 49 / AXIS_ICON_SIZE : 1 };
 }
 
 function axisIconParts(value) {
@@ -1969,7 +1976,7 @@ function groupAxisSteps(steps) {
 }
 
 function estimateAxisActionWidth(display) {
-  if (display.iconSrc) return display.wide ? 49 : AXIS_ICON_SIZE;
+  if (display.iconSrc) return AXIS_ICON_SIZE * (display.iconWidthScale || 1);
   const parts = axisIconParts(display.label);
   const contentWidth = parts.reduce((width, part) => {
     if (part.kind === 'icon') {
@@ -2014,7 +2021,7 @@ function axisActionContent(display) {
   if (display.iconSrc) {
     const icon = document.createElement('img');
     icon.className = 'axis-action-icon';
-    if (display.wide) icon.classList.add('is-wide');
+    icon.style.setProperty('--axis-icon-width-scale', String(display.iconWidthScale || 1));
     icon.src = display.iconSrc;
     icon.alt = display.label;
     icon.title = display.label;

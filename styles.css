@@ -320,7 +320,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .axis-move-content { min-width: 0; display: flex; align-items: center; flex-wrap: nowrap; gap: calc(5px * var(--axis-scale, 1)); overflow: hidden; }
 .axis-action { min-width: calc(20px * var(--axis-scale, 1)); min-height: calc(31px * var(--axis-scale, 1)); display: inline-flex; align-items: center; justify-content: center; gap: calc(2px * var(--axis-scale, 1)); color: #f0f2ef; font-size: calc(12px * var(--axis-scale, 1)); font-weight: 900; line-height: 1; white-space: nowrap; }
 .axis-action > span { max-width: calc(180px * var(--axis-scale, 1)); overflow: hidden; text-overflow: ellipsis; }
-.axis-action-icon { width: calc(31px * var(--axis-scale, 1)); height: calc(31px * var(--axis-scale, 1)); display: block; object-fit: contain; }
+.axis-action-icon { width: calc(31px * var(--axis-icon-width-scale, 1) * var(--axis-scale, 1)); height: calc(31px * var(--axis-scale, 1)); display: block; object-fit: contain; }
 .axis-action-icon.is-wide { width: calc(49px * var(--axis-scale, 1)); }
 .axis-empty, .axis-error { min-height: 240px; display: grid; place-items: center; align-content: center; gap: 8px; color: var(--muted); font-size: 12px; text-align: center; }
 .axis-error { color: #ff9b9f; }
