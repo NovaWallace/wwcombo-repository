@@ -1295,6 +1295,7 @@ function renderCard(chart) {
   const comboGrade = card.querySelector('.combo-grade');
   const grade = gradeForTags(tags);
   comboGrade.textContent = grade.grade;
+  comboGrade.dataset.grade = grade.grade;
   comboGrade.hidden = !grade.grade;
   if (grade.tag) comboGrade.title = i18n.localizeTag(grade.tag);
 
@@ -1345,6 +1346,7 @@ function renderCommissionCard(commission) {
   const grade = gradeForTags(commission.tag || '基础');
   const gradeNode = card.querySelector('.commission-grade');
   gradeNode.textContent = grade.grade;
+  gradeNode.dataset.grade = grade.grade;
   gradeNode.title = i18n.localizeTag(grade.tag);
   card.querySelector('.commission-updated').textContent = formatDate(commission.updatedAt);
   card.querySelector('h3').textContent = commission.title || t('commission.untitled');
