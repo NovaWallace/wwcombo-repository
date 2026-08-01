@@ -182,7 +182,7 @@
               <h3></h3>
               <p class="characters"></p>
             </div>
-            <div class="combo-tags"></div>
+            <div class="combo-classification"><strong class="combo-grade"></strong><div class="combo-tags"></div></div>
           </div>
           <dl class="combo-meta">
             <div><dt data-i18n="meta.rounds">轮次</dt><dd class="rounds"></dd></div>
@@ -213,6 +213,7 @@
           <div class="commission-card-head">
             <span class="commission-status"></span>
             <time class="commission-updated"></time>
+            <strong class="commission-grade"></strong>
           </div>
           <h3></h3>
           <div class="commission-characters"></div>
@@ -296,6 +297,17 @@
             <div class="commission-character-grid" id="commissionCharacterGrid"></div>
             <small id="commissionCharacterHint" data-i18n="commission.characterHint">至少选择 1 名角色。</small>
           </fieldset>
+          <fieldset class="commission-tag-fieldset">
+            <legend data-i18n="commission.tag">委托标签</legend>
+            <div class="commission-tag-grid" id="commissionTagGrid">
+              <button type="button" data-commission-tag="轮椅"><strong>C</strong><span data-i18n="tag.轮椅">轮椅</span></button>
+              <button type="button" data-commission-tag="基础" class="selected"><strong>B</strong><span data-i18n="tag.基础">基础</span></button>
+              <button type="button" data-commission-tag="标准"><strong>A</strong><span data-i18n="tag.标准">标准</span></button>
+              <button type="button" data-commission-tag="进阶"><strong>S</strong><span data-i18n="tag.进阶">进阶</span></button>
+              <button type="button" data-commission-tag="冒烟"><strong>SS</strong><span data-i18n="tag.冒烟">冒烟</span></button>
+              <button type="button" data-commission-tag="错轮"><strong>SSS</strong><span data-i18n="tag.错轮">错轮</span></button>
+            </div>
+          </fieldset>
           <label><span data-i18n="commission.description">流程具体描述</span><textarea id="commissionDescriptionInput" maxlength="4000" rows="7" required></textarea></label>
           <div class="form-feedback" id="commissionCreateFeedback" aria-live="polite"></div>
           <footer class="modal-footer"><button type="button" id="cancelCommissionCreateBtn" data-i18n="common.cancel">取消</button><button class="primary-button" id="confirmCommissionCreateBtn" type="submit"><i data-lucide="send" aria-hidden="true"></i><span data-i18n="commission.publish">发布委托</span></button></footer>
@@ -321,7 +333,7 @@
               <button class="primary-button" id="commissionResponseUploadBtn" type="button"><i data-lucide="upload" aria-hidden="true"></i><span data-i18n="commission.uploadResponse">上传方案</span></button>
               <button class="secondary-button commission-withdraw-button" id="commissionWithdrawBtn" type="button" hidden><i data-lucide="undo-2" aria-hidden="true"></i><span data-i18n="commission.withdraw">撤回委托</span></button>
             </div>
-            <p class="commission-detail-note" data-i18n="commission.adoptNote">采纳只标记完成，不会自动发布到连段社区。</p>
+            <p class="commission-detail-note" data-i18n="commission.adoptNote">采纳后，方案会自动进入连段社区审核流程。</p>
           </aside>
           <section class="commission-response-panel">
             <div class="commission-response-head"><div><h3 data-i18n="commission.responses">收到的方案</h3><p id="commissionResponseSummary"></p></div></div>

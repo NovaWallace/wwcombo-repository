@@ -8,6 +8,7 @@ const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_STEPS = 5000;
 const MAX_DURATION_MS = 10 * 60 * 1000;
 const MAX_COMMISSION_RESPONSES = 50;
+const COMMISSION_TAGS = ['轮椅', '基础', '标准', '进阶', '冒烟', '错轮'];
 const ICON_TRIGGERS = [
   '长按共鸣解放', '长按普攻', '长按技能', '长按声骸', '长按解放', '长按闪避', '长按跳跃',
   '共鸣解放', '终结技', '普攻', '重击', '技能', '声骸', '解放', '闪避', '跳跃', '工具', '变奏', '延奏', '处决', '前走',
@@ -43,6 +44,11 @@ function characterNames(value) {
   return [...new Set((Array.isArray(value) ? value : [])
     .filter((item) => typeof item === 'string' && item.trim())
     .map((item) => item.trim().slice(0, 80)))].slice(0, 3);
+}
+
+function commissionTag(value) {
+  const tag = String(value || '').trim();
+  return COMMISSION_TAGS.includes(tag) ? tag : '基础';
 }
 
 function chartDuration(chart) {
@@ -241,6 +247,22 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
 
   async function smtpSettings() {
     return record(await readJson(smtpFile, {}));
+  }
+
+  async function sendCommunityMail(to, subject, text) {
+    const recipient = normalizeEmail(to);
+    if (!recipient) return '收件人邮箱不可用';
+    const settings = await smtpSettings();
+    if (!settings.host || !settings.user || !settings.pass) return 'SMTP 尚未配置';
+    const { createTransport } = await import('nodemailer');
+    const transport = createTransport({
+      host: settings.host,
+      port: Number(settings.port || 465),
+      secure: settings.secure !== false,
+      auth: { user: settings.user, pass: settings.pass }
+    });
+    await transport.sendMail({ from: settings.from || settings.user, to: recipient, subject, text });
+    return '';
   }
 
   async function reviewSettings() {
@@ -643,6 +665,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       title: String(item.title || '未命名委托'),
       description: String(item.description || ''),
       characters: characterNames(item.characters),
+      tag: commissionTag(item.tag),
       owner: {
         nickname: String(owner.username || '未命名用户'),
         email: publicEmail(ownerEmail),
@@ -688,17 +711,20 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const title = String(body.title || '').trim().slice(0, 120);
     const description = String(body.description || '').trim().slice(0, 4000);
     const characters = characterNames(body.characters);
+    const tag = String(body.tag || '').trim();
     if (!username) throw new Error('请先填写用户名。');
     if (!email) throw new Error('邮箱格式不正确。');
     if (!title) throw new Error('请填写委托标题。');
     if (!description) throw new Error('请填写需要的具体流程。');
     if (!characters.length) throw new Error('请至少选择一名需要的角色。');
+    if (!COMMISSION_TAGS.includes(tag)) throw new Error('请选择有效的委托标签。');
     const now = Date.now();
     const item = {
       id: randomUUID(),
       title,
       description,
       characters,
+      tag,
       owner: { username, email, avatar: String(body.avatar || '').trim().slice(0, 80) },
       status: 'open',
       interests: {},
@@ -769,6 +795,16 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       await rm(path.join(responseRoot, storedFile), { force: true }).catch(() => {});
       throw error;
     }
+    try {
+      response.notificationError = await sendCommunityMail(
+        item.owner?.email,
+        `[椰果朋克2077] 委托收到新方案：${item.title}`,
+        `你的委托收到了一份新方案。\n\n委托：${item.title}\n方案：${preview.title}\n上传者：${username}\n提交时间：${new Date(response.submittedAt).toLocaleString('zh-CN')}\n\n请打开椰果朋克2077委托广场查看和预览。`
+      );
+    } catch (error) {
+      response.notificationError = error.message || String(error);
+    }
+    if (response.notificationError) await writeJson(commissionsFile, state);
     const publicItem = await commissionPublicValue(item, voterId);
     return { commission: publicItem, response: publicItem.responses.find((entry) => entry.id === responseId) };
   }
@@ -793,6 +829,16 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     if (item.status === 'completed') throw new Error('这个委托已经完成。');
     const response = (Array.isArray(item.responses) ? item.responses : []).find((entry) => entry.id === responseId);
     if (!response) throw new Error('委托方案不存在。');
+    const storedFile = path.basename(String(response.storedFile || ''));
+    if (!storedFile || storedFile !== response.storedFile) throw new Error('委托方案文件路径不安全。');
+    const content = JSON.parse(await readFile(path.join(commissionResponsesRoot, item.id, storedFile), 'utf8'));
+    const moderation = await submit({
+      username: response.username,
+      email: response.email,
+      avatar: response.avatar,
+      fileName: response.fileName,
+      content
+    }, 'commission-adoption');
     const now = Date.now();
     item.status = 'completed';
     item.acceptedResponseId = response.id;
@@ -800,8 +846,26 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     item.updatedAt = now;
     response.status = 'accepted';
     response.acceptedAt = now;
+    response.moderationSubmissionId = moderation.id;
+    response.moderationStatus = moderation.status;
+    if (moderation.chart?.id) {
+      response.comboId = moderation.chart.id;
+      item.publishedComboId = moderation.chart.id;
+    }
+    try {
+      response.adoptionNotificationError = await sendCommunityMail(
+        response.email,
+        `[椰果朋克2077] 你的委托方案已被采纳：${item.title}`,
+        `你为委托“${item.title}”提交的方案“${response.preview?.title || response.fileName}”已被采纳，并已进入连段社区审核流程。\n\n审核状态：${moderation.status === 'published' ? '已通过预审核并发布' : '等待维护者审核'}\n投稿编号：${moderation.id}`
+      );
+    } catch (error) {
+      response.adoptionNotificationError = error.message || String(error);
+    }
     await writeJson(commissionsFile, state);
-    return { commission: await commissionPublicValue(item, voterId) };
+    return {
+      commission: await commissionPublicValue(item, voterId),
+      moderation: { id: moderation.id, status: moderation.status, ...(moderation.chart?.id ? { comboId: moderation.chart.id } : {}) }
+    };
   }
 
   async function withdrawCommission(commissionId, body) {

@@ -49,7 +49,8 @@ const GAMEPAD_ICON_CODES = {
   iii: 'GamepadDPadDown'
 };
 const MAX_SELECTED_CHARACTERS = 3;
-const DIFFICULTY_ORDER = ['冒烟', '进阶', '基础', '轮椅'];
+const DIFFICULTY_ORDER = ['错轮', '冒烟', '进阶', '标准', '基础', '轮椅'];
+const TAG_GRADES = { '轮椅': 'C', '基础': 'B', '标准': 'A', '进阶': 'S', '冒烟': 'SS', '错轮': 'SSS' };
 const ROLE_COLORS = ['#d84f55', '#44c8c6', '#d7ad52'];
 const AXIS_ICON_SIZE = 31;
 const AXIS_AVATAR_SIZE = 34;
@@ -272,6 +273,7 @@ const state = {
   commissionLoadState: 'idle',
   commissionUpdatedAt: 0,
   commissionCreateCharacters: [],
+  commissionCreateTag: '基础',
   commissionDetail: null,
   commissionResponse: null,
   commissionResponsePackage: null,
@@ -383,6 +385,7 @@ const els = {
   commissionTitleInput: document.getElementById('commissionTitleInput'),
   commissionCharacterGrid: document.getElementById('commissionCharacterGrid'),
   commissionCharacterHint: document.getElementById('commissionCharacterHint'),
+  commissionTagGrid: document.getElementById('commissionTagGrid'),
   commissionDescriptionInput: document.getElementById('commissionDescriptionInput'),
   commissionCreateFeedback: document.getElementById('commissionCreateFeedback'),
   confirmCommissionCreate: document.getElementById('confirmCommissionCreateBtn'),
@@ -952,9 +955,17 @@ function chartDifficulty(chart) {
   return rank === -1 ? DIFFICULTY_ORDER.length : rank;
 }
 
+function gradeForTags(value) {
+  const tags = (Array.isArray(value) ? value : [value]).map((tag) => tag === '全局' ? '错轮' : tag);
+  const tag = DIFFICULTY_ORDER.find((item) => tags.includes(item)) || '';
+  return { tag, grade: TAG_GRADES[tag] || '' };
+}
+
 function tagAccent(tags) {
+  if (tags.includes('错轮') || tags.includes('全局')) return '#d71920';
   if (tags.includes('轮椅')) return '#44c8c6';
   if (tags.includes('基础')) return '#4bd29c';
+  if (tags.includes('标准')) return '#9aa4a8';
   if (tags.includes('进阶')) return '#d7ad52';
   if (tags.includes('冒烟')) return '#eb5f69';
   return '#d71920';
@@ -1281,6 +1292,11 @@ function renderCard(chart) {
     item.textContent = i18n.localizeTag(tag);
     tagContainer.appendChild(item);
   }
+  const comboGrade = card.querySelector('.combo-grade');
+  const grade = gradeForTags(tags);
+  comboGrade.textContent = grade.grade;
+  comboGrade.hidden = !grade.grade;
+  if (grade.tag) comboGrade.title = i18n.localizeTag(grade.tag);
 
   const detailButton = card.querySelector('.detail-button');
   detailButton.setAttribute('aria-label', `${t('card.details')}: ${chart.title || t('card.untitled')}`);
@@ -1326,6 +1342,10 @@ function renderCommissionCard(commission) {
   const status = card.querySelector('.commission-status');
   status.textContent = commissionStatusLabel(commission);
   status.classList.toggle('completed', commission.status === 'completed');
+  const grade = gradeForTags(commission.tag || '基础');
+  const gradeNode = card.querySelector('.commission-grade');
+  gradeNode.textContent = grade.grade;
+  gradeNode.title = i18n.localizeTag(grade.tag);
   card.querySelector('.commission-updated').textContent = formatDate(commission.updatedAt);
   card.querySelector('h3').textContent = commission.title || t('commission.untitled');
   card.querySelector('.commission-excerpt').textContent = commission.description || '';
@@ -1384,6 +1404,14 @@ function renderCommissionCreateCharacters() {
   els.commissionCharacterHint.textContent = t('commission.characterCount', { count: state.commissionCreateCharacters.length, max: MAX_SELECTED_CHARACTERS });
 }
 
+function renderCommissionCreateTag() {
+  for (const button of els.commissionTagGrid?.querySelectorAll('[data-commission-tag]') || []) {
+    const selected = button.dataset.commissionTag === state.commissionCreateTag;
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  }
+}
+
 function openCommissionCreate() {
   if (!state.profile.username || !state.profile.email) {
     openProfile();
@@ -1391,12 +1419,14 @@ function openCommissionCreate() {
     return;
   }
   state.commissionCreateCharacters = [];
+  state.commissionCreateTag = '基础';
   els.commissionTitleInput.value = '';
   els.commissionDescriptionInput.value = '';
   els.commissionCreateFeedback.textContent = '';
   els.commissionCreateFeedback.className = 'form-feedback';
   renderProfile();
   renderCommissionCreateCharacters();
+  renderCommissionCreateTag();
   els.commissionCreateBackdrop.hidden = false;
   document.body.style.overflow = 'hidden';
   requestAnimationFrame(() => els.commissionTitleInput.focus());
@@ -1421,7 +1451,7 @@ async function submitCommission(event) {
       body: JSON.stringify({
         username: state.profile.username, email: state.profile.email, avatar: state.profile.avatar,
         title: els.commissionTitleInput.value.trim(), description: els.commissionDescriptionInput.value.trim(),
-        characters: state.commissionCreateCharacters
+        characters: state.commissionCreateCharacters, tag: state.commissionCreateTag
       })
     });
     const body = await response.json().catch(() => ({}));
@@ -1620,6 +1650,7 @@ function renderCommissionDetail() {
   ownerCopy.querySelector('small').textContent = commission.owner?.email || '';
   els.commissionDetailOwner.append(ownerAvatar, ownerCopy);
   els.commissionDetailMeta.replaceChildren(
+    detailMetaRow(t('commission.tag'), `${gradeForTags(commission.tag || '基础').grade} · ${i18n.localizeTag(commission.tag || '基础')}`),
     detailMetaRow(t('commission.interestLabel'), String(Number(commission.interestCount || 0))),
     detailMetaRow(t('commission.responseLabel'), String(Number(commission.responseCount || 0))),
     detailMetaRow(t('commission.created'), formatDate(commission.createdAt)),
@@ -2455,6 +2486,12 @@ els.commissionCharacterGrid?.addEventListener('click', (event) => {
   if (state.commissionCreateCharacters.includes(name)) state.commissionCreateCharacters = state.commissionCreateCharacters.filter((item) => item !== name);
   else if (state.commissionCreateCharacters.length < MAX_SELECTED_CHARACTERS) state.commissionCreateCharacters = [...state.commissionCreateCharacters, name];
   renderCommissionCreateCharacters();
+});
+els.commissionTagGrid?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-commission-tag]');
+  if (!button?.dataset.commissionTag) return;
+  state.commissionCreateTag = button.dataset.commissionTag;
+  renderCommissionCreateTag();
 });
 els.commissionCreateForm?.addEventListener('submit', submitCommission);
 els.closeCommissionDetail?.addEventListener('click', closeCommissionDetail);

@@ -301,6 +301,13 @@ function clientAddress(req) {
   return req.socket.remoteAddress || 'unknown';
 }
 
+function maskedPublicEmail(value) {
+  const email = String(value || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+$/.test(email) || email.length > 254) return '';
+  const at = email.lastIndexOf('@');
+  return `${Array.from(email.slice(0, at)).slice(0, 2).join('')}***${email.slice(at)}`;
+}
+
 function requireSession(req, res, requireCsrf = false) {
   if (ADMIN_AUTH_DISABLED) {
     const session = { expiresAt: Number.POSITIVE_INFINITY, csrf: 'local-test-no-auth' };
@@ -586,25 +593,32 @@ function acceptFeedbackFrom(address) {
 
 async function publicIndex(voterId = '') {
   const index = JSON.parse((await readFile(path.join(PUBLIC_ROOT, 'community-index.json'), 'utf8')).replace(/^\ufeff/, ''));
-  const [downloads, engagement] = await Promise.all([
-    community.status().then((value) => value.downloads),
+  const [communityStatus, engagement] = await Promise.all([
+    community.status(),
     community.publicEngagement(voterId)
   ]);
-  index.charts = index.charts.map((chart) => ({
-    ...chart,
-    tags: [...new Set((Array.isArray(chart.tags) ? chart.tags : []).map((tag) => tag === '全局' ? '错轮' : tag))],
-    downloadCount: Math.max(0, Number(downloads[chart.id] || 0)),
-    downloadUrl: `/api/community/download/${encodeURIComponent(chart.id)}`,
-    votes: {
-      up: Math.max(0, Number(engagement.counts[chart.id]?.up || 0)),
-      down: Math.max(0, Number(engagement.counts[chart.id]?.down || 0))
-    },
-    viewerVote: engagement.voterVotes[chart.id] || '',
-    viewerDownloaded: Boolean(engagement.downloaded[chart.id]),
-    feedbackSubmitted: Boolean(engagement.voterFeedbacks[chart.id]),
-    canVote: Boolean(engagement.downloaded[chart.id] && !engagement.voterVotes[chart.id]),
-    canFeedback: Boolean(engagement.downloaded[chart.id] && !engagement.voterFeedbacks[chart.id])
-  }));
+  const whitelistMasks = new Set((Array.isArray(communityStatus.whitelist) ? communityStatus.whitelist : []).map(maskedPublicEmail).filter(Boolean));
+  index.charts = index.charts.map((chart) => {
+    const submitter = chart.submitter && typeof chart.submitter === 'object' && !Array.isArray(chart.submitter) ? { ...chart.submitter } : {};
+    if (whitelistMasks.has(String(submitter.email || '').trim().toLowerCase())) submitter.badge = 'UP';
+    else delete submitter.badge;
+    return {
+      ...chart,
+      submitter,
+      tags: [...new Set((Array.isArray(chart.tags) ? chart.tags : []).map((tag) => tag === '全局' ? '错轮' : tag))],
+      downloadCount: Math.max(0, Number(communityStatus.downloads[chart.id] || 0)),
+      downloadUrl: `/api/community/download/${encodeURIComponent(chart.id)}`,
+      votes: {
+        up: Math.max(0, Number(engagement.counts[chart.id]?.up || 0)),
+        down: Math.max(0, Number(engagement.counts[chart.id]?.down || 0))
+      },
+      viewerVote: engagement.voterVotes[chart.id] || '',
+      viewerDownloaded: Boolean(engagement.downloaded[chart.id]),
+      feedbackSubmitted: Boolean(engagement.voterFeedbacks[chart.id]),
+      canVote: Boolean(engagement.downloaded[chart.id] && !engagement.voterVotes[chart.id]),
+      canFeedback: Boolean(engagement.downloaded[chart.id] && !engagement.voterFeedbacks[chart.id])
+    };
+  });
   return index;
 }
 
