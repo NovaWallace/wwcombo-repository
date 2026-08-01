@@ -262,6 +262,7 @@ const state = {
   sort: 'version',
   detailChart: null,
   detailPackage: null,
+  detailOptions: null,
   uploadChart: null,
   uploadPackage: null,
   uploadMode: 'community',
@@ -392,6 +393,7 @@ const els = {
   commissionDetailMeta: document.getElementById('commissionDetailMeta'),
   commissionInterest: document.getElementById('commissionInterestBtn'),
   commissionResponseUpload: document.getElementById('commissionResponseUploadBtn'),
+  commissionWithdraw: document.getElementById('commissionWithdrawBtn'),
   commissionResponseSummary: document.getElementById('commissionResponseSummary'),
   commissionResponseList: document.getElementById('commissionResponseList'),
   commissionResponseEmpty: document.getElementById('commissionResponseEmpty'),
@@ -414,6 +416,7 @@ const els = {
   detailDescriptionSection: document.getElementById('detailDescriptionSection'),
   detailDescription: document.getElementById('detailDescription'),
   detailSubmitter: document.getElementById('detailSubmitter'),
+  detailVoteSection: document.getElementById('detailVoteSection'),
   detailSourceLink: document.getElementById('detailSourceLink'),
   detailDownload: document.getElementById('detailDownload'),
   detailWithdraw: document.getElementById('detailWithdraw'),
@@ -610,13 +613,19 @@ function uploadedIndexChart(pack, fileName = '') {
   const chart = pack?.chart || (Array.isArray(pack?.charts) ? pack.charts[0] : null) || (Array.isArray(pack?.steps) ? pack : null);
   const community = chart?.community || {};
   const characters = (Array.isArray(community.characters) ? community.characters : [chart?.character]).filter(Boolean).slice(0, 3);
+  const firstStep = [...(Array.isArray(chart?.steps) ? chart.steps : [])].sort((left, right) => Number(left.startMin || 0) - Number(right.startMin || 0))[0];
+  const firstSlot = Math.max(1, Math.round(Number(firstStep?.characterSlot || 1)));
   return {
     id: community.id || chart?.id || fileName || 'upload-preview',
     title: community.name || community.title || chart?.title || fileName || t('upload.previewTitle'),
     characters,
     character: characters[0] || chart?.character || '',
+    firstCharacter: characters[firstSlot - 1] || characters[0] || '',
     tags: normalizedTags(Array.isArray(community.tags) ? community.tags : chart?.tags || []),
-    rounds: Number(community.rounds || 1)
+    rounds: Number(community.rounds || 1),
+    uploadVersion: String(community.uploadVersion || ''),
+    description: typeof community.description === 'string' ? community.description : '',
+    link: typeof community.link === 'string' && /^https?:\/\//i.test(community.link) ? community.link : ''
   };
 }
 
@@ -1356,39 +1365,41 @@ function isLikelyCommissionOwner(commission) {
   return Boolean(state.profile.email && commission?.owner?.email && commission.owner.email === maskProfileEmail(state.profile.email));
 }
 
-function responseIndexChart(response) {
+function responseDetailChart(pack, response) {
+  const packageChart = uploadedIndexChart(pack, response.fileName);
   return {
+    ...packageChart,
     id: response.id,
-    title: response.title,
-    characters: response.characters,
-    character: response.characters?.[0] || '',
-    tags: response.tags || [],
-    rounds: response.rounds || 1,
+    title: response.title || packageChart.title,
+    characters: response.characters?.length ? response.characters : packageChart.characters,
+    character: response.characters?.[0] || packageChart.character,
+    tags: response.tags?.length ? response.tags : packageChart.tags,
+    rounds: response.rounds || packageChart.rounds || 1,
     durationMs: response.durationMs || 0,
     loopSwitchCount: response.loopSwitchCount || 0,
+    updatedAt: response.submittedAt || 0,
+    submitter: response.submitter || {},
     url: response.packageUrl
   };
 }
 
-async function previewCommissionResponse(commission, response) {
+async function previewCommissionResponse(commission, response, trigger) {
   state.commissionResponse = response;
-  els.commissionAxisPanel.hidden = false;
-  els.commissionAxisTitle.textContent = response.title || t('upload.previewTitle');
-  els.commissionAxisSummary.textContent = t('axis.loading');
-  els.commissionAxisPreview.innerHTML = '<div class="axis-loading"><span></span><span></span><span></span></div>';
-  renderCommissionDetail();
+  if (trigger) {
+    trigger.disabled = true;
+    trigger.setAttribute('aria-busy', 'true');
+  }
   try {
     const pack = await loadChartPackage({ url: response.packageUrl });
     if (state.commissionDetail?.id !== commission.id || state.commissionResponse?.id !== response.id) return;
-    state.commissionResponsePackage = pack;
-    renderAxisPreview(pack, responseIndexChart(response), { preview: els.commissionAxisPreview, summary: els.commissionAxisSummary });
+    await openDetails(responseDetailChart(pack, response), { context: 'commission-response', response, package: pack });
   } catch (error) {
-    els.commissionAxisPreview.innerHTML = '';
-    const failure = document.createElement('div');
-    failure.className = 'axis-error';
-    failure.textContent = t('axis.failed', { error: error.message });
-    els.commissionAxisPreview.appendChild(failure);
-    els.commissionAxisSummary.textContent = t('axis.unavailable');
+    void showAppMessage(t('axis.failed', { error: error.message }));
+  } finally {
+    if (trigger?.isConnected) {
+      trigger.disabled = false;
+      trigger.removeAttribute('aria-busy');
+    }
   }
 }
 
@@ -1432,6 +1443,34 @@ async function adoptCommissionResponse(commission, response) {
   }
 }
 
+async function withdrawCommission(commission) {
+  if (!state.profile.email) {
+    openProfile();
+    els.profileFeedback.textContent = t('profile.withdrawRequired');
+    return;
+  }
+  if (!await askAppConfirmation(t('commission.withdrawConfirm', { title: commission.title || t('commission.untitled') }), { danger: true })) return;
+  els.commissionWithdraw.disabled = true;
+  try {
+    const request = await fetch(`/api/community/commissions/${encodeURIComponent(commission.id)}/withdraw`, {
+      method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: state.profile.email })
+    });
+    const body = await request.json().catch(() => ({}));
+    if (!request.ok) throw new Error(body.error || `HTTP ${request.status}`);
+    state.commissions = state.commissions.filter((item) => item.id !== commission.id);
+    state.commissionUpdatedAt = Math.max(0, ...state.commissions.map((item) => Number(item.updatedAt || item.createdAt || 0)));
+    closeCommissionDetail();
+    render();
+    setStatus('ready', commissionReadyStatus());
+    await showAppMessage(t('commission.withdrawDone'));
+  } catch (error) {
+    void showAppMessage(t('commission.withdrawFailed', { error: error.message }));
+  } finally {
+    els.commissionWithdraw.disabled = false;
+  }
+}
+
 function renderCommissionResponseCard(commission, response) {
   const card = document.createElement('article');
   const accepted = response.id === commission.acceptedResponseId || response.status === 'accepted';
@@ -1460,7 +1499,7 @@ function renderCommissionResponseCard(commission, response) {
   preview.className = 'secondary-button';
   preview.innerHTML = '<i data-lucide="workflow" aria-hidden="true"></i>';
   preview.appendChild(document.createTextNode(t('commission.previewResponse')));
-  preview.addEventListener('click', () => { void previewCommissionResponse(commission, response); });
+  preview.addEventListener('click', () => { void previewCommissionResponse(commission, response, preview); });
   const download = document.createElement('button');
   download.type = 'button';
   download.className = 'secondary-button';
@@ -1513,6 +1552,8 @@ function renderCommissionDetail() {
   els.commissionInterest.disabled = commission.status === 'completed' || commission.viewerInterested;
   els.commissionInterest.querySelector('span').textContent = commission.viewerInterested ? t('commission.interested') : t('commission.interest');
   els.commissionResponseUpload.disabled = commission.status === 'completed';
+  els.commissionWithdraw.hidden = commission.status === 'completed' || !isLikelyCommissionOwner(commission);
+  els.commissionWithdraw.disabled = false;
   els.commissionResponseSummary.textContent = t('commission.responseCount', { count: Number(commission.responseCount || 0) });
   els.commissionResponseList.replaceChildren(...(commission.responses || []).map((response) => renderCommissionResponseCard(commission, response)));
   els.commissionResponseEmpty.hidden = Boolean(commission.responses?.length);
@@ -1952,23 +1993,30 @@ async function requestWithdrawal(chart) {
   }
 }
 
-async function openDetails(chart) {
+async function openDetails(chart, options = {}) {
+  const responseMode = options.context === 'commission-response';
   state.detailChart = chart;
-  state.detailPackage = null;
+  state.detailPackage = options.package || null;
+  state.detailOptions = options;
+  if (responseMode && !els.commissionDetailBackdrop.hidden) {
+    els.commissionDetailBackdrop.inert = true;
+    els.commissionDetailBackdrop.setAttribute('aria-hidden', 'true');
+  }
   renderAxisIconSet();
   const submitter = submitterFor(chart);
   els.detailTitle.textContent = chart.title || t('card.untitled');
   renderDetailCharacters(chart);
   renderDetailTags(chart);
-  els.detailMeta.replaceChildren(
+  const detailRows = [
     detailMetaRow(t('meta.rounds'), t('unit.rounds', { count: Math.max(1, Number(chart.rounds || 1)) })),
     detailMetaRow(t('meta.firstCharacter'), chart.firstCharacter || chartCharacters(chart)[0] || t('common.unknown')),
     detailMetaRow(t('meta.loopSwitches'), t('unit.switches', { count: Number(chart.loopSwitchCount || 0) })),
     detailMetaRow(t('meta.updated'), formatDate(chart.updatedAt)),
-    detailMetaRow(t('meta.uploadVersion'), chart.uploadVersion || state.gameVersion),
-    detailMetaRow(t('meta.downloads'), t('unit.downloads', { count: Number(chart.downloadCount || 0) })),
-    detailMetaRow('ID', chart.id || t('common.unknown'))
-  );
+    detailMetaRow(t('meta.uploadVersion'), chart.uploadVersion || state.gameVersion)
+  ];
+  if (!responseMode) detailRows.push(detailMetaRow(t('meta.downloads'), t('unit.downloads', { count: Number(chart.downloadCount || 0) })));
+  detailRows.push(detailMetaRow('ID', chart.id || t('common.unknown')));
+  els.detailMeta.replaceChildren(...detailRows);
   els.detailDescription.textContent = chart.description || '';
   els.detailDescriptionSection.hidden = !chart.description;
   els.detailSubmitter.textContent = `${submitter.nickname}${submitter.badge ? ` · ${submitter.badge}` : ''} · ${submitter.email}`;
@@ -1976,16 +2024,26 @@ async function openDetails(chart) {
   els.detailSourceLink.href = chart.link || '#';
   els.detailDownload.href = chart.downloadUrl || chart.url || '#';
   els.detailDownload.download = filenameFor(chart);
-  els.detailDownload.onclick = (event) => downloadChart(event, chart);
+  els.detailDownload.onclick = responseMode
+    ? (event) => { event.preventDefault(); void downloadCommissionResponse(options.response); }
+    : (event) => downloadChart(event, chart);
+  els.detailVoteSection.hidden = responseMode;
+  els.detailWithdraw.hidden = responseMode;
   els.detailWithdraw.onclick = () => requestWithdrawal(chart);
   els.detailUpvote.onclick = () => { void castVote(chart, 'up'); };
   els.detailDownvote.onclick = () => { void castVote(chart, 'down'); };
-  renderVoteControls(chart);
-  els.axisPreviewSummary.textContent = t('axis.loading');
-  els.axisPreview.innerHTML = '<div class="axis-loading"><span></span><span></span><span></span></div>';
+  if (!responseMode) renderVoteControls(chart);
   els.detailBackdrop.hidden = false;
   document.body.style.overflow = 'hidden';
   window.lucide?.createIcons();
+
+  if (options.package) {
+    renderAxisPreview(options.package, chart);
+    return;
+  }
+
+  els.axisPreviewSummary.textContent = t('axis.loading');
+  els.axisPreview.innerHTML = '<div class="axis-loading"><span></span><span></span><span></span></div>';
 
   try {
     const pack = await loadChartPackage(chart);
@@ -2004,8 +2062,13 @@ async function openDetails(chart) {
 }
 
 function closeDetails() {
+  if (state.detailOptions?.context === 'commission-response') {
+    els.commissionDetailBackdrop.inert = false;
+    els.commissionDetailBackdrop.removeAttribute('aria-hidden');
+  }
   state.detailChart = null;
   state.detailPackage = null;
+  state.detailOptions = null;
   els.detailBackdrop.hidden = true;
   syncModalBody();
 }
@@ -2096,7 +2159,7 @@ function refreshLocalizedView() {
     setCharacterHint(false);
     renderCharacterPicker();
   }
-  if (state.detailChart) void openDetails(state.detailChart);
+  if (state.detailChart) void openDetails(state.detailChart, state.detailOptions || {});
   if (state.commissionDetail) renderCommissionDetail();
   if (!els.uploadBackdrop.hidden) {
     const commissionUpload = state.uploadMode === 'commission';
@@ -2246,6 +2309,7 @@ els.closeCommissionDetail?.addEventListener('click', closeCommissionDetail);
 els.commissionDetailBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.commissionDetailBackdrop) closeCommissionDetail(); });
 els.commissionInterest?.addEventListener('click', () => { if (state.commissionDetail) void addCommissionInterest(state.commissionDetail); });
 els.commissionResponseUpload?.addEventListener('click', () => { if (state.commissionDetail) openUpload(state.commissionDetail.id); });
+els.commissionWithdraw?.addEventListener('click', () => { if (state.commissionDetail) void withdrawCommission(state.commissionDetail); });
 els.languageSelect?.addEventListener('change', () => i18n.setLanguage(els.languageSelect.value));
 window.addEventListener('wwcombo-languagechange', refreshLocalizedView);
 els.clientDownloadButton?.addEventListener('click', () => { void openClientDownload(); });
@@ -2299,9 +2363,9 @@ document.addEventListener('keydown', (event) => {
   if (!els.appDialogBackdrop.hidden) closeAppDialog(false);
   else if (!els.uploadBackdrop.hidden) closeUpload();
   else if (!els.profileBackdrop.hidden) closeProfile();
+  else if (!els.detailBackdrop.hidden) closeDetails();
   else if (!els.commissionDetailBackdrop.hidden) closeCommissionDetail();
   else if (!els.commissionCreateBackdrop.hidden) closeCommissionCreate();
-  else if (!els.detailBackdrop.hidden) closeDetails();
   else if (!els.characterPickerBackdrop.hidden) closeCharacterPicker();
 });
 els.appDialogCancel?.addEventListener('click', () => closeAppDialog(false));

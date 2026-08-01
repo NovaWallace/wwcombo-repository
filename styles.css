@@ -20,6 +20,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--bg); }
 button, input, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
@@ -549,6 +550,7 @@ html[data-theme='day'] .empty-state { border-color: #aebec2; color: #63777e; }
 .search-controls:has(#sortField[hidden]) { grid-template-columns: minmax(260px, 1fr) 260px; }
 .create-commission-button[hidden], #sortField[hidden], .tag-filter[hidden] { display: none; }
 #uploadBackdrop { z-index: 120; }
+#detailBackdrop { z-index: 130; }
 .app-dialog-backdrop { z-index: 220; }
 .app-dialog { width: min(500px, 100%); overflow: hidden; border: 1px solid #596168; border-radius: 6px; background: #11161a; box-shadow: 0 34px 110px rgba(0,0,0,.72); }
 .app-dialog > .eyebrow { margin: 0; padding: 22px 22px 0; color: var(--red); }
@@ -620,6 +622,9 @@ html[data-theme='day'] .empty-state { border-color: #aebec2; color: #63777e; }
 .commission-detail-owner strong { font-size: 12px; }
 .commission-detail-owner small { color: var(--muted); font-size: 10px; }
 .commission-detail-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.commission-withdraw-button { grid-column: 1 / -1; border-color: #8c4a50; color: #ff9da2; }
+.commission-withdraw-button:hover { border-color: #d85b62; background: #34181b; color: #fff; }
+.commission-withdraw-button[hidden], .withdraw-button[hidden], .vote-section[hidden] { display: none; }
 .commission-detail-note { margin: -7px 0 0; color: #9b8d6d; font-size: 10px; line-height: 1.55; }
 .commission-response-panel { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(120px, auto) minmax(0, 1fr); background: #0b0e10; overflow: hidden; }
 .commission-response-head { padding: 16px 18px; border-bottom: 1px solid var(--line); background: #121619; }
@@ -658,6 +663,8 @@ html[data-theme='day'] .commission-status { border-color: #b58a37; background: #
 html[data-theme='day'] .commission-status.completed, html[data-theme='day'] .commission-detail-status.completed { background: #e5f5ee; color: #246c50; }
 html[data-theme='day'] .commission-interest-button { border-color: #afbec2; background: #edf3f4; color: #334b52; }
 html[data-theme='day'] .commission-interest-button.selected { border-color: #4d9679; background: #e5f5ee; color: #246c50; }
+html[data-theme='day'] .commission-withdraw-button { border-color: #c98b8f; background: #fff4f4; color: #9e343a; }
+html[data-theme='day'] .commission-withdraw-button:hover { border-color: #b64b52; background: #ffe7e8; color: #79262b; }
 html[data-theme='day'] .commission-create-dialog, html[data-theme='day'] .commission-detail-dialog { border-color: #91a5ab; background: #fff; box-shadow: 0 28px 90px rgba(29,49,55,.34); }
 html[data-theme='day'] .app-dialog { border-color: #91a5ab; background: #fff; box-shadow: 0 28px 90px rgba(29,49,55,.34); }
 html[data-theme='day'] .commission-create-form input, html[data-theme='day'] .commission-create-form textarea { border-color: #adbdc1; background: #fff; color: #17282d; }

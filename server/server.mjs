@@ -607,6 +607,15 @@ async function handleCommunityApi(req, res, pathname) {
     sendJson(res, 200, { commission }, { 'set-cookie': voterCookie(req, identity.token) });
     return;
   }
+  const commissionWithdrawal = /^\/api\/community\/commissions\/([^/]+)\/withdraw$/.exec(pathname);
+  if (req.method === 'POST' && commissionWithdrawal) {
+    const result = await community.withdrawCommission(
+      decodeURIComponent(commissionWithdrawal[1]),
+      await readJsonBody(req, 8 * 1024)
+    );
+    sendJson(res, 200, result);
+    return;
+  }
   const commissionResponses = /^\/api\/community\/commissions\/([^/]+)\/responses$/.exec(pathname);
   if (req.method === 'POST' && commissionResponses) {
     const address = clientAddress(req);

@@ -744,6 +744,21 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     return { commission: await commissionPublicValue(item, voterId) };
   }
 
+  async function withdrawCommission(commissionId, body) {
+    const email = normalizeEmail(body.email);
+    if (!email) throw new Error('请先登记发布委托时使用的邮箱。');
+    const state = await commissionState();
+    const index = state.commissions.findIndex((commission) => commission.id === commissionId);
+    if (index < 0) throw new Error('委托不存在。');
+    const item = state.commissions[index];
+    if (normalizeEmail(item.owner?.email) !== email) throw new Error('只有委托发布者可以撤回委托。');
+    if (item.status === 'completed') throw new Error('已完成的委托不能撤回。');
+    state.commissions.splice(index, 1);
+    await writeJson(commissionsFile, state);
+    await rm(path.join(commissionResponsesRoot, item.id), { recursive: true, force: true }).catch(() => {});
+    return { id: item.id, status: 'withdrawn' };
+  }
+
   async function status() {
     const [queue, published, withdrawals, emails, smtp, moderation, downloads, hidden, commissions] = await Promise.all([
       readJson(queueFile, { pending: [], history: [] }),
@@ -793,6 +808,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     submitCommissionResponse: (...args) => serializeMutation(() => submitCommissionResponse(...args)),
     commissionResponseContent,
     adoptCommissionResponse: (...args) => serializeMutation(() => adoptCommissionResponse(...args)),
+    withdrawCommission: (...args) => serializeMutation(() => withdrawCommission(...args)),
     status
   };
 }
