@@ -1334,13 +1334,28 @@ function commissionCharacters(commission) {
   return Array.isArray(commission?.characters) ? commission.characters.filter(Boolean).slice(0, MAX_SELECTED_CHARACTERS) : [];
 }
 
+function commissionInterestSortCount(commission) {
+  const count = Number(commission?.interestCount || 0);
+  return Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+}
+
+function commissionCreatedAt(commission) {
+  const value = Number(commission?.createdAt || 0);
+  return Number.isFinite(value) && value > 0 ? value : Number.MAX_SAFE_INTEGER;
+}
+
 function filteredCommissions() {
   const titleQuery = normalizeText(state.title);
   return state.commissions.filter((commission) => {
     const titleMatches = !titleQuery || normalizeText(commission.title).includes(titleQuery);
     const characterMatches = state.characters.every((name) => commissionCharacters(commission).includes(name));
     return titleMatches && characterMatches;
-  }).sort((left, right) => Number(left.status === 'completed') - Number(right.status === 'completed') || Number(right.updatedAt || 0) - Number(left.updatedAt || 0));
+  }).sort((left, right) =>
+    commissionInterestSortCount(right) - commissionInterestSortCount(left)
+    || commissionCreatedAt(left) - commissionCreatedAt(right)
+    || collator.compare(left.title || '', right.title || '')
+    || collator.compare(left.id || '', right.id || '')
+  );
 }
 
 function commissionStatusLabel(commission) {
