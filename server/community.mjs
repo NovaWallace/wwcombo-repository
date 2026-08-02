@@ -518,6 +518,79 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     await transport.sendMail({ from: settings.from || settings.user, to: settings.to, subject: '[椰果朋克2077] SMTP 测试', text: '服务器投稿通知已配置成功。' });
   }
 
+  async function resendFailedNotifications() {
+    const settings = await smtpSettings();
+    if (!settings.host || !settings.user || !settings.pass || !settings.to) throw new Error('请先保存并测试 SMTP 设置。');
+    const [queue, commissions] = await Promise.all([
+      readJson(queueFile, { pending: [], history: [] }),
+      commissionState()
+    ]);
+    const summary = {
+      attempted: 0,
+      sent: 0,
+      failed: 0,
+      submissions: { attempted: 0, sent: 0, failed: 0 },
+      commissionResponses: { attempted: 0, sent: 0, failed: 0 },
+      adoptions: { attempted: 0, sent: 0, failed: 0 },
+      failures: []
+    };
+    let queueChanged = false;
+    let commissionsChanged = false;
+
+    async function retry(category, id, target, errorKey, sentAtKey, send) {
+      summary.attempted += 1;
+      summary[category].attempted += 1;
+      const attemptedAt = Date.now();
+      try {
+        const error = await send();
+        if (error) throw new Error(error);
+        delete target[errorKey];
+        target[sentAtKey] = attemptedAt;
+        target.notificationRetryAt = attemptedAt;
+        summary.sent += 1;
+        summary[category].sent += 1;
+      } catch (error) {
+        const message = String(error?.message || error || '邮件发送失败').slice(0, 500);
+        target[errorKey] = message;
+        target.notificationRetryAt = attemptedAt;
+        summary.failed += 1;
+        summary[category].failed += 1;
+        summary.failures.push({ category, id: String(id || ''), error: message });
+      }
+    }
+
+    for (const submission of [...(Array.isArray(queue.pending) ? queue.pending : []), ...(Array.isArray(queue.history) ? queue.history : [])]) {
+      if (!String(submission?.notificationError || '').trim()) continue;
+      await retry('submissions', submission.id, submission, 'notificationError', 'notificationSentAt', () => sendSubmissionNotice(submission));
+      queueChanged = true;
+    }
+
+    for (const commission of commissions.commissions) {
+      for (const response of Array.isArray(commission.responses) ? commission.responses : []) {
+        if (String(response.notificationError || '').trim()) {
+          await retry('commissionResponses', response.id, response, 'notificationError', 'notificationSentAt', () => sendCommunityMail(
+            commission.owner?.email,
+            `[椰果朋克2077] 委托收到新方案：${commission.title}`,
+            `你的委托收到了一份新方案。\n\n委托：${commission.title}\n方案：${response.preview?.title || response.fileName}\n上传者：${response.username}\n提交时间：${new Date(response.submittedAt).toLocaleString('zh-CN')}\n\n请打开椰果朋克2077委托广场查看和预览。`
+          ));
+          commissionsChanged = true;
+        }
+        if (String(response.adoptionNotificationError || '').trim()) {
+          await retry('adoptions', response.id, response, 'adoptionNotificationError', 'adoptionNotificationSentAt', () => sendCommunityMail(
+            response.email,
+            `[椰果朋克2077] 你的委托方案已被采纳：${commission.title}`,
+            `你为委托“${commission.title}”提交的方案“${response.preview?.title || response.fileName}”已被采纳，并已进入连段社区审核流程。\n\n审核状态：${response.moderationStatus === 'published' ? '已通过预审核并发布' : '等待维护者审核'}\n投稿编号：${response.moderationSubmissionId || '未知'}`
+          ));
+          commissionsChanged = true;
+        }
+      }
+    }
+
+    if (queueChanged) await writeJson(queueFile, queue);
+    if (commissionsChanged) await writeJson(commissionsFile, commissions);
+    return summary;
+  }
+
   async function incrementDownload(comboId) {
     const operation = downloadWrite.then(async () => {
       const counts = record(await readJson(downloadsFile, {}));
@@ -940,6 +1013,11 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       published: published.charts || [],
       whitelist: emails,
       smtp: smtpPublic(smtp),
+      failedNotifications: [
+        ...(queue.pending || []),
+        ...(queue.history || []),
+        ...commissions.commissions.flatMap((item) => Array.isArray(item.responses) ? item.responses : [])
+      ].reduce((count, item) => count + Number(Boolean(item?.notificationError)) + Number(Boolean(item?.adoptionNotificationError)), 0),
       reviewSettings: moderation,
       downloads: record(downloads),
       hidden,
@@ -966,6 +1044,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     setSmtp: (...args) => serializeMutation(() => setSmtp(...args)),
     setReviewSettings: (...args) => serializeMutation(() => setReviewSettings(...args)),
     testSmtp,
+    resendFailedNotifications: (...args) => serializeMutation(() => resendFailedNotifications(...args)),
     incrementDownload,
     recordDownload,
     publicEngagement,

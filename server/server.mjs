@@ -514,6 +514,13 @@ async function handleAdminApi(req, res, pathname) {
     return;
   }
 
+  if (req.method === 'POST' && pathname === '/api/server/community/smtp/resend-failed') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    sendJson(res, 200, { ok: true, result: await community.resendFailedNotifications() });
+    return;
+  }
+
   if (req.method === 'GET' && pathname === '/api/server/project-assets') {
     const session = requireSession(req, res);
     if (!session) return;

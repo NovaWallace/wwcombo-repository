@@ -135,7 +135,7 @@
             <label><span>发件地址</span><input id="smtpFrom" type="email" placeholder="默认使用 SMTP 账号" /></label>
             <label><span>接收通知邮箱</span><input id="smtpTo" type="email" required /></label>
             <label class="check-row"><input id="smtpSecure" type="checkbox" checked /><span>使用 TLS 安全连接</span></label>
-            <div class="form-actions"><button class="quiet" id="smtpTestBtn" type="button">发送测试邮件</button><button class="primary" type="submit">保存设置</button></div>
+            <div class="form-actions"><button class="quiet" id="smtpTestBtn" type="button">发送测试邮件</button><button class="quiet" id="smtpResendBtn" type="button">补发失败邮件</button><button class="primary" type="submit">保存设置</button></div>
             <p class="form-message" id="smtpMessage" aria-live="polite"></p>
           </form>
         </section>
@@ -203,6 +203,6 @@
         <div class="confirm-actions"><button class="quiet" id="confirmCancelBtn" type="button">取消</button><button class="primary" id="confirmAcceptBtn" type="button">确认</button></div>
       </section>
     </div>
-    <script src="/admin/app.js?v=20260802-1"></script>
+    <script src="/admin/app.js?v=20260802-2"></script>
   </body>
 </html>
