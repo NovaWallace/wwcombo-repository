@@ -90,7 +90,7 @@ const AXIS_ICON_MAPPINGS = [
   ['tool', '工具', '工具.png', ['t', '工具']],
   ['intro', '变奏', '变奏.png', ['b', '变奏']],
   ['outro', '延奏', '延奏.png', ['y', '延奏']],
-  ['finisher', '处决', '处决.png', ['f', '处决', '终结技']],
+  ['finisher', '处决', '处决.png', ['f', 'F', '处决', '终结技']],
   ['forward', '前走', '前走.png', ['w', '前走']],
   ['iii', '3', 'iii.png', ['iii']],
   ['ii', '2', 'ii.png', ['ii']],
@@ -1533,7 +1533,12 @@ function renderCommissionCard(commission) {
   const interestCount = card.querySelector('.commission-interest-count');
   interestCount.textContent = String(interestTotal);
   interestCount.parentElement.setAttribute('aria-label', `${t('commission.interestLabel')}: ${interestTotal}`);
-  card.querySelector('.commission-response-count').textContent = t('commission.responseCount', { count: Number(commission.responseCount || 0) });
+  const rawResponseTotal = Number(commission.responseCount || 0);
+  const responseTotal = Number.isFinite(rawResponseTotal) ? Math.max(0, Math.floor(rawResponseTotal)) : 0;
+  const responseBadge = card.querySelector('.commission-response-badge');
+  responseBadge.hidden = responseTotal < 1;
+  responseBadge.textContent = responseTotal > 0 ? String(responseTotal) : '';
+  responseBadge.setAttribute('aria-label', `${t('commission.responseLabel')}: ${responseTotal}`);
   const interest = card.querySelector('.commission-interest-button');
   const viewerInterested = Boolean(commission.viewerInterested || commission.viewerIsOwner);
   interest.disabled = commission.status === 'completed' || viewerInterested;

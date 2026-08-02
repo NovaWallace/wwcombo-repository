@@ -665,11 +665,12 @@ html[data-theme='day'] .empty-state { border-color: #aebec2; color: #63777e; }
 .commission-owner .profile-avatar { width: 34px; height: 34px; }
 .commission-owner > div { min-width: 0; display: grid; gap: 2px; }
 .commission-owner strong, .commission-owner small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.commission-owner strong { font-size: 12px; }
+.commission-owner strong { font-size: 16px; }
 .commission-owner small { color: var(--muted); font-size: 10px; }
 .commission-owner em { padding: 2px 4px; border: 1px solid #d8ad52; border-radius: 2px; color: #f3cf7d; font-size: 8px; font-style: normal; font-weight: 950; }
-.commission-counts { display: flex; justify-content: flex-end; gap: 12px; color: #c8bd91; font-size: 11px; font-weight: 850; }
-.commission-card-actions { display: grid; grid-template-columns: minmax(72px, .7fr) 1fr; gap: 8px; }
+.commission-response-badge { width: 36px; height: 36px; flex: 0 0 36px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #ff5960; border-radius: 50%; background: #fff; color: #080b0d; font-family: "优设标题黑", "Microsoft YaHei", sans-serif; font-size: 18px; font-weight: 400; line-height: 1; font-variant-numeric: tabular-nums; }
+.commission-response-badge[hidden] { display: none; }
+.commission-card-actions { display: grid; grid-template-columns: minmax(72px, .7fr) minmax(0, 1fr) auto; gap: 8px; }
 .commission-interest-button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid #595f63; border-radius: 4px; background: #202428; color: var(--muted-strong); font-size: 12px; font-weight: 900; cursor: pointer; }
 .commission-interest-button:hover:not(:disabled) { border-color: #d1aa54; color: #f3d58f; }
 .commission-interest-button.selected { border-color: #34795e; background: #10271e; color: #74dbad; }
@@ -749,7 +750,7 @@ html[data-theme='day'] .commission-card::before { background: rgba(255,255,255,.
 html[data-theme='day'] .commission-card:hover { border-color: #b4932f; background: #ffefaa; }
 html[data-theme='day'] .commission-card.completed { border-color: #69a98d; background: #dff3e8; }
 html[data-theme='day'] .commission-card h3, html[data-theme='day'] .commission-owner strong { color: #17282d; }
-html[data-theme='day'] .commission-excerpt, html[data-theme='day'] .commission-counts { color: #665b32; }
+html[data-theme='day'] .commission-excerpt { color: #665b32; }
 html[data-theme='day'] .commission-interest-count { color: #080b0d; }
 html[data-theme='day'] .combo-download-count { color: #080b0d; }
 html[data-theme='day'] .commission-card-side { border-color: rgba(130,102,30,.32); background: rgba(255,255,255,.2); }
