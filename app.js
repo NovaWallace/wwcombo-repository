@@ -50,7 +50,7 @@ const GAMEPAD_ICON_CODES = {
 };
 const MAX_SELECTED_CHARACTERS = 3;
 const DIFFICULTY_ORDER = ['错轮', '冒烟', '进阶', '标准', '基础', '轮椅'];
-const TAG_GRADES = { '轮椅': 'C', '基础': 'B', '标准': 'A', '进阶': 'S', '冒烟': 'SS', '错轮': 'SSS' };
+const TAG_GRADES = { '轮椅': 'C', '基础': 'B', '标准': 'A', '进阶': 'S', '冒烟': 'SS', '错轮': 'S' };
 const ROLE_COLORS = ['#d84f55', '#44c8c6', '#d7ad52'];
 const AXIS_ICON_SIZE = 31;
 const AXIS_AVATAR_SIZE = 34;
@@ -1308,7 +1308,7 @@ function renderCard(chart) {
   const downloadCount = Math.max(0, Math.floor(Number(chart.downloadCount || 0)) || 0);
   const downloadCountNode = card.querySelector('.combo-download-count');
   downloadCountNode.textContent = String(downloadCount);
-  downloadCountNode.parentElement.setAttribute('aria-label', `${t('meta.downloads')}: ${downloadCount}`);
+  downloadCountNode.setAttribute('aria-label', `${t('meta.downloads')}: ${downloadCount}`);
 
   const detailButton = card.querySelector('.detail-button');
   detailButton.setAttribute('aria-label', `${t('card.details')}: ${chart.title || t('card.untitled')}`);
