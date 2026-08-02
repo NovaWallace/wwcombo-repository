@@ -30,7 +30,7 @@ const els = {
   projectAssetEdge: byId('projectAssetEdge'), projectAssetPreview: byId('projectAssetPreview'), projectAssetTitle: byId('projectAssetTitle'), projectAssetMode: byId('projectAssetMode'),
   projectAssetMessage: byId('projectAssetMessage'), deleteProjectAsset: byId('deleteProjectAssetBtn'), newProjectAsset: byId('newProjectAssetBtn'), refreshProjectAssets: byId('refreshProjectAssetsBtn'), syncProjectAssets: byId('syncProjectAssetsBtn'),
   copyProjectApi: byId('copyProjectApiBtn'), projectApiUrl: byId('projectApiUrl'), projectApiRevision: byId('projectApiRevision'),
-  appReleaseForm: byId('appReleaseForm'), appReleaseVersion: byId('appReleaseVersion'), appReleaseTitle: byId('appReleaseTitle'), appReleaseNotes: byId('appReleaseNotes'), appReleaseChinaUrl: byId('appReleaseChinaUrl'), appReleaseGlobalUrl: byId('appReleaseGlobalUrl'),
+  appReleaseForm: byId('appReleaseForm'), appReleaseVersion: byId('appReleaseVersion'), appReleaseTitle: byId('appReleaseTitle'), appReleaseNotes: byId('appReleaseNotes'), appReleaseQuarkUrl: byId('appReleaseQuarkUrl'), appReleaseBaiduUrl: byId('appReleaseBaiduUrl'), appReleaseCloud123Url: byId('appReleaseCloud123Url'), appReleaseGithubUrl: byId('appReleaseGithubUrl'),
   appReleaseCurrent: byId('appReleaseCurrent'), appReleaseMessage: byId('appReleaseMessage')
 };
 
@@ -325,11 +325,12 @@ async function deleteProjectAsset() {
 function formatBytes(value) { const bytes=Math.max(0,Number(value||0));if(bytes<1024)return `${bytes} B`;if(bytes<1024*1024)return `${(bytes/1024).toFixed(1)} KB`;return `${(bytes/1024/1024).toFixed(1)} MB`; }
 function renderAppRelease(release) {
   const legacyExternal = release.download?.url && release.download.url !== '/api/app-release/download' ? release.download.url : '';
-  state.appRelease=release;els.appReleaseVersion.value=release.version||'0.5.0';els.appReleaseTitle.value=release.title||'';els.appReleaseNotes.value=release.notes||'';els.appReleaseChinaUrl.value=release.downloadLinks?.china||'';els.appReleaseGlobalUrl.value=release.downloadLinks?.global||legacyExternal;
-  els.appReleaseCurrent.textContent=release.downloadLinks?.china||release.downloadLinks?.global?'已配置国内和/或海外下载地址。':'尚未填写国内或海外下载地址。';
+  const links = release.downloadLinks || {};
+  state.appRelease=release;els.appReleaseVersion.value=release.version||'0.5.0';els.appReleaseTitle.value=release.title||'';els.appReleaseNotes.value=release.notes||'';els.appReleaseQuarkUrl.value=links.quark||links.china||'';els.appReleaseBaiduUrl.value=links.baidu||'';els.appReleaseCloud123Url.value=links.cloud123||links.lanzou||'';els.appReleaseGithubUrl.value=links.github||links.global||legacyExternal;
+  els.appReleaseCurrent.textContent=[links.quark||links.china,links.baidu,links.cloud123||links.lanzou,links.github||links.global||legacyExternal].some(Boolean)?'已配置一条或多条下载线路。':'尚未填写下载线路。';
 }
 async function loadAppRelease(){const release=await api('/api/server/app-release');renderAppRelease(release);return release;}
-async function saveAppRelease(event){event.preventDefault();els.appReleaseMessage.textContent='正在发布版本信息...';try{const result=await api('/api/server/app-release',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({version:els.appReleaseVersion.value,title:els.appReleaseTitle.value,notes:els.appReleaseNotes.value,chinaDownloadUrl:els.appReleaseChinaUrl.value,globalDownloadUrl:els.appReleaseGlobalUrl.value})});renderAppRelease(result.release);els.appReleaseMessage.textContent='版本 API 已发布，客户端会按语言选择下载地址。';}catch(error){els.appReleaseMessage.textContent=error.message;}}
+async function saveAppRelease(event){event.preventDefault();els.appReleaseMessage.textContent='正在发布版本信息...';try{const result=await api('/api/server/app-release',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({version:els.appReleaseVersion.value,title:els.appReleaseTitle.value,notes:els.appReleaseNotes.value,quarkDownloadUrl:els.appReleaseQuarkUrl.value,baiduDownloadUrl:els.appReleaseBaiduUrl.value,cloud123DownloadUrl:els.appReleaseCloud123Url.value,githubDownloadUrl:els.appReleaseGithubUrl.value})});renderAppRelease(result.release);els.appReleaseMessage.textContent='版本 API 已发布，四条下载线路已保存。';}catch(error){els.appReleaseMessage.textContent=error.message;}}
 
 document.querySelectorAll('[data-tab]').forEach((tab)=>tab.addEventListener('click',()=>switchTab(tab.dataset.tab)));
 document.querySelectorAll('[data-refresh]').forEach((item)=>item.addEventListener('click',()=>loadStatus()));

@@ -86,8 +86,10 @@
               <label><span>最新版本</span><input id="appReleaseVersion" inputmode="numeric" placeholder="0.2.1" required /></label>
               <label><span>更新标题</span><input id="appReleaseTitle" maxlength="120" placeholder="WW Combo Trainer 0.2.1" /></label>
               <label class="release-notes"><span>更新说明</span><textarea id="appReleaseNotes" maxlength="4000" rows="4" placeholder="每行填写一项主要改动"></textarea></label>
-              <label class="release-url-cn"><span>国内下载地址（夸克网盘）</span><input id="appReleaseChinaUrl" type="url" placeholder="中文客户端使用的夸克链接" /></label>
-              <label class="release-url-global"><span>海外下载地址（GitHub）</span><input id="appReleaseGlobalUrl" type="url" placeholder="其他语言客户端使用的 GitHub 链接" /></label>
+              <label class="release-url-quark"><span>夸克网盘</span><input id="appReleaseQuarkUrl" type="url" placeholder="填写夸克网盘链接" /></label>
+              <label class="release-url-baidu"><span>百度网盘</span><input id="appReleaseBaiduUrl" type="url" placeholder="填写百度网盘链接" /></label>
+              <label class="release-url-cloud123"><span>123 云盘</span><input id="appReleaseCloud123Url" type="url" placeholder="填写 123 云盘链接" /></label>
+              <label class="release-url-github"><span>GitHub</span><input id="appReleaseGithubUrl" type="url" placeholder="填写 GitHub Release 链接" /></label>
             </div>
             <div class="release-current" id="appReleaseCurrent">尚未配置下载地址。</div>
             <div class="release-actions"><p class="form-message" id="appReleaseMessage" aria-live="polite"></p><button class="primary" type="submit">发布版本信息</button></div>

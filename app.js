@@ -327,6 +327,10 @@ const els = {
   submissionButton: document.getElementById('submissionButton'),
   submissionButtonLabel: document.getElementById('submissionButtonLabel'),
   clientDownloadButton: document.getElementById('clientDownloadButton'),
+  clientDownloadBackdrop: document.getElementById('clientDownloadBackdrop'),
+  closeClientDownload: document.getElementById('closeClientDownloadBtn'),
+  clientDownloadList: document.getElementById('clientDownloadList'),
+  clientDownloadVersion: document.getElementById('clientDownloadVersion'),
   profileButton: document.getElementById('profileButton'),
   profileAvatar: document.getElementById('profileAvatar'),
   profileName: document.getElementById('profileName'),
@@ -582,11 +586,29 @@ function appReleaseManifestUrl() {
   return `${APP_RELEASE_FALLBACK_ORIGIN}${APP_RELEASE_MANIFEST_PATH}`;
 }
 
+const CLIENT_DOWNLOAD_CHANNELS = [
+  { key: 'quark', label: '夸克网盘', icon: 'cloud-download' },
+  { key: 'baidu', label: '百度网盘', icon: 'cloud' },
+  { key: 'cloud123', label: '123 云盘', icon: 'archive' },
+  { key: 'github', label: 'GitHub', icon: 'github' }
+];
+
+function appReleaseDownloadLinks(release) {
+  const links = release?.downloadLinks && typeof release.downloadLinks === 'object' ? release.downloadLinks : {};
+  const valid = (value) => typeof value === 'string' && /^https?:\/\//i.test(value) ? value : '';
+  return {
+    quark: valid(links.quark || links.china),
+    baidu: valid(links.baidu),
+    cloud123: valid(links.cloud123 || links.lanzou),
+    github: valid(links.github || links.global)
+  };
+}
+
 function appReleaseDownloadUrl(release, language = i18n.language) {
-  const links = release?.downloadLinks;
-  if (!links || typeof links !== 'object') return '';
-  const value = language === 'zh-CN' ? links.china : links.global;
-  return typeof value === 'string' && /^https?:\/\//i.test(value) ? value : '';
+  const links = appReleaseDownloadLinks(release);
+  return language === 'zh-CN'
+    ? links.quark || links.baidu || links.cloud123 || links.github
+    : links.github || links.quark || links.baidu || links.cloud123;
 }
 
 function refreshClientDownloadControl() {
@@ -595,11 +617,44 @@ function refreshClientDownloadControl() {
     els.clientDownloadButton.style.display = 'none';
     return;
   }
-  const hasLink = Boolean(appReleaseDownloadUrl(state.appRelease));
+  const hasLink = Object.values(appReleaseDownloadLinks(state.appRelease)).some(Boolean);
   els.clientDownloadButton.disabled = state.appReleaseState === 'loading';
   els.clientDownloadButton.setAttribute('aria-busy', state.appReleaseState === 'loading' ? 'true' : 'false');
-  els.clientDownloadButton.title = hasLink ? (i18n.language === 'zh-CN' ? '下载客户端' : 'Download client') : (i18n.language === 'zh-CN' ? '暂未配置客户端下载地址' : 'Client download is not configured');
+  els.clientDownloadButton.title = hasLink ? '下载客户端' : '下载线路尚未配置';
   els.clientDownloadButton.setAttribute('aria-label', els.clientDownloadButton.title);
+}
+
+function renderClientDownloadOptions() {
+  if (!els.clientDownloadList) return;
+  const links = appReleaseDownloadLinks(state.appRelease);
+  els.clientDownloadVersion.textContent = state.appRelease?.version ? '当前版本：' + state.appRelease.version : '当前版本信息暂不可用';
+  els.clientDownloadList.replaceChildren(...CLIENT_DOWNLOAD_CHANNELS.map((channel) => {
+    const url = links[channel.key];
+    const item = document.createElement(url ? 'a' : 'div');
+    item.className = 'client-download-option' + (url ? '' : ' unavailable');
+    if (url) {
+      item.href = url;
+      item.target = '_blank';
+      item.rel = 'noopener noreferrer';
+    }
+    const icon = document.createElement('span');
+    icon.className = 'client-download-option-icon';
+    icon.innerHTML = '<i data-lucide="' + channel.icon + '" aria-hidden="true"></i>';
+    const copy = document.createElement('span');
+    copy.className = 'client-download-option-copy';
+    const title = document.createElement('strong');
+    title.textContent = channel.label;
+    const status = document.createElement('small');
+    status.textContent = url ? '点击打开下载地址' : '维护端尚未配置';
+    copy.append(title, status);
+    const arrow = document.createElement('i');
+    arrow.className = 'client-download-option-arrow';
+    arrow.dataset.lucide = url ? 'external-link' : 'minus';
+    arrow.setAttribute('aria-hidden', 'true');
+    item.append(icon, copy, arrow);
+    return item;
+  }));
+  window.lucide?.createIcons();
 }
 
 function maskProfileEmail(value) {
@@ -1215,16 +1270,17 @@ window.addEventListener('message', (event) => {
 });
 
 async function openClientDownload() {
-  const popup = window.open('about:blank', '_blank');
   if (!state.appRelease) await loadAppRelease();
-  const url = appReleaseDownloadUrl(state.appRelease);
-  if (!url) {
-    popup?.close();
-    refreshClientDownloadControl();
-    return;
-  }
-  if (popup) popup.location.href = url;
-  else window.location.href = url;
+  renderClientDownloadOptions();
+  els.clientDownloadBackdrop.hidden = false;
+  syncModalBody();
+  requestAnimationFrame(() => els.closeClientDownload?.focus());
+}
+
+function closeClientDownload() {
+  if (!els.clientDownloadBackdrop || els.clientDownloadBackdrop.hidden) return;
+  els.clientDownloadBackdrop.hidden = true;
+  syncModalBody();
 }
 
 function availableCharacters() {
@@ -2743,6 +2799,8 @@ els.commissionWithdraw?.addEventListener('click', () => { if (state.commissionDe
 els.languageSelect?.addEventListener('change', () => i18n.setLanguage(els.languageSelect.value));
 window.addEventListener('wwcombo-languagechange', refreshLocalizedView);
 els.clientDownloadButton?.addEventListener('click', () => { void openClientDownload(); });
+els.closeClientDownload?.addEventListener('click', closeClientDownload);
+els.clientDownloadBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.clientDownloadBackdrop) closeClientDownload(); });
 els.title.addEventListener('input', () => { state.title = els.title.value; render(); });
 els.clearTitle.addEventListener('click', () => { state.title = ''; els.title.value = ''; els.title.focus(); render(); });
 els.characterPickerButton.addEventListener('click', openCharacterPicker);
@@ -2791,6 +2849,7 @@ window.addEventListener('resize', () => {
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
   if (!els.appDialogBackdrop.hidden) closeAppDialog(false);
+  else if (!els.clientDownloadBackdrop.hidden) closeClientDownload();
   else if (!els.feedbackBackdrop.hidden) closeFeedback();
   else if (!els.uploadBackdrop.hidden) closeUpload();
   else if (!els.profileBackdrop.hidden) closeProfile();

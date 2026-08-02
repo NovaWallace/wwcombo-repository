@@ -127,18 +127,18 @@ function normalizeRelease(value, previous = {}) {
   const previousManagedDownload = previousDownload?.url === '/api/app-release/download';
   const previousLinks = previous.downloadLinks && typeof previous.downloadLinks === 'object' ? previous.downloadLinks : {};
   const suppliedLinks = value?.downloadLinks && typeof value.downloadLinks === 'object' ? value.downloadLinks : {};
-  const fallbackChinaUrl = previousLinks.china ?? '';
-  const fallbackGlobalUrl = previous.globalDownloadUrl ?? previousLinks.global ?? (!previousManagedDownload ? previousDownload?.url : '');
-  const requestedChinaUrl = value?.chinaDownloadUrl !== undefined
-    ? value.chinaDownloadUrl
-    : suppliedLinks.china !== undefined ? suppliedLinks.china : fallbackChinaUrl;
-  const requestedGlobalUrl = value?.globalDownloadUrl !== undefined
-    ? value.globalDownloadUrl
-    : suppliedLinks.global !== undefined ? suppliedLinks.global : value?.downloadUrl !== undefined ? value.downloadUrl : fallbackGlobalUrl;
-  const chinaDownloadUrl = cleanText(requestedChinaUrl, 1000);
-  const globalDownloadUrl = cleanText(requestedGlobalUrl, 1000);
-  if (chinaDownloadUrl && !/^https?:\/\//i.test(chinaDownloadUrl)) throw new Error('国内下载地址必须以 http:// 或 https:// 开头。');
-  if (globalDownloadUrl && !/^https?:\/\//i.test(globalDownloadUrl)) throw new Error('海外下载地址必须以 http:// 或 https:// 开头。');
+  const fallbackQuarkUrl = previousLinks.quark ?? previousLinks.china ?? '';
+  const fallbackGithubUrl = previousLinks.github ?? previousLinks.global ?? previous.globalDownloadUrl ?? (!previousManagedDownload ? previousDownload?.url : '');
+  const requestedLinks = {
+    quark: value?.quarkDownloadUrl !== undefined ? value.quarkDownloadUrl : suppliedLinks.quark !== undefined ? suppliedLinks.quark : value?.chinaDownloadUrl !== undefined ? value.chinaDownloadUrl : fallbackQuarkUrl,
+    baidu: value?.baiduDownloadUrl !== undefined ? value.baiduDownloadUrl : suppliedLinks.baidu ?? '',
+    cloud123: value?.cloud123DownloadUrl !== undefined ? value.cloud123DownloadUrl : suppliedLinks.cloud123 ?? suppliedLinks.lanzou ?? '',
+    github: value?.githubDownloadUrl !== undefined ? value.githubDownloadUrl : suppliedLinks.github !== undefined ? suppliedLinks.github : value?.globalDownloadUrl !== undefined ? value.globalDownloadUrl : value?.downloadUrl !== undefined ? value.downloadUrl : fallbackGithubUrl
+  };
+  const downloadLinks = Object.fromEntries(Object.entries(requestedLinks).map(([key, url]) => [key, cleanText(url, 1000)]));
+  for (const [key, url] of Object.entries(downloadLinks)) {
+    if (url && !/^https?:\/\//i.test(url)) throw new Error('Download link ' + key + ' must use http:// or https://.');
+  }
   const download = suppliedDownload || (previousManagedDownload ? previousDownload : null);
   return {
     schemaVersion: 1,
@@ -148,8 +148,9 @@ function normalizeRelease(value, previous = {}) {
     publishedAt: cleanText(value?.publishedAt ?? previous.publishedAt, 60) || new Date().toISOString(),
     download,
     downloadLinks: {
-      china: chinaDownloadUrl,
-      global: globalDownloadUrl
+      ...downloadLinks,
+      china: downloadLinks.quark,
+      global: downloadLinks.github
     }
   };
 }

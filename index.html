@@ -505,6 +505,27 @@
       </section>
     </div>
 
+    <div class="modal-backdrop client-download-backdrop" id="clientDownloadBackdrop" hidden>
+      <section class="client-download-dialog" role="dialog" aria-modal="true" aria-labelledby="clientDownloadTitle">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">CLIENT DOWNLOAD</p>
+            <h2 id="clientDownloadTitle">下载线路</h2>
+            <p id="clientDownloadVersion">当前版本信息暂不可用</p>
+          </div>
+          <button class="icon-button" id="closeClientDownloadBtn" type="button" title="关闭" aria-label="关闭下载线路窗口">
+            <i data-lucide="x" aria-hidden="true"></i>
+          </button>
+        </header>
+        <div class="client-download-intro" aria-label="下载线路说明">
+          <p>我们这破玩意真的需要4个线路吗</p>
+          <p>你不懂，这是主的启示，只有这样我们才能乘坐橙色的鲸鱼上到天堂</p>
+          <p>你tm这是哪个天堂</p>
+        </div>
+        <div class="client-download-list" id="clientDownloadList"></div>
+      </section>
+    </div>
+
     <input id="axisKeymapInput" class="sr-only" type="file" accept=".json,.wwkeys.json,application/json" />
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
