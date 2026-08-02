@@ -258,8 +258,28 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .detail-dialog { width: min(1420px, 100%); height: min(860px, calc(100vh - 48px)); grid-template-rows: auto minmax(0, 1fr); }
 .upload-preview-dialog { width: min(1420px, 100%); height: min(860px, calc(100vh - 48px)); grid-template-rows: auto minmax(0, 1fr); }
 .upload-layout { min-height: 0; display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); }
-.upload-info { min-height: 0; grid-template-rows: auto auto minmax(20px, 1fr) auto; align-content: stretch; padding: 20px 22px 0; border-right: 1px solid var(--line); }
-.upload-info .file-drop { min-height: 210px; }
+.upload-info { min-height: 0; grid-template-rows: auto auto minmax(0, 1fr) auto auto; align-content: stretch; padding: 20px 22px 0; border-right: 1px solid var(--line); }
+.upload-info .file-drop { min-height: 64px; height: 64px; grid-template-columns: 24px minmax(0, 1fr); grid-template-rows: auto auto; place-items: start; align-content: center; column-gap: 11px!important; padding: 8px 14px; text-align: left; }
+.upload-info .file-drop svg { grid-row: 1 / 3; align-self: center; width: 24px; height: 24px; }
+.client-combo-picker { min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; }
+.client-combo-picker[hidden] { display: none; }
+.client-combo-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.client-combo-picker-head > div { min-width: 0; display: grid; gap: 2px; }
+.client-combo-picker-head strong { color: var(--text); font-size: 12px; }
+.client-combo-picker-head span { color: var(--muted); font-size: 10px; }
+.client-combo-picker-head button { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 3px; background: var(--surface-raised); color: var(--muted-strong); cursor: pointer; }
+.client-combo-picker-head button:hover { border-color: #787f83; color: var(--text); }
+.client-combo-picker-head button svg { width: 14px; height: 14px; }
+.client-combo-list { min-height: 0; display: grid; align-content: start; gap: 7px; overflow: auto; padding-right: 3px; }
+.client-combo-card { min-width: 0; min-height: 64px; display: grid; justify-items: start; align-content: center; gap: 4px; padding: 8px 11px; border: 1px solid #41484c; border-radius: 3px; background: #202529; color: var(--text); text-align: left; cursor: pointer; }
+.client-combo-card:hover { border-color: #767d81; background: #282d31; }
+.client-combo-card.selected { border-color: #f5c542; background: #332d16; box-shadow: inset 3px 0 0 #f5c542; }
+.client-combo-card:disabled { cursor: wait; opacity: .72; }
+.client-combo-card strong,.client-combo-card span,.client-combo-card small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.client-combo-card strong { font-size: 12px; }
+.client-combo-card span { color: #f0c96a; font-size: 10px; }
+.client-combo-card small { color: var(--muted); font-size: 9px; }
+.client-combo-empty { padding: 18px 10px; border: 1px dashed var(--line); color: var(--muted); font-size: 11px; text-align: center; }
 .upload-info .form-feedback { align-self: start; }
 .upload-axis-panel { min-height: 0; }
 .detail-header { align-items: center; padding: 17px 20px; }
@@ -309,6 +329,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .axis-keymap-import { height: 28px; display: inline-flex; align-items: center; gap: 6px; padding: 0 9px; border: 1px solid #856322; border-radius: 3px; background: #231d11; color: #f1cb75; font-size: 9px; font-weight: 900; white-space: nowrap; cursor: pointer; }
 .axis-keymap-import:hover { border-color: #c99b3c; background: #302615; color: #ffe29c; }
 .axis-keymap-import.loaded { border-color: #347a61; background: #11271f; color: #78dfb4; }
+.axis-keymap-import:disabled { cursor: default; opacity: 1; }
 .axis-keymap-import svg { width: 14px; height: 14px; }
 .axis-preview { width: 100%; min-width: 0; min-height: 0; display: grid; align-content: start; gap: 18px; padding: 18px; overflow-x: hidden; overflow-y: auto; background-color: #0d1012; background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 24px 24px; }
 .axis-group { min-width: 0; display: grid; gap: calc(9px * var(--axis-scale, 1)); }
@@ -511,6 +532,11 @@ html[data-theme='day'] .upload-dialog { border-color: #91a5ab; background: #ffff
 html[data-theme='day'] .account-form input { border-color:#adbdc1; background:#fff; color:#17282d; }
 html[data-theme='day'] .upload-identity { border-color:#bdcacc; background:#f4f8f9; }
 html[data-theme='day'] .file-drop { border-color:#8fa4aa!important; background:#f3f7f8; }
+html[data-theme='day'] .client-combo-picker-head button { border-color:#adbdc1; background:#edf3f4; color:#314950; }
+html[data-theme='day'] .client-combo-card { border-color:#c8d4d7; background:#f7fafb; color:#17282d; }
+html[data-theme='day'] .client-combo-card:hover { border-color:#91a5ab; background:#edf4f5; }
+html[data-theme='day'] .client-combo-card.selected { border-color:#b98b00; background:#fff8d9; box-shadow:inset 3px 0 0 #d6a500; }
+html[data-theme='day'] .client-combo-card span { color:#8a6500; }
 html[data-theme='day'] .modal-header { border-color: #cdd9dc; }
 html[data-theme='day'] .icon-button { border-color: #aebdc1; background: #edf3f4; color: #22373e; }
 html[data-theme='day'] .icon-button:hover { border-color: #75898f; background: #dfe9eb; }

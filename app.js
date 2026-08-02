@@ -1,4 +1,4 @@
-const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/icons/character';
+const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/batch-icons/character';
 const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
 const UNKNOWN_CHARACTER_ICON = './assets/unknown-character.jpg';
 const APP_RELEASE_MANIFEST_PATH = '/api/project-assets/v1/app-release.json';
@@ -217,17 +217,23 @@ function keyboardMouseIconWidthScale(code) {
 }
 
 function normalizeAxisKeySettings(value) {
-  if (!value || typeof value !== 'object' || value.kind !== 'wwcombo-input-settings' || ![1, 2].includes(value.schemaVersion)) throw new Error('invalid-key-settings');
+  if (!value || typeof value !== 'object' || value.kind !== 'wwcombo-input-settings' || ![1, 2, 3].includes(value.schemaVersion)) throw new Error('invalid-key-settings');
   if (!Array.isArray(value.keyboardMouseBindings) || !Array.isArray(value.gamepadBindings)) throw new Error('invalid-key-settings');
   const normalizeBindings = (items) => items.flatMap((item) => {
     if (!item || typeof item.moveId !== 'string' || !Array.isArray(item.inputs)) return [];
     const inputs = item.inputs.flatMap((input) => input && typeof input.code === 'string' && input.code.trim() ? [{ code: input.code.trim(), label: String(input.label || input.code).trim() }] : []);
     return inputs.length ? [{ moveId: item.moveId.trim(), inputs }] : [];
   });
+  const customIconSources = value.customIconSources && typeof value.customIconSources === 'object' && !Array.isArray(value.customIconSources)
+    ? Object.fromEntries(Object.entries(value.customIconSources)
+      .filter(([key, source]) => key.length <= 96 && typeof source === 'string' && source.length <= 180000 && /^data:image\/(?:png|jpe?g|webp|gif);base64,/iu.test(source))
+      .slice(0, 64))
+    : {};
   return {
     kind: 'wwcombo-input-settings', schemaVersion: value.schemaVersion,
     keyboardMouseBindings: normalizeBindings(value.keyboardMouseBindings),
     gamepadBindings: normalizeBindings(value.gamepadBindings),
+    customIconSources,
     preferences: {
       inputMode: value.preferences?.inputMode === 'gamepad' ? 'gamepad' : 'keyboard',
       keyboardIconMode: value.preferences?.keyboardIconMode === 'actual' ? 'actual' : 'default',
@@ -275,8 +281,12 @@ const state = {
   detailOptions: null,
   uploadChart: null,
   uploadPackage: null,
+  uploadSource: null,
   uploadMode: 'community',
   uploadCommissionId: '',
+  clientLibrary: [],
+  clientLibraryLoadingId: '',
+  pendingUploadIntent: null,
   commissionLoadState: 'idle',
   commissionUpdatedAt: 0,
   commissionCreateCharacters: [],
@@ -340,6 +350,9 @@ const els = {
   uploadEmail: document.getElementById('uploadEmail'),
   comboFile: document.getElementById('comboFileInput'),
   comboFileName: document.getElementById('comboFileName'),
+  clientComboPicker: document.getElementById('clientComboPicker'),
+  clientComboList: document.getElementById('clientComboList'),
+  refreshClientCombos: document.getElementById('refreshClientCombosBtn'),
   uploadAxisSection: document.getElementById('uploadAxisSection'),
   uploadAxisPreview: document.getElementById('uploadAxisPreview'),
   uploadAxisSummary: document.getElementById('uploadAxisSummary'),
@@ -640,19 +653,22 @@ function openProfile() {
 }
 
 function closeProfile() {
+  state.pendingUploadIntent = null;
   state.profileDraftAvatar = state.profile.avatar;
   els.profileBackdrop.hidden = true;
   syncModalBody();
 }
 
-function openUpload(commissionId = '') {
+function openUpload(commissionId = '', initialPackage = null) {
   if (!state.profile.username || !state.profile.email) {
+    state.pendingUploadIntent = { commissionId, initialPackage };
     openProfile();
     els.profileFeedback.textContent = t('profile.required');
     return;
   }
   state.uploadChart = null;
   state.uploadPackage = null;
+  state.uploadSource = null;
   state.uploadMode = commissionId ? 'commission' : 'community';
   state.uploadCommissionId = commissionId;
   if (commissionId && !els.commissionDetailBackdrop.hidden) {
@@ -669,16 +685,20 @@ function openUpload(commissionId = '') {
   els.comboFile.value = '';
   els.comboFileName.textContent = t('upload.none');
   resetUploadAxisPreview();
+  renderClientComboPicker();
+  requestClientLibrary();
   els.uploadFeedback.textContent = '';
   els.uploadFeedback.className = 'form-feedback';
   els.uploadBackdrop.hidden = false;
   document.body.style.overflow = 'hidden';
-}
+  if (initialPackage) applyUploadPackage(initialPackage, 'client');
+ }
 
 function closeUpload() {
   uploadPreviewToken += 1;
   state.uploadChart = null;
   state.uploadPackage = null;
+  state.uploadSource = null;
   state.uploadMode = 'community';
   state.uploadCommissionId = '';
   els.uploadBackdrop.hidden = true;
@@ -720,6 +740,77 @@ function renderUploadAxisPreview() {
   renderAxisPreview(state.uploadPackage, state.uploadChart, { preview: els.uploadAxisPreview, summary: els.uploadAxisSummary });
 }
 
+function normalizedClientUploadPackage(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const filename = typeof value.filename === 'string' ? value.filename.trim().slice(0, 180) : '';
+  const chartId = typeof value.chartId === 'string' ? value.chartId.trim().slice(0, 160) : '';
+  if (!filename || !value.payload || typeof value.payload !== 'object') return null;
+  return { chartId, filename, payload: value.payload };
+}
+
+function applyUploadPackage(value, source = 'client') {
+  const packageValue = normalizedClientUploadPackage(value);
+  if (!packageValue) return false;
+  uploadPreviewToken += 1;
+  state.uploadSource = { ...packageValue, source };
+  state.uploadPackage = packageValue.payload;
+  state.uploadChart = uploadedIndexChart(packageValue.payload, packageValue.filename);
+  els.comboFile.value = '';
+  els.comboFileName.textContent = packageValue.filename;
+  els.uploadFeedback.textContent = '';
+  els.uploadFeedback.className = 'form-feedback';
+  renderUploadAxisPreview();
+  renderClientComboPicker();
+  return true;
+}
+
+function requestClientLibrary() {
+  if (!isEmbeddedClient) return;
+  window.parent.postMessage({ type: 'wwcombo:community-library-request', version: 1 }, '*');
+}
+
+const pendingClientLibraryRequests = new Map();
+
+function requestClientLibraryItem(chartId) {
+  if (!isEmbeddedClient || !chartId || state.clientLibraryLoadingId) return;
+  const requestId = `library-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  state.clientLibraryLoadingId = chartId;
+  pendingClientLibraryRequests.set(requestId, chartId);
+  renderClientComboPicker();
+  window.parent.postMessage({ type: 'wwcombo:community-library-item-request', version: 1, requestId, chartId }, '*');
+}
+
+function renderClientComboPicker() {
+  if (!els.clientComboPicker || !els.clientComboList) return;
+  els.clientComboPicker.hidden = !isEmbeddedClient;
+  if (!isEmbeddedClient) return;
+  const selectedChartId = state.uploadSource?.source === 'client' ? state.uploadSource.chartId : '';
+  const nodes = state.clientLibrary.map((item) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `client-combo-card${selectedChartId === item.id ? ' selected' : ''}`;
+    button.dataset.chartId = item.id;
+    button.disabled = Boolean(state.clientLibraryLoadingId);
+    const title = document.createElement('strong');
+    title.textContent = item.title || t('card.untitled');
+    const characters = document.createElement('span');
+    characters.textContent = item.characters.length ? item.characters.join(' / ') : t('card.charactersMissing');
+    const meta = document.createElement('small');
+    meta.textContent = state.clientLibraryLoadingId === item.id
+      ? t('upload.localComboLoading')
+      : `${t('unit.actions', { count: item.stepCount })} · ${formatDate(item.updatedAt)}`;
+    button.append(title, characters, meta);
+    return button;
+  });
+  if (!nodes.length) {
+    const empty = document.createElement('div');
+    empty.className = 'client-combo-empty';
+    empty.textContent = t('upload.localCombosEmpty');
+    nodes.push(empty);
+  }
+  els.clientComboList.replaceChildren(...nodes);
+}
+
 async function previewUploadFile() {
   const file = els.comboFile.files?.[0];
   const previewToken = ++uploadPreviewToken;
@@ -728,6 +819,7 @@ async function previewUploadFile() {
   els.uploadFeedback.className = 'form-feedback';
   state.uploadChart = null;
   state.uploadPackage = null;
+  state.uploadSource = null;
   els.uploadAxisPreview.replaceChildren();
   if (!file) {
     resetUploadAxisPreview();
@@ -743,9 +835,7 @@ async function previewUploadFile() {
   try {
     const content = JSON.parse((await file.text()).replace(/^\ufeff/, ''));
     if (previewToken !== uploadPreviewToken || els.comboFile.files?.[0] !== file) return;
-    state.uploadPackage = content;
-    state.uploadChart = uploadedIndexChart(content, file.name);
-    renderUploadAxisPreview();
+    applyUploadPackage({ chartId: '', filename: file.name, payload: content }, 'file');
   } catch (error) {
     if (previewToken !== uploadPreviewToken || els.comboFile.files?.[0] !== file) return;
     els.uploadAxisPreview.replaceChildren();
@@ -759,21 +849,21 @@ async function previewUploadFile() {
 
 async function submitCombo(event) {
   event.preventDefault();
-  const file = els.comboFile.files?.[0];
-  if (!file) return;
-  if (file.size > 1024 * 1024) {
+  const source = state.uploadSource;
+  if (!source) return;
+  const serialized = JSON.stringify(source.payload);
+  if (new TextEncoder().encode(serialized).byteLength > 1024 * 1024) {
     els.uploadFeedback.textContent = t('upload.tooLarge');
     return;
   }
   els.confirmUpload.disabled = true;
   els.uploadFeedback.textContent = t('upload.sending');
   try {
-    const content = JSON.parse((await file.text()).replace(/^\ufeff/, ''));
     const commissionId = state.uploadMode === 'commission' ? state.uploadCommissionId : '';
     const response = await fetch(commissionId ? `/api/community/commissions/${encodeURIComponent(commissionId)}/responses` : '/api/community/submit', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: state.profile.username, email: state.profile.email, avatar: state.profile.avatar, fileName: file.name, content })
+      body: JSON.stringify({ username: state.profile.username, email: state.profile.email, avatar: state.profile.avatar, fileName: source.filename, content: source.payload })
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
@@ -784,7 +874,9 @@ async function submitCombo(event) {
     els.comboFileName.textContent = t('upload.none');
     state.uploadChart = null;
     state.uploadPackage = null;
+    state.uploadSource = null;
     resetUploadAxisPreview();
+    renderClientComboPicker();
     if (commissionId && body.commission) {
       replaceCommission(body.commission);
       state.commissionDetail = body.commission;
@@ -1076,6 +1168,40 @@ function updateEmbeddedClientControls(imported = false) {
 window.addEventListener('message', (event) => {
   if (!isEmbeddedClient || event.source !== window.parent || !event.data || typeof event.data !== 'object') return;
   const result = event.data;
+  if (result.type === 'wwcombo:community-input-settings' && result.version === 1) {
+    try { applyAxisKeySettings(result.settings, 'WW Combo Trainer'); } catch {}
+    return;
+  }
+  if (result.type === 'wwcombo:community-library' && result.version === 1 && Array.isArray(result.items)) {
+    state.clientLibrary = result.items.slice(0, 200).flatMap((item) => {
+      if (!item || typeof item !== 'object' || typeof item.id !== 'string' || !item.id.trim()) return [];
+      return [{
+        id: item.id.trim().slice(0, 160),
+        title: typeof item.title === 'string' ? item.title.trim().slice(0, 120) : '',
+        characters: Array.isArray(item.characters) ? item.characters.filter((name) => typeof name === 'string' && name.trim()).map((name) => name.trim().slice(0, 80)).slice(0, 3) : [],
+        stepCount: Math.max(0, Math.round(Number(item.stepCount) || 0)),
+        updatedAt: Number(item.updatedAt) || 0
+      }];
+    });
+    renderClientComboPicker();
+    return;
+  }
+  if (result.type === 'wwcombo:community-upload' && result.version === 1) {
+    const packageValue = normalizedClientUploadPackage(result.package);
+    if (packageValue) openUpload('', packageValue);
+    return;
+  }
+  if (result.type === 'wwcombo:community-library-item-result' && result.version === 1 && typeof result.requestId === 'string') {
+    const chartId = pendingClientLibraryRequests.get(result.requestId);
+    if (chartId === undefined) return;
+    pendingClientLibraryRequests.delete(result.requestId);
+    state.clientLibraryLoadingId = '';
+    if (result.ok && applyUploadPackage(result.package, 'client')) return;
+    els.uploadFeedback.textContent = String(result.detail || t('upload.localComboFailed'));
+    els.uploadFeedback.className = 'form-feedback';
+    renderClientComboPicker();
+    return;
+  }
   if (result.type !== 'wwcombo:community-import-result' || result.version !== 1 || typeof result.requestId !== 'string') return;
   const comboId = pendingClientImports.get(result.requestId);
   if (comboId === undefined) return;
@@ -1341,21 +1467,28 @@ function commissionInterestSortCount(commission) {
 
 function commissionCreatedAt(commission) {
   const value = Number(commission?.createdAt || 0);
-  return Number.isFinite(value) && value > 0 ? value : Number.MAX_SAFE_INTEGER;
+  return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
 function filteredCommissions() {
   const titleQuery = normalizeText(state.title);
-  return state.commissions.filter((commission) => {
+  const commissions = state.commissions.filter((commission) => {
     const titleMatches = !titleQuery || normalizeText(commission.title).includes(titleQuery);
     const characterMatches = state.characters.every((name) => commissionCharacters(commission).includes(name));
     return titleMatches && characterMatches;
-  }).sort((left, right) =>
-    commissionInterestSortCount(right) - commissionInterestSortCount(left)
-    || commissionCreatedAt(left) - commissionCreatedAt(right)
-    || collator.compare(left.title || '', right.title || '')
-    || collator.compare(left.id || '', right.id || '')
-  );
+  });
+  const topInterestCounts = new Set([...new Set(commissions.map(commissionInterestSortCount))].sort((left, right) => right - left).slice(0, 3));
+  return commissions.sort((left, right) => {
+    const leftInterest = commissionInterestSortCount(left);
+    const rightInterest = commissionInterestSortCount(right);
+    const leftIsTop = topInterestCounts.has(leftInterest);
+    const rightIsTop = topInterestCounts.has(rightInterest);
+    if (leftIsTop !== rightIsTop) return leftIsTop ? -1 : 1;
+    if (leftIsTop && leftInterest !== rightInterest) return rightInterest - leftInterest;
+    return commissionCreatedAt(right) - commissionCreatedAt(left)
+      || collator.compare(left.title || '', right.title || '')
+      || collator.compare(left.id || '', right.id || '');
+  });
 }
 
 function commissionStatusLabel(commission) {
@@ -1925,6 +2058,11 @@ function axisBindingCode(moveId, mode) {
   return source?.find((binding) => binding.moveId === moveId)?.inputs.find((input) => input.code)?.code || '';
 }
 
+function axisCustomIconSource(mode, code) {
+  const key = window.WWComboInputIcons?.inputIconCustomizationKey?.(mode, code);
+  return key ? String(state.axisKeySettings?.customIconSources?.[key] || '') : '';
+}
+
 function axisLabelMatchesMove(label, moveId) {
   const value = String(label || '').trim();
   if (!value || value.includes('[') || value.includes(']')) return !value;
@@ -1949,10 +2087,10 @@ function axisStepDisplay(step, labels) {
   if (!state.axisKeySettings || !axisLabelMatchesMove(custom, step.moveId) || state.axisIconSet === 'graphic') return { label, iconSrc: '', iconWidthScale: 1 };
   if (state.axisIconSet === 'english') {
     const code = axisBindingCode(step.moveId, 'keyboard');
-    return { label, iconSrc: code ? keyboardMouseIconSource(code) || '' : '', iconWidthScale: keyboardMouseIconWidthScale(code) };
+    return { label, iconSrc: code ? axisCustomIconSource('keyboard', code) || keyboardMouseIconSource(code) || '' : '', iconWidthScale: keyboardMouseIconWidthScale(code) };
   }
   const code = axisBindingCode(step.moveId, 'gamepad');
-  return { label, iconSrc: code ? gamepadIconSource(code, state.axisIconSet) || '' : '', iconWidthScale: code.includes('+') ? 49 / AXIS_ICON_SIZE : 1 };
+  return { label, iconSrc: code ? axisCustomIconSource('gamepad', code) || gamepadIconSource(code, state.axisIconSet) || '' : '', iconWidthScale: code.includes('+') ? 49 / AXIS_ICON_SIZE : 1 };
 }
 
 function axisIconParts(value) {
@@ -2087,26 +2225,34 @@ function renderAxisIconSet() {
 }
 
 function renderAxisKeymapButtons() {
+  const syncedFromClient = isEmbeddedClient && state.axisKeySettingsFile === 'WW Combo Trainer';
   for (const button of els.axisKeymapButtons) {
     button.classList.toggle('loaded', Boolean(state.axisKeySettings));
+    button.disabled = syncedFromClient;
+    const label = button.querySelector('span');
+    if (label) label.textContent = syncedFromClient ? t('axis.keysSynced') : t('axis.importKeys');
     button.title = state.axisKeySettings
-      ? t('axis.keysImported', { file: state.axisKeySettingsFile || 'wwcombo-input-settings' })
+      ? syncedFromClient ? t('axis.keysSynced') : t('axis.keysImported', { file: state.axisKeySettingsFile || 'wwcombo-input-settings' })
       : t('axis.importKeys');
   }
+}
+
+function applyAxisKeySettings(value, fileName) {
+  state.axisKeySettings = normalizeAxisKeySettings(value);
+  state.axisKeySettingsFile = fileName;
+  if (state.axisKeySettings.preferences.inputMode === 'gamepad') state.axisIconSet = state.axisKeySettings.preferences.gamepadIconSet;
+  else state.axisIconSet = 'english';
+  try { localStorage.setItem(AXIS_KEY_SETTINGS_STORAGE_KEY, JSON.stringify({ settings: state.axisKeySettings, fileName })); } catch {}
+  renderAxisIconSet();
+  renderAxisKeymapButtons();
+  renderActiveAxisPreviews();
 }
 
 async function importAxisKeySettings(file) {
   if (!file) return;
   try {
     const value = JSON.parse((await file.text()).replace(/^\uFEFF/, ''));
-    state.axisKeySettings = normalizeAxisKeySettings(value);
-    state.axisKeySettingsFile = file.name;
-    if (state.axisKeySettings.preferences.inputMode === 'gamepad') state.axisIconSet = state.axisKeySettings.preferences.gamepadIconSet;
-    else state.axisIconSet = 'english';
-    try { localStorage.setItem(AXIS_KEY_SETTINGS_STORAGE_KEY, JSON.stringify({ settings: state.axisKeySettings, fileName: file.name })); } catch {}
-    renderAxisIconSet();
-    renderAxisKeymapButtons();
-    renderActiveAxisPreviews();
+    applyAxisKeySettings(value, file.name);
     void showAppMessage(t('axis.keysImported', { file: file.name }));
   } catch {
     void showAppMessage(t('axis.keysInvalid'));
@@ -2435,6 +2581,7 @@ function refreshLocalizedView() {
     syncAxisScaleControls();
     if (state.uploadChart && state.uploadPackage) renderUploadAxisPreview();
     else resetUploadAxisPreview();
+    renderClientComboPicker();
   }
   if (state.view === 'commissions') {
     if (state.commissionLoadState === 'loading' || state.commissionLoadState === 'idle') setStatus('', t('commission.loading'));
@@ -2453,13 +2600,16 @@ async function loadCharacterIcons() {
     if (!response.ok) response = await fetch(CHARACTER_ICON_API, { cache: 'force-cache' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
-    if (!Array.isArray(payload)) return;
+    const entries = Array.isArray(payload) ? payload : payload && typeof payload === 'object' ? Object.entries(payload) : [];
     const icons = new Map();
-    for (const item of payload) {
+    for (const item of entries) {
       if (!Array.isArray(item) || typeof item[0] !== 'string' || typeof item[1] !== 'string') continue;
       const name = item[0].trim();
       const source = item[1].trim();
-      if (name && /^https?:\/\//i.test(source) && !icons.has(name)) icons.set(name, source);
+      try {
+        const sourceUrl = new URL(source, location.href);
+        if (name && ['http:', 'https:'].includes(sourceUrl.protocol) && !icons.has(name)) icons.set(name, sourceUrl.href);
+      } catch {}
     }
     state.characterIcons = icons;
     renderProfile();
@@ -2672,7 +2822,12 @@ els.profileForm?.addEventListener('submit', (event) => {
   if (state.commissionLoadState !== 'idle') void loadCommissions();
   els.profileFeedback.textContent = t('profile.saved');
   els.profileFeedback.className = 'form-feedback success';
-  setTimeout(closeProfile, 500);
+  const pendingUploadIntent = state.pendingUploadIntent;
+  state.pendingUploadIntent = null;
+  setTimeout(() => {
+    closeProfile();
+    if (pendingUploadIntent) openUpload(pendingUploadIntent.commissionId, pendingUploadIntent.initialPackage);
+  }, 500);
 });
 els.clearProfile?.addEventListener('click', () => {
   state.profile = { username: '', email: '', avatar: '' };
@@ -2693,7 +2848,16 @@ els.submissionButton?.addEventListener('click', () => openUpload());
 els.closeUpload?.addEventListener('click', closeUpload);
 els.cancelUpload?.addEventListener('click', closeUpload);
 els.uploadBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.uploadBackdrop) closeUpload(); });
-els.editUploadProfile?.addEventListener('click', () => { closeUpload(); openProfile(); });
+els.editUploadProfile?.addEventListener('click', () => {
+  state.pendingUploadIntent = { commissionId: state.uploadMode === 'commission' ? state.uploadCommissionId : '', initialPackage: state.uploadSource };
+  closeUpload();
+  openProfile();
+});
+els.clientComboList?.addEventListener('click', (event) => {
+  const button = event.target.closest('.client-combo-card');
+  if (button?.dataset.chartId) requestClientLibraryItem(button.dataset.chartId);
+});
+els.refreshClientCombos?.addEventListener('click', requestClientLibrary);
 els.comboFile?.addEventListener('change', () => {
   void previewUploadFile();
 });
@@ -2702,6 +2866,7 @@ els.uploadForm?.addEventListener('submit', submitCombo);
 if (isEmbeddedClient) {
   i18n.setLanguage(params.get('lang'), false);
   setTheme(params.get('theme'), false);
+  requestClientLibrary();
 }
 updateThemeControl();
 updateMotionControl();
