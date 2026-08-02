@@ -73,7 +73,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .client-download-dialog { width: min(650px, 100%); max-height: min(760px, calc(100vh - 48px)); display: grid; grid-template-rows: auto auto minmax(0, 1fr); border: 1px solid #454b50; border-radius: 6px; background: #11161a; box-shadow: 0 28px 90px rgba(0,0,0,.72); overflow: hidden; }
 .client-download-intro { display: grid; gap: 6px; padding: 18px 20px 6px; color: var(--muted-strong); font-size: 13px; line-height: 1.65; }
 .client-download-intro p { margin: 0; }
-.client-download-intro p:nth-child(2) { color: #f2d18b; }
+.client-download-intro p:nth-child(2) { color: inherit; }
 .client-download-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start; padding: 14px 20px 20px; overflow: auto; }
 .client-download-option { min-width: 0; display: grid; grid-template-columns: 42px minmax(0, 1fr) 18px; align-items: center; gap: 11px; min-height: 72px; padding: 10px 12px; border: 1px solid #3e484e; border-radius: 4px; background: #191f23; color: var(--text); text-decoration: none; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
 .client-download-option:hover, .client-download-option:focus-visible { border-color: #e4545b; background: #252022; outline: 0; transform: translateY(-1px); }
@@ -544,6 +544,8 @@ html[data-theme='day'] .detail-dialog,
 html[data-theme='day'] .client-download-dialog,
 html[data-theme='day'] .account-dialog,
 html[data-theme='day'] .upload-dialog { border-color: #91a5ab; background: #ffffff; box-shadow: 0 28px 90px rgba(29, 49, 55, .34); }
+html[data-theme='day'] .client-download-intro { color: #17282d; }
+html[data-theme='day'] .client-download-intro p:nth-child(2) { color: #080b0d; }
 html[data-theme='day'] .account-form input { border-color:#adbdc1; background:#fff; color:#17282d; }
 html[data-theme='day'] .upload-identity { border-color:#bdcacc; background:#f4f8f9; }
 html[data-theme='day'] .file-drop { border-color:#8fa4aa!important; background:#f3f7f8; }
