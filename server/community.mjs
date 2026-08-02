@@ -80,6 +80,16 @@ function validStep(step) {
     && times.every((value) => Number.isFinite(value) && value >= 0 && value < MAX_DURATION_MS);
 }
 
+function validChartPeriod(period) {
+  const item = record(period);
+  return ['startup_axis', 'loop_axis'].includes(item.kind)
+    && Number.isFinite(item.startMs)
+    && Number.isFinite(item.endMs)
+    && item.startMs >= 0
+    && item.endMs > item.startMs
+    && item.endMs <= MAX_DURATION_MS;
+}
+
 function submittedChart(payload) {
   const item = record(payload);
   const chart = record(item.chart || (Array.isArray(item.charts) ? item.charts[0] : item));
@@ -114,6 +124,7 @@ function labelRemainder(value) {
 function preflightReview(payload) {
   const { item, chart } = submittedChart(payload);
   const labels = record(item.contentLabels);
+  const missingPeriodInformation = !Array.isArray(chart.periods) || !chart.periods.some(validChartPeriod);
   const ordered = [...chart.steps].sort((left, right) => Number(left.startMin || 0) - Number(right.startMin || 0) || String(left.id || '').localeCompare(String(right.id || '')));
   const repeatedActionRuns = [];
   let run = [];
@@ -133,15 +144,17 @@ function preflightReview(payload) {
     .filter((item) => item.remainder);
   const issues = [
     ...repeatedActionRuns.map((item) => `连续 ${item.count} 次“${item.label}”（${Math.round(item.startMs)} ms 起）`),
-    ...unconvertibleLabels.map((item) => `自定义文字“${item.label}”含无法图标化内容“${item.remainder}”`)
+    ...unconvertibleLabels.map((item) => `自定义文字“${item.label}”含无法图标化内容“${item.remainder}”`),
+    ...(missingPeriodInformation ? ['未设置有效的启动轴或循环轴时段'] : [])
   ];
   return {
-    level: issues.length ? 'review' : 'low',
+    level: issues.length ? 'high' : 'low',
     lowRisk: issues.length === 0,
     checkedAt: Date.now(),
     issues,
     repeatedActionRuns,
-    unconvertibleLabels
+    unconvertibleLabels,
+    missingPeriodInformation
   };
 }
 
