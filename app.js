@@ -1395,15 +1395,17 @@ function renderFilters() {
   renderCharacterTrigger();
   const commissionView = state.view === 'commissions';
   els.sortField.hidden = commissionView;
-  els.tagFilter.hidden = commissionView;
-  els.createCommission.hidden = !commissionView;
+  els.tagFilter.hidden = false;
+  els.createCommission.hidden = true;
   els.resultsTitle.textContent = t(commissionView ? 'plaza.commissions' : 'results.title');
   els.title.placeholder = t(commissionView ? 'commission.searchPlaceholder' : 'search.titlePlaceholder');
   els.comboTab.classList.toggle('active', !commissionView);
   els.comboTab.setAttribute('aria-selected', String(!commissionView));
   els.commissionTab.classList.toggle('active', commissionView);
   els.commissionTab.setAttribute('aria-selected', String(commissionView));
-  const tags = uniqueSorted(state.charts.flatMap((chart) => Array.isArray(chart.tags) ? chart.tags : []));
+  const tags = commissionView
+    ? uniqueSorted(state.commissions.flatMap(commissionTags))
+    : uniqueSorted(state.charts.flatMap((chart) => Array.isArray(chart.tags) ? chart.tags : []));
   els.tags.replaceChildren();
   const all = document.createElement('button');
   all.type = 'button';
@@ -1419,6 +1421,18 @@ function renderFilters() {
     button.dataset.tag = tag;
     els.tags.appendChild(button);
   }
+  updateSubmissionButton();
+}
+
+function updateSubmissionButton() {
+  const commissionView = state.view === 'commissions';
+  const label = t(commissionView ? 'commission.create' : 'submission.button');
+  els.submissionButtonLabel.textContent = label;
+  els.submissionButton.title = label;
+  els.submissionButton.setAttribute('aria-label', label);
+  const icon = els.submissionButton.querySelector('[data-lucide]');
+  if (icon) icon.setAttribute('data-lucide', commissionView ? 'plus' : 'upload');
+  window.lucide?.createIcons();
 }
 
 function filteredCharts() {
@@ -1516,6 +1530,10 @@ function commissionCharacters(commission) {
   return Array.isArray(commission?.characters) ? commission.characters.filter(Boolean).slice(0, MAX_SELECTED_CHARACTERS) : [];
 }
 
+function commissionTags(commission) {
+  return normalizedTags(Array.isArray(commission?.tags) ? commission.tags : [commission?.tag]);
+}
+
 function commissionInterestSortCount(commission) {
   const count = Number(commission?.interestCount || 0);
   return Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
@@ -1531,7 +1549,8 @@ function filteredCommissions() {
   const commissions = state.commissions.filter((commission) => {
     const titleMatches = !titleQuery || normalizeText(commission.title).includes(titleQuery);
     const characterMatches = state.characters.every((name) => commissionCharacters(commission).includes(name));
-    return titleMatches && characterMatches;
+    const tagMatches = !state.tag || commissionTags(commission).includes(state.tag);
+    return titleMatches && characterMatches && tagMatches;
   });
   const topInterestCounts = new Set([...new Set(commissions.map(commissionInterestSortCount))].sort((left, right) => right - left).slice(0, 3));
   return commissions.sort((left, right) => {
@@ -1560,15 +1579,12 @@ function renderCommissionCard(commission) {
   const card = els.commissionTemplate.content.firstElementChild.cloneNode(true);
   i18n.apply(card);
   card.classList.toggle('completed', commission.status === 'completed');
-  const status = card.querySelector('.commission-status');
-  status.textContent = commissionStatusLabel(commission);
-  status.classList.toggle('completed', commission.status === 'completed');
   const grade = gradeForTags(commission.tag || '基础');
   const gradeNode = card.querySelector('.commission-grade');
   gradeNode.textContent = grade.grade;
   gradeNode.dataset.grade = grade.grade;
   gradeNode.title = i18n.localizeTag(grade.tag);
-  card.querySelector('.commission-updated').textContent = formatDate(commission.updatedAt);
+  card.querySelector('.commission-updated').textContent = `${t('commission.created')} ${formatDate(commission.createdAt || commission.updatedAt)}`;
   card.querySelector('h3').textContent = commission.title || t('commission.untitled');
   card.querySelector('.commission-excerpt').textContent = commission.description || '';
   const characters = card.querySelector('.commission-characters');
@@ -1591,10 +1607,10 @@ function renderCommissionCard(commission) {
   interestCount.parentElement.setAttribute('aria-label', `${t('commission.interestLabel')}: ${interestTotal}`);
   const rawResponseTotal = Number(commission.responseCount || 0);
   const responseTotal = Number.isFinite(rawResponseTotal) ? Math.max(0, Math.floor(rawResponseTotal)) : 0;
-  const responseBadge = card.querySelector('.commission-response-badge');
-  responseBadge.hidden = responseTotal < 1;
-  responseBadge.textContent = responseTotal > 0 ? String(responseTotal) : '';
-  responseBadge.setAttribute('aria-label', `${t('commission.responseLabel')}: ${responseTotal}`);
+  const responseCount = card.querySelector('.commission-response-count');
+  responseCount.hidden = responseTotal < 1;
+  responseCount.textContent = responseTotal > 0 ? String(responseTotal) : '';
+  responseCount.setAttribute('aria-label', `${t('commission.responseLabel')}: ${responseTotal}`);
   const interest = card.querySelector('.commission-interest-button');
   const viewerInterested = Boolean(commission.viewerInterested || commission.viewerIsOwner);
   interest.disabled = commission.status === 'completed' || viewerInterested;
@@ -2908,7 +2924,10 @@ els.profileAvatarGrid?.addEventListener('click', (event) => {
   state.profileDraftAvatar = button.dataset.avatar || '';
   renderProfileAvatarGrid();
 });
-els.submissionButton?.addEventListener('click', () => openUpload());
+els.submissionButton?.addEventListener('click', () => {
+  if (state.view === 'commissions') openCommissionCreate();
+  else openUpload();
+});
 els.closeUpload?.addEventListener('click', closeUpload);
 els.cancelUpload?.addEventListener('click', closeUpload);
 els.uploadBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.uploadBackdrop) closeUpload(); });
