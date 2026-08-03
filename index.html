@@ -18,7 +18,7 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260803-1" />
+    <link rel="stylesheet" href="styles.css?v=20260802-5" />
   </head>
   <body>
     <header class="site-header">
@@ -215,6 +215,10 @@
     <template id="commissionTemplate">
       <article class="commission-card">
         <div class="commission-card-main">
+          <div class="commission-card-head">
+            <span class="commission-status"></span>
+            <time class="commission-updated"></time>
+          </div>
           <div class="commission-card-content">
             <div class="commission-card-copy">
               <h3></h3>
@@ -229,10 +233,10 @@
         </div>
         <div class="commission-card-side">
           <div class="commission-owner"><span class="commission-owner-avatar"></span><div><strong></strong><small></small></div><em hidden>UP</em></div>
-          <time class="commission-updated"></time>
           <div class="commission-card-actions">
             <button class="commission-interest-button" type="button"><i data-lucide="plus" aria-hidden="true"></i><span>+1</span></button>
-            <button class="detail-button commission-detail-button" type="button"><i data-lucide="panel-right-open" aria-hidden="true"></i><span data-i18n="card.details"></span><strong class="commission-response-count" hidden></strong></button>
+            <button class="detail-button commission-detail-button" type="button"><i data-lucide="panel-right-open" aria-hidden="true"></i><span data-i18n="card.details">详情</span></button>
+            <span class="commission-response-badge" hidden></span>
           </div>
         </div>
       </article>

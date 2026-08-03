@@ -1547,6 +1547,9 @@ function filteredCommissions() {
   });
 }
 
+function commissionStatusLabel(commission) {
+  return t(commission.status === 'completed' ? 'commission.completed' : 'commission.open');
+}
 
 function commissionInterestTotal(commission) {
   const count = Number(commission?.interestCount || 0);
@@ -1557,11 +1560,15 @@ function renderCommissionCard(commission) {
   const card = els.commissionTemplate.content.firstElementChild.cloneNode(true);
   i18n.apply(card);
   card.classList.toggle('completed', commission.status === 'completed');
+  const status = card.querySelector('.commission-status');
+  status.textContent = commissionStatusLabel(commission);
+  status.classList.toggle('completed', commission.status === 'completed');
+  const grade = gradeForTags(commission.tag || '基础');
   const gradeNode = card.querySelector('.commission-grade');
   gradeNode.textContent = grade.grade;
   gradeNode.dataset.grade = grade.grade;
   gradeNode.title = i18n.localizeTag(grade.tag);
-  card.querySelector('.commission-updated').textContent = formatDate(commission.createdAt || commission.updatedAt);
+  card.querySelector('.commission-updated').textContent = formatDate(commission.updatedAt);
   card.querySelector('h3').textContent = commission.title || t('commission.untitled');
   card.querySelector('.commission-excerpt').textContent = commission.description || '';
   const characters = card.querySelector('.commission-characters');
@@ -1584,10 +1591,11 @@ function renderCommissionCard(commission) {
   interestCount.parentElement.setAttribute('aria-label', `${t('commission.interestLabel')}: ${interestTotal}`);
   const rawResponseTotal = Number(commission.responseCount || 0);
   const responseTotal = Number.isFinite(rawResponseTotal) ? Math.max(0, Math.floor(rawResponseTotal)) : 0;
-  const responseCount = card.querySelector('.commission-response-count');
-  responseCount.hidden = responseTotal < 1;
-  responseCount.textContent = responseTotal > 0 ? String(responseTotal) : '';
-  responseCount.setAttribute('aria-label', `${t('commission.responseLabel')}: ${responseTotal}`);
+  const responseBadge = card.querySelector('.commission-response-badge');
+  responseBadge.hidden = responseTotal < 1;
+  responseBadge.textContent = responseTotal > 0 ? String(responseTotal) : '';
+  responseBadge.setAttribute('aria-label', `${t('commission.responseLabel')}: ${responseTotal}`);
+  const interest = card.querySelector('.commission-interest-button');
   const viewerInterested = Boolean(commission.viewerInterested || commission.viewerIsOwner);
   interest.disabled = commission.status === 'completed' || viewerInterested;
   interest.classList.toggle('selected', viewerInterested);
