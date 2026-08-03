@@ -650,8 +650,9 @@ html[data-theme='day'] .empty-state { border-color: #aebec2; color: #63777e; }
 .create-commission-button:hover { border-color: #f2ce7b; background: #3a2f19; color: #fff0bd; }
 .create-commission-button svg { width: 16px; height: 16px; }
 
+#comboList.commission-list { min-height: 0; height: auto; align-items: start; align-content: start; grid-auto-rows: max-content; }
 .commission-list { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; align-content: start; grid-auto-rows: max-content; gap: 16px; }
-.commission-card { position: relative; min-width: 0; min-height: 304px; height: fit-content; align-self: start; display: grid; grid-template-rows: auto auto; border: 1px solid #3b454a; border-radius: 3px; background: #15191c; box-shadow: 0 14px 30px rgba(0,0,0,.34); isolation: isolate; overflow: hidden; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
+.commission-card { position: relative; min-width: 0; min-height: 304px; height: auto; align-self: start; display: grid; grid-template-rows: auto auto; border: 1px solid #3b454a; border-radius: 3px; background: #15191c; box-shadow: 0 14px 30px rgba(0,0,0,.34); isolation: isolate; overflow: hidden; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
 .commission-card::before { content: ''; position: absolute; z-index: 1; top: 8px; left: 50%; width: 58px; height: 8px; background: rgba(205,215,211,.16); transform: translateX(-50%) rotate(-2deg); pointer-events: none; }
 .commission-card::after { content: ''; position: absolute; z-index: 0; right: -18px; bottom: 88px; width: 150px; height: 132px; background: url("assets/commission-open-jianxin.png") right bottom / contain no-repeat; opacity: .12; pointer-events: none; }
 .commission-card:hover { border-color: #a8444d; background: #1d2225; transform: translateY(-2px); }
