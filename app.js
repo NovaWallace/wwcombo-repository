@@ -1564,6 +1564,13 @@ function renderCard(chart) {
     : '<i data-lucide="video" aria-hidden="true"></i>';
 
   const detailButton = card.querySelector('.detail-button');
+  const commentCount = Math.max(0, Math.floor(Number(chart.commentCount || 0)) || 0);
+  const commentCountNode = document.createElement('strong');
+  commentCountNode.className = 'combo-comment-count';
+  commentCountNode.hidden = commentCount < 1;
+  commentCountNode.textContent = commentCount > 0 ? String(commentCount) : '';
+  commentCountNode.setAttribute('aria-label', `${t('comments.button')}: ${commentCount}`);
+  detailButton.appendChild(commentCountNode);
   detailButton.setAttribute('aria-label', `${t('card.details')}: ${chart.title || t('card.untitled')}`);
   detailButton.addEventListener('click', () => openDetails(chart));
   return card;

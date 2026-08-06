@@ -205,6 +205,8 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .detail-button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border: 1px solid #ff5960; border-radius: 4px; background: var(--red); color: #fff; font-size: 12px; font-weight: 900; cursor: pointer; }
 .detail-button:hover { background: var(--red-hover); }
 .detail-button svg { width: 16px; height: 16px; }
+.combo-comment-count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; margin-left: 2px; padding-left: 7px; border-left: 1px solid rgba(255,255,255,.48); color: currentColor; font-family: "优设标题黑", "Microsoft YaHei", sans-serif; font-size: 18px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.combo-comment-count[hidden] { display: none; }
 
 .modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; background: rgba(0,0,0,.78); backdrop-filter: blur(5px); }
 .modal-backdrop[hidden] { display: none; }
