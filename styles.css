@@ -400,10 +400,10 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
   .tag-list { justify-content: flex-end; }
   .combo-card { grid-template-columns: 1fr; }
   .combo-actions { border-left: 0; border-top: 1px solid var(--line-soft); }
-  .detail-layout { grid-template-columns: 1fr; overflow: auto; }
+  .detail-layout { grid-template-columns: 1fr; grid-template-rows: max-content minmax(520px, auto); align-content: start; overflow: auto; }
   .upload-layout { grid-template-columns: 1fr; overflow: auto; }
   .upload-info { overflow: visible; border-right: 0; border-bottom: 1px solid var(--line); }
-  .detail-info { overflow: visible; border-right: 0; border-bottom: 1px solid var(--line); }
+  .detail-info { min-height: max-content; overflow: visible; border-right: 0; border-bottom: 1px solid var(--line); }
   .axis-preview-panel { min-height: 520px; }
   .axis-preview-head { align-items: flex-start; }
   .axis-preview-options { flex-wrap: wrap; justify-content: flex-end; }

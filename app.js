@@ -2234,12 +2234,12 @@ function openComments(chart) {
   if (!chart?.id) return;
   state.commentsChart = chart;
   state.commentReplyTarget = null;
+  els.commentsBackdrop.hidden = false;
   els.commentInput.value = '';
   els.commentFormStatus.textContent = '';
   els.commentFormStatus.className = '';
   updateCommentInputCount();
   renderComments();
-  els.commentsBackdrop.hidden = false;
   syncModalBody();
   void loadCommentsFor(chart);
   requestAnimationFrame(() => els.commentInput.focus());
@@ -2708,7 +2708,6 @@ async function openDetails(chart, options = {}) {
   els.detailWithdraw.hidden = responseMode;
   els.detailWithdraw.onclick = () => requestWithdrawal(chart);
   els.detailUpvote.onclick = () => { void castVote(chart); };
-  els.detailComments.onclick = () => openComments(chart);
   if (!responseMode) renderVoteControls(chart);
   els.detailBackdrop.hidden = false;
   document.body.style.overflow = 'hidden';
@@ -3068,6 +3067,10 @@ els.appDialogCancel?.addEventListener('click', () => closeAppDialog(false));
 els.appDialogAccept?.addEventListener('click', () => closeAppDialog(true));
 els.appDialogBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.appDialogBackdrop) closeAppDialog(false); });
 els.commentForm?.addEventListener('submit', submitComment);
+document.addEventListener('click', (event) => {
+  const trigger = event.target.closest?.('#detailComments');
+  if (trigger && state.detailChart) openComments(state.detailChart);
+});
 els.commentInput?.addEventListener('input', updateCommentInputCount);
 els.commentsList?.addEventListener('click', (event) => {
   const button = event.target.closest('[data-comment-reply]');
