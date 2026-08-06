@@ -1125,6 +1125,23 @@ function tagAccent(tags) {
   return '#d71920';
 }
 
+function safeHttpUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
+function videoLinkPlatform(value) {
+  const source = safeHttpUrl(value);
+  if (!source) return '';
+  const hostname = new URL(source).hostname.toLowerCase().replace(/^www\./, '');
+  if (hostname === 'bilibili.com' || hostname.endsWith('.bilibili.com')) return 'bilibili';
+  return 'video';
+}
+
 function filenameFor(chart) {
   const title = String(chart.title || 'wwcombo').replace(/[\\/:*?"<>|]+/g, '_').trim();
   return `${title}-${chart.id || 'community'}.wwcombo.json`;
@@ -1505,6 +1522,18 @@ function renderCard(chart) {
   const downloadCountNode = card.querySelector('.combo-download-count');
   downloadCountNode.textContent = String(downloadCount);
   downloadCountNode.setAttribute('aria-label', `${t('meta.downloads')}: ${downloadCount}`);
+
+  const videoLink = card.querySelector('.combo-video-link');
+  const videoSource = safeHttpUrl(chart.link);
+  const videoPlatform = videoLinkPlatform(videoSource);
+  videoLink.hidden = !videoSource;
+  videoLink.classList.toggle('bilibili', videoPlatform === 'bilibili');
+  videoLink.href = videoSource || '#';
+  videoLink.title = t('detail.demo');
+  videoLink.setAttribute('aria-label', t('detail.demo'));
+  videoLink.innerHTML = videoPlatform === 'bilibili'
+    ? '<img class="combo-video-logo" src="./assets/bilibili.png" alt="" aria-hidden="true">'
+    : '<i data-lucide="video" aria-hidden="true"></i>';
 
   const detailButton = card.querySelector('.detail-button');
   detailButton.setAttribute('aria-label', `${t('card.details')}: ${chart.title || t('card.untitled')}`);

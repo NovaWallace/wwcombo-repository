@@ -162,7 +162,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .combo-title-row > div:first-child { min-width: 0; }
 .combo-card h3 { margin: 0; color: var(--text); font-size: 17px; line-height: 1.35; overflow-wrap: anywhere; }
 .characters { margin: 5px 0 0; color: var(--cyan); font-size: 12px; font-weight: 800; overflow-wrap: anywhere; }
-.combo-classification { flex: 0 0 auto; display: grid; grid-template-columns: minmax(46px, auto) auto; grid-template-areas: "tags grade" "download count"; align-items: center; justify-content: end; gap: 9px 10px; }
+.combo-classification { flex: 0 0 auto; display: grid; grid-template-columns: minmax(46px, auto) auto; grid-template-areas: "tags grade" "links count"; align-items: center; justify-content: end; gap: 9px 10px; }
 .combo-tags { grid-area: tags; justify-self: end; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
 .combo-grade, .commission-grade { min-width: 0; height: auto; display: inline-block; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--text); font-family: "优设标题黑", "Microsoft YaHei", sans-serif; font-size: 40px; font-weight: 400; line-height: 1; letter-spacing: 0; box-shadow: none; }
 .combo-grade { grid-area: grade; justify-self: start; }
@@ -172,7 +172,14 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .combo-grade[data-grade='S'], .commission-grade[data-grade='S'] { color: #d6ad00; }
 .combo-grade[data-grade='SS'], .commission-grade[data-grade='SS'] { color: #e12d36; }
 .combo-grade[hidden] { display: none; }
-.combo-download-icon { grid-area: download; justify-self: end; min-width: 46px; min-height: 30px; display: inline-flex; align-items: center; justify-content: center; padding: 1px 11px 0; border: 0; border-radius: 999px; background: #fff; color: #080b0d; }
+.combo-link-icons { grid-area: links; justify-self: end; display: inline-flex; align-items: center; gap: 7px; }
+.combo-video-link { width: 32px; height: 32px; display: inline-grid; place-items: center; border: 1px solid #59646a; border-radius: 50%; background: #20272b; color: #d8dcde; text-decoration: none; transition: border-color .16s ease, background .16s ease, color .16s ease, transform .16s ease; }
+.combo-video-link:hover, .combo-video-link:focus-visible { border-color: #8c969b; background: #30393e; color: #fff; outline: 0; transform: translateY(-1px); }
+.combo-video-link.bilibili { width: 40px; border: 0; background: transparent; color: inherit; }
+.combo-video-link.bilibili:hover, .combo-video-link.bilibili:focus-visible { border-color: transparent; background: rgba(0, 174, 236, .12); }
+.combo-video-link svg { width: 18px; height: 18px; stroke-width: 2.8; }
+.combo-video-logo { display: block; width: 38px; height: auto; }
+.combo-download-icon { min-width: 46px; min-height: 30px; display: inline-flex; align-items: center; justify-content: center; padding: 1px 11px 0; border: 0; border-radius: 999px; background: #fff; color: #080b0d; }
 .combo-download-icon svg { width: 21px; height: 21px; stroke-width: 3; }
 .combo-download-count { grid-area: count; justify-self: start; color: #fff; font-family: "优设标题黑", "Microsoft YaHei", sans-serif; font-size: 40px; font-weight: 400; line-height: 1; letter-spacing: 0; font-variant-numeric: tabular-nums; }
 .combo-tag { padding: 4px 9px; border: 1px solid #5d6368; border-radius: 3px; background: rgba(255,255,255,.035); color: #d8dcde; font-size: 12px; font-weight: 850; line-height: 1.2; }
@@ -537,6 +544,10 @@ html[data-theme='day'] .card-submitter strong { color: #354b52; }
 html[data-theme='day'] .card-submitter small { color: #6a7e85; }
 html[data-theme='day'] .combo-actions { border-color: #d8e2e4; background: #f5f9fa; }
 html[data-theme='day'] .card-character-avatar { border-color: #f5f9fa; background: #dde8ea; box-shadow: 0 2px 7px rgba(44, 68, 75, .2); }
+html[data-theme='day'] .combo-video-link { border-color: #9dafb4; background: #edf4f5; color: #314950; }
+html[data-theme='day'] .combo-video-link:hover, html[data-theme='day'] .combo-video-link:focus-visible { border-color: #71868d; background: #e1ebed; color: #17282d; }
+html[data-theme='day'] .combo-video-link.bilibili { border-color: transparent; background: transparent; color: inherit; }
+html[data-theme='day'] .combo-video-link.bilibili:hover, html[data-theme='day'] .combo-video-link.bilibili:focus-visible { border-color: transparent; background: rgba(0, 174, 236, .1); }
 
 html[data-theme='day'] .modal-backdrop { background: rgba(40, 59, 65, .48); }
 html[data-theme='day'] .character-picker-dialog,
