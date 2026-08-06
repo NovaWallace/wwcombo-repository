@@ -45,7 +45,7 @@ const CHINESE_ICON_NAMES = { i:'i.png', ii:'ii.png', iii:'iii.png', intro:'变�
 const ROLE_COLORS = ['#d84f55', '#44c8c6', '#d7ad52'];
 const AXIS_ICON_SIZE = 31;
 const AXIS_AVATAR_SIZE = 34;
-const GAMEPAD_ICON_CODES = { 'mouse-left':'GamepadX','mouse-left-hold':'GamepadXHold',skill:'GamepadY','skill-hold':'GamepadYHold',echo:'GamepadLT','echo-hold':'GamepadLTHold',liberation:'GamepadRB','liberation-hold':'GamepadRBHold','mouse-right':'GamepadRT','mouse-right-hold':'GamepadRTHold',jump:'GamepadA','jump-hold':'GamepadAHold',tool:'GamepadLB+GamepadX',i:'GamepadDPadUp',ii:'GamepadDPadRight',iii:'GamepadDPadDown' };
+const GAMEPAD_ICON_CODES = { 'mouse-left':'GamepadX','mouse-left-hold':'GamepadXHold',skill:'GamepadY','skill-hold':'GamepadYHold',echo:'GamepadLT','echo-hold':'GamepadLTHold',liberation:'GamepadRT','liberation-hold':'GamepadRTHold','mouse-right':'GamepadRB','mouse-right-hold':'GamepadRBHold',jump:'GamepadA','jump-hold':'GamepadAHold',tool:'GamepadLB+GamepadX',i:'GamepadDPadUp',ii:'GamepadDPadRight',iii:'GamepadDPadDown' };
 const PURE_GRAPHIC_ICON_IDS = new Set(['echo-hold','echo','finisher','jump-hold','jump','liberation-hold','liberation','mouse-left-hold','mouse-left','mouse-right-hold','mouse-right','skill-hold','skill','tool']);
 const ADMIN_AXIS_ICON_MAPPINGS = [
   ['mouse-right-hold','长按闪避','长按闪避.png',['S','D','闪','长按闪避']],['mouse-left-hold','重击','重击.png',['z','Z','长按普攻','重击']],['skill-hold','长按技能','长按技能.png',['E','长按技能']],['echo-hold','长按声骸','长按声骸.png',['Q','长按声骸']],['liberation-hold','长按解放','长按解放.png',['R','长按解放','长按共鸣解放']],['jump-hold','长按跳跃','长按跳跃.png',['J','长按跳跃']],
