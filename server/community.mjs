@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { chmod, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -8,6 +8,8 @@ const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_STEPS = 5000;
 const MAX_DURATION_MS = 10 * 60 * 1000;
 const MAX_COMMISSION_RESPONSES = 50;
+const MAX_COMMENTS_PER_COMBO = 200;
+const MAX_COMMENT_BODY = 1000;
 const COMMISSION_TAGS = ['轮椅', '基础', '标准', '进阶', '冒烟', '错轮'];
 const ICON_TRIGGERS = [
   '长按共鸣解放', '长按普攻', '长按技能', '长按声骸', '长按解放', '长按闪避', '长按跳跃',
@@ -220,6 +222,25 @@ async function writeJson(file, value, privateFile = true) {
   if (privateFile) await chmod(file, 0o600).catch(() => {});
 }
 
+function commentStorageKey(comboId) {
+  return createHash('sha256').update(String(comboId || '')).digest('hex');
+}
+
+function normalizeComment(value, fallbackId = '') {
+  const item = record(value);
+  const body = String(item.body || item.text || '').trim().slice(0, MAX_COMMENT_BODY);
+  const id = String(item.id || fallbackId).trim().slice(0, 120);
+  if (!body || !id) return null;
+  return {
+    id,
+    parentId: String(item.parentId || '').trim().slice(0, 120),
+    username: String(item.username || 'Guest').trim().slice(0, 40) || 'Guest',
+    avatar: String(item.avatar || '').trim().slice(0, 80),
+    body,
+    createdAt: Number.isFinite(Number(item.createdAt)) ? Number(item.createdAt) : Date.now()
+  };
+}
+
 export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const root = path.join(runtimeRoot, 'community');
   const pendingRoot = path.join(root, 'pending');
@@ -236,6 +257,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const hiddenFile = path.join(root, 'hidden.json');
   const commissionsFile = path.join(root, 'commissions.json');
   const commissionResponsesRoot = path.join(root, 'commission-responses');
+  const commentsRoot = path.join(root, 'comments');
+  const commentCountsFile = path.join(root, 'comment-counts.json');
   let downloadWrite = Promise.resolve();
   let mutationWrite = Promise.resolve();
 
@@ -249,8 +272,61 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     await Promise.all([
       mkdir(pendingRoot, { recursive: true }),
       mkdir(publishedRoot, { recursive: true }),
-      mkdir(commissionResponsesRoot, { recursive: true })
+      mkdir(commissionResponsesRoot, { recursive: true }),
+      mkdir(commentsRoot, { recursive: true })
     ]);
+  }
+
+  function commentsFile(comboId) {
+    const id = String(comboId || '').trim();
+    if (!id || id.length > 240) throw new Error('Invalid combo id.');
+    return path.join(commentsRoot, `${commentStorageKey(id)}.json`);
+  }
+
+  async function readComboComments(comboId) {
+    const value = await readJson(commentsFile(comboId), { version: 1, comments: [] });
+    const comments = Array.isArray(value?.comments) ? value.comments
+      .map((item, index) => normalizeComment(item, `${comboId}-${index}`))
+      .filter(Boolean)
+      .slice(-MAX_COMMENTS_PER_COMBO) : [];
+    return comments;
+  }
+
+  async function commentCounts() {
+    const value = record(await readJson(commentCountsFile, {}));
+    return Object.fromEntries(Object.entries(value)
+      .map(([id, count]) => [id, Math.max(0, Math.min(MAX_COMMENTS_PER_COMBO, Math.floor(Number(count) || 0)))])
+      .filter(([, count]) => count > 0));
+  }
+
+  async function publicComments(comboId) {
+    const comments = await readComboComments(comboId);
+    return { comments, count: comments.length };
+  }
+
+  async function addComment(comboId, body) {
+    const id = String(comboId || '').trim();
+    const text = record(body);
+    if (!id) throw new Error('Combo id is required.');
+    const commentBody = String(text.body || '').trim();
+    if (!commentBody || commentBody.length > MAX_COMMENT_BODY) throw new Error('Comment must contain 1 to 1000 characters.');
+    const comments = await readComboComments(id);
+    const parentId = String(text.parentId || '').trim().slice(0, 120);
+    if (parentId && !comments.some((comment) => comment.id === parentId)) throw new Error('The comment being replied to no longer exists.');
+    const comment = normalizeComment({
+      id: `comment-${randomUUID()}`,
+      parentId,
+      username: text.username,
+      avatar: text.avatar,
+      body: commentBody,
+      createdAt: Date.now()
+    });
+    const next = [...comments, comment].slice(-MAX_COMMENTS_PER_COMBO);
+    await writeJson(commentsFile(id), { version: 1, comments: next });
+    const counts = await commentCounts();
+    counts[id] = next.length;
+    await writeJson(commentCountsFile, counts);
+    return { comment, count: next.length };
   }
 
   async function whitelist() {
@@ -1048,6 +1124,9 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     incrementDownload,
     recordDownload,
     publicEngagement,
+    publicComments,
+    addComment: (...args) => serializeMutation(() => addComment(...args)),
+    commentCounts,
     castVote,
     sendComboFeedback: (...args) => serializeMutation(() => sendComboFeedback(...args)),
     publicCommissions,

@@ -579,6 +579,7 @@ async function handleAdminApi(req, res, pathname) {
 const serverStartedAt = Date.now();
 const submissionAttempts = new Map();
 const feedbackAttempts = new Map();
+const commentAttempts = new Map();
 
 function acceptSubmissionFrom(address) {
   const now = Date.now();
@@ -598,11 +599,21 @@ function acceptFeedbackFrom(address) {
   return true;
 }
 
+function acceptCommentFrom(address) {
+  const now = Date.now();
+  const attempts = (commentAttempts.get(address) || []).filter((time) => now - time < 10 * 60 * 1000);
+  if (attempts.length >= 30) return false;
+  attempts.push(now);
+  commentAttempts.set(address, attempts);
+  return true;
+}
+
 async function publicIndex(voterId = '') {
   const index = JSON.parse((await readFile(path.join(PUBLIC_ROOT, 'community-index.json'), 'utf8')).replace(/^\ufeff/, ''));
-  const [communityStatus, engagement] = await Promise.all([
+  const [communityStatus, engagement, commentCounts] = await Promise.all([
     community.status(),
-    community.publicEngagement(voterId)
+    community.publicEngagement(voterId),
+    community.commentCounts()
   ]);
   const whitelistMasks = new Set((Array.isArray(communityStatus.whitelist) ? communityStatus.whitelist : []).map(maskedPublicEmail).filter(Boolean));
   index.charts = index.charts.map((chart) => {
@@ -614,6 +625,7 @@ async function publicIndex(voterId = '') {
       submitter,
       tags: [...new Set((Array.isArray(chart.tags) ? chart.tags : []).map((tag) => tag === '全局' ? '错轮' : tag))],
       downloadCount: Math.max(0, Number(communityStatus.downloads[chart.id] || 0)),
+      commentCount: Math.max(0, Number(commentCounts[chart.id] || 0)),
       downloadUrl: `/api/community/download/${encodeURIComponent(chart.id)}`,
       votes: {
         up: Math.max(0, Number(engagement.counts[chart.id]?.up || 0)),
@@ -714,6 +726,23 @@ async function handleCommunityApi(req, res, pathname) {
   }
   if (req.method === 'POST' && pathname === '/api/community/withdraw') {
     sendJson(res, 202, await community.requestWithdrawal(await readJsonBody(req)));
+    return;
+  }
+  const commentsMatch = /^\/api\/community\/comments\/([^/]+)$/.exec(pathname);
+  if (req.method === 'GET' && commentsMatch) {
+    sendJson(res, 200, await community.publicComments(decodeURIComponent(commentsMatch[1])));
+    return;
+  }
+  if (req.method === 'POST' && commentsMatch) {
+    if (!acceptCommentFrom(clientAddress(req))) return sendJson(res, 429, { error: 'Too many comments. Please try again later.' });
+    try {
+      sendJson(res, 201, await community.addComment(
+        decodeURIComponent(commentsMatch[1]),
+        await readJsonBody(req, 8 * 1024)
+      ));
+    } catch (error) {
+      sendJson(res, Number(error.statusCode || 400), { error: error.message || String(error) });
+    }
     return;
   }
   if (req.method === 'POST' && pathname === '/api/community/vote') {

@@ -294,7 +294,10 @@ const state = {
   commissionDetail: null,
   commissionResponse: null,
   commissionResponsePackage: null,
-  feedbackChart: null,
+  commentsChart: null,
+  commentReplyTarget: null,
+  // Comments are fetched from the community server when a thread is opened.
+  commentsByChart: {},
   appDialogResolve: null,
   appDialogPreviousFocus: null,
   axisIconSet: 'english',
@@ -451,16 +454,25 @@ const els = {
   detailDownload: document.getElementById('detailDownload'),
   detailWithdraw: document.getElementById('detailWithdraw'),
   detailUpvote: document.getElementById('detailUpvote'),
-  detailFeedback: document.getElementById('detailFeedback'),
+  detailComments: document.getElementById('detailComments'),
+  detailCommentCount: document.getElementById('detailCommentCount'),
   detailVoteHint: document.getElementById('detailVoteHint'),
-  feedbackBackdrop: document.getElementById('feedbackBackdrop'),
-  feedbackForm: document.getElementById('feedbackForm'),
-  feedbackReason: document.getElementById('feedbackReason'),
-  feedbackReasonCount: document.getElementById('feedbackReasonCount'),
-  feedbackFormStatus: document.getElementById('feedbackFormStatus'),
-  closeFeedback: document.getElementById('closeFeedbackBtn'),
-  cancelFeedback: document.getElementById('cancelFeedbackBtn'),
-  submitFeedback: document.getElementById('submitFeedbackBtn'),
+  commentsBackdrop: document.getElementById('commentsBackdrop'),
+  commentsComboTitle: document.getElementById('commentsComboTitle'),
+  commentsCount: document.getElementById('commentsCount'),
+  commentsList: document.getElementById('commentsList'),
+  commentsEmpty: document.getElementById('commentsEmpty'),
+  commentForm: document.getElementById('commentForm'),
+  commentInput: document.getElementById('commentInput'),
+  commentInputCount: document.getElementById('commentInputCount'),
+  commentFormStatus: document.getElementById('commentFormStatus'),
+  commentReplyContext: document.getElementById('commentReplyContext'),
+  commentReplyLabel: document.getElementById('commentReplyLabel'),
+  cancelCommentReply: document.getElementById('cancelCommentReplyBtn'),
+  closeComments: document.getElementById('closeCommentsBtn'),
+  cancelComments: document.getElementById('cancelCommentsBtn'),
+  submitComment: document.getElementById('submitCommentBtn'),
+  submitCommentLabel: document.getElementById('submitCommentLabel'),
   axisIconSetButtons: [...document.querySelectorAll('[data-icon-set]')],
   axisZoom: document.getElementById('axisZoom'),
   axisZoomValue: document.getElementById('axisZoomValue'),
@@ -1132,6 +1144,22 @@ function safeHttpUrl(value) {
   } catch {
     return '';
   }
+}
+
+function normalizedComment(value, fallbackId = '') {
+  if (!value || typeof value !== 'object') return null;
+  const body = String(value.body || value.text || '').trim().slice(0, 1000);
+  if (!body) return null;
+  const id = String(value.id || fallbackId).trim().slice(0, 120);
+  if (!id) return null;
+  return {
+    id,
+    parentId: String(value.parentId || '').trim().slice(0, 120),
+    username: String(value.username || '').trim().slice(0, 40) || t('comments.guest'),
+    avatar: String(value.avatar || '').trim().slice(0, 80),
+    body,
+    createdAt: Number(value.createdAt || Date.now()) || Date.now()
+  };
 }
 
 function videoLinkPlatform(value) {
@@ -2040,26 +2068,23 @@ function renderDetailTags(chart) {
 
 function renderVoteControls(chart) {
   const vote = chart.viewerVote === 'up' || chart.viewerVote === 'down' ? chart.viewerVote : '';
-  const downloaded = chart.viewerDownloaded === true || chart.canVote === true || chart.canFeedback === true;
   const canVote = chart.canVote === true && !vote;
-  const feedbackSubmitted = chart.feedbackSubmitted === true;
-  const canFeedback = chart.canFeedback === true && !feedbackSubmitted;
   els.detailUpvote.querySelector('[data-vote-count]').textContent = String(Number(chart.votes?.up || 0));
   els.detailUpvote.classList.toggle('selected', vote === 'up');
   els.detailUpvote.disabled = !canVote;
-  els.detailFeedback.classList.toggle('selected', feedbackSubmitted);
-  els.detailFeedback.disabled = !canFeedback;
-  els.detailFeedback.querySelector('span').textContent = t(feedbackSubmitted ? 'feedback.sent' : 'feedback.button');
-  const hintKey = !downloaded
-    ? 'vote.downloadRequired'
-    : feedbackSubmitted && vote
-      ? 'vote.done'
-      : feedbackSubmitted
-        ? 'feedback.sentHint'
-        : vote
-          ? 'feedback.ready'
-          : 'vote.ready';
-  els.detailVoteHint.textContent = t(hintKey);
+  const loadedComments = state.commentsByChart[String(chart.id || '')];
+  const commentCount = Array.isArray(loadedComments) ? loadedComments.length : Math.max(0, Number(chart.commentCount || 0));
+  els.detailCommentCount.textContent = String(commentCount);
+  els.detailCommentCount.hidden = commentCount === 0;
+  els.detailComments.disabled = false;
+  els.detailComments.setAttribute('aria-label', `${t('comments.button')} ${commentCount}`);
+  const commentHints = {
+    'zh-CN': '评论和回复会保存到社区服务器。',
+    'en-US': 'Comments and replies are saved on the community server.',
+    'ja-JP': 'コメントと返信はコミュニティサーバーに保存されます。',
+    'ko-KR': '댓글과 답글은 커뮤니티 서버에 저장됩니다.'
+  };
+  els.detailVoteHint.textContent = commentHints[i18n.language] || t('comments.hint');
 }
 
 async function castVote(chart) {
@@ -2083,68 +2108,203 @@ async function castVote(chart) {
   }
 }
 
-function closeFeedback() {
-  state.feedbackChart = null;
-  els.feedbackBackdrop.hidden = true;
-  syncModalBody();
+function commentsFor(chart) {
+  if (!chart?.id) return [];
+  const chartId = String(chart.id);
+  const merged = new Map();
+  for (const item of Array.isArray(chart.comments) ? chart.comments : []) {
+    const comment = normalizedComment(item, `${chartId}-remote-${merged.size}`);
+    if (comment) merged.set(comment.id, comment);
+  }
+  for (const item of state.commentsByChart[chartId] || []) merged.set(item.id, item);
+  return [...merged.values()].sort((a, b) => a.createdAt - b.createdAt);
 }
 
-function updateFeedbackCount() {
-  els.feedbackReasonCount.value = `${els.feedbackReason.value.length} / 1000`;
-  els.feedbackReasonCount.textContent = els.feedbackReasonCount.value;
+function commentAvatarNode(comment) {
+  const avatar = document.createElement('span');
+  avatar.className = 'comment-avatar profile-avatar';
+  const name = String(comment.avatar || '').trim();
+  if (name && state.characterIcons.has(name)) {
+    avatar.appendChild(avatarElement(name, 'profile-avatar-image'));
+    return avatar;
+  }
+  avatar.textContent = Array.from(comment.username || t('comments.guest'))[0]?.toUpperCase() || '?';
+  return avatar;
 }
 
-function openFeedback(chart) {
+function renderCommentItem(comment, parent = null) {
+  const item = document.createElement('article');
+  item.className = `comment-item${parent ? ' comment-reply' : ''}`;
+  item.dataset.commentId = comment.id;
+  const head = document.createElement('header');
+  head.className = 'comment-item-head';
+  const author = document.createElement('div');
+  author.className = 'comment-author';
+  const name = document.createElement('strong');
+  name.textContent = comment.username;
+  author.append(commentAvatarNode(comment), name);
+  const date = document.createElement('time');
+  date.dateTime = new Date(comment.createdAt).toISOString();
+  date.textContent = formatDate(comment.createdAt);
+  head.append(author, date);
+  const body = document.createElement('p');
+  body.textContent = comment.body;
+  const actions = document.createElement('footer');
+  actions.className = 'comment-item-actions';
+  if (parent) {
+    const replyTo = document.createElement('span');
+    replyTo.textContent = t('comments.replying', { name: parent.username });
+    actions.appendChild(replyTo);
+  }
+  const reply = document.createElement('button');
+  reply.type = 'button';
+  reply.dataset.commentReply = comment.id;
+  reply.innerHTML = `<i data-lucide="corner-down-right" aria-hidden="true"></i><span>${t('comments.reply')}</span>`;
+  actions.appendChild(reply);
+  item.append(head, body, actions);
+  return item;
+}
+
+function renderComments() {
+  const chart = state.commentsChart;
+  if (!chart) return;
+  const comments = commentsFor(chart);
+  const byId = new Map(comments.map((comment) => [comment.id, comment]));
+  const grouped = new Map();
+  for (const comment of comments) {
+    let root = comment;
+    const seen = new Set();
+    while (root.parentId && byId.has(root.parentId) && !seen.has(root.id)) {
+      seen.add(root.id);
+      root = byId.get(root.parentId);
+    }
+    if (!grouped.has(root.id)) grouped.set(root.id, []);
+    if (root.id !== comment.id) grouped.get(root.id).push(comment);
+  }
+  const fragment = document.createDocumentFragment();
+  for (const root of comments.filter((comment) => !comment.parentId || !byId.has(comment.parentId))) {
+    fragment.appendChild(renderCommentItem(root));
+    for (const reply of (grouped.get(root.id) || []).sort((a, b) => a.createdAt - b.createdAt)) {
+      fragment.appendChild(renderCommentItem(reply, root));
+    }
+  }
+  els.commentsList.replaceChildren(fragment);
+  els.commentsList.hidden = comments.length === 0;
+  els.commentsEmpty.hidden = comments.length > 0;
+  els.commentsComboTitle.textContent = chart.title || t('card.untitled');
+  els.commentsCount.textContent = t('comments.count', { count: comments.length });
+  if (state.commentReplyTarget) {
+    els.commentReplyContext.hidden = false;
+    els.commentReplyLabel.textContent = t('comments.replying', { name: state.commentReplyTarget.username });
+    els.commentInput.placeholder = t('comments.replyPlaceholder', { name: state.commentReplyTarget.username });
+    els.submitCommentLabel.textContent = t('comments.replySubmit');
+  } else {
+    els.commentReplyContext.hidden = true;
+    els.commentInput.placeholder = t('comments.placeholder');
+    els.submitCommentLabel.textContent = t('comments.submit');
+  }
+  window.lucide?.createIcons();
+}
+
+function updateCommentInputCount() {
+  els.commentInputCount.textContent = `${els.commentInput.value.length} / 1000`;
+}
+
+async function loadCommentsFor(chart) {
   if (!chart?.id) return;
-  if (chart.feedbackSubmitted) {
-    void showAppMessage(t('feedback.sentHint'));
-    return;
+  try {
+    const response = await fetch(`/api/community/comments/${encodeURIComponent(chart.id)}`, { cache: 'no-store', credentials: 'same-origin' });
+    const value = await response.json().catch(() => ({}));
+    if (!response.ok || !Array.isArray(value.comments)) throw new Error(value.error || `HTTP ${response.status}`);
+    state.commentsByChart[String(chart.id)] = value.comments.map((item, index) => normalizedComment(item, `${chart.id}-${index}`)).filter(Boolean);
+    chart.commentCount = Number(value.count || state.commentsByChart[String(chart.id)].length);
+    if (state.commentsChart?.id === chart.id) {
+      renderComments();
+      renderVoteControls(chart);
+    }
+  } catch (error) {
+    if (state.commentsChart?.id === chart.id) {
+      els.commentFormStatus.textContent = `Comments could not be loaded: ${error.message}`;
+      els.commentFormStatus.className = 'error';
+    }
   }
-  if (!chart.canFeedback) {
-    void showAppMessage(t('feedback.downloadRequired'));
-    return;
-  }
-  state.feedbackChart = chart;
-  els.feedbackReason.value = '';
-  els.feedbackFormStatus.textContent = '';
-  els.feedbackFormStatus.className = '';
-  updateFeedbackCount();
-  els.feedbackBackdrop.hidden = false;
-  syncModalBody();
-  requestAnimationFrame(() => els.feedbackReason.focus());
 }
 
-async function submitFeedback(event) {
+function openComments(chart) {
+  if (!chart?.id) return;
+  state.commentsChart = chart;
+  state.commentReplyTarget = null;
+  els.commentInput.value = '';
+  els.commentFormStatus.textContent = '';
+  els.commentFormStatus.className = '';
+  updateCommentInputCount();
+  renderComments();
+  els.commentsBackdrop.hidden = false;
+  syncModalBody();
+  void loadCommentsFor(chart);
+  requestAnimationFrame(() => els.commentInput.focus());
+}
+
+function closeComments() {
+  state.commentsChart = null;
+  state.commentReplyTarget = null;
+  els.commentsBackdrop.hidden = true;
+  syncModalBody();
+}
+
+function setCommentReplyTarget(commentId) {
+  const comment = commentsFor(state.commentsChart).find((item) => item.id === commentId);
+  if (!comment) return;
+  state.commentReplyTarget = comment;
+  renderComments();
+  els.commentInput.focus();
+}
+
+async function submitComment(event) {
   event.preventDefault();
-  const chart = state.feedbackChart;
-  const reason = els.feedbackReason.value.trim();
-  if (!chart?.id || reason.length < 5) {
-    els.feedbackFormStatus.textContent = t('feedback.tooShort');
-    els.feedbackFormStatus.className = 'error';
+  const chart = state.commentsChart;
+  const body = els.commentInput.value.trim();
+  if (!chart?.id) return;
+  if (!body) {
+    els.commentFormStatus.textContent = t('comments.emptyHint');
+    els.commentFormStatus.className = 'error';
     return;
   }
-  els.submitFeedback.disabled = true;
-  els.feedbackFormStatus.textContent = t('feedback.sending');
-  els.feedbackFormStatus.className = '';
+  const chartId = String(chart.id);
+  const payload = {
+    parentId: state.commentReplyTarget?.id || '',
+    username: state.profile.username || t('comments.guest'),
+    avatar: state.profile.avatar,
+    body
+  };
+  els.commentFormStatus.textContent = 'Saving comment...';
+  els.commentFormStatus.className = '';
   try {
-    const response = await fetch('/api/community/feedback', {
-      method: 'POST', credentials: 'same-origin', headers: embeddedVoterHeaders('/api/community/feedback', { 'content-type': 'application/json' }),
-      body: JSON.stringify({ comboId: chart.id, reason })
+    const response = await fetch(`/api/community/comments/${encodeURIComponent(chartId)}`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
     });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
-    chart.feedbackSubmitted = true;
-    chart.canFeedback = false;
-    closeFeedback();
-    renderVoteControls(chart);
-    render();
-    void showAppMessage(t('feedback.success'));
+    const value = await response.json().catch(() => ({}));
+    if (!response.ok || !value.comment) throw new Error(value.error || `HTTP ${response.status}`);
+    const comment = normalizedComment(value.comment);
+    if (!comment) throw new Error('The server returned an invalid comment.');
+    state.commentsByChart[chartId] = [...(state.commentsByChart[chartId] || []), comment].slice(-200);
+    chart.commentCount = Number(value.count || state.commentsByChart[chartId].length);
   } catch (error) {
-    els.feedbackFormStatus.textContent = t('feedback.failed', { error: error.message });
-    els.feedbackFormStatus.className = 'error';
-  } finally {
-    els.submitFeedback.disabled = false;
+    els.commentFormStatus.textContent = `Comment could not be saved: ${error.message}`;
+    els.commentFormStatus.className = 'error';
+    return;
   }
+  state.commentReplyTarget = null;
+  els.commentInput.value = '';
+  els.commentFormStatus.textContent = '';
+  els.commentFormStatus.className = '';
+  updateCommentInputCount();
+  renderComments();
+  renderVoteControls(chart);
+  els.commentInput.focus();
 }
 
 function axisPeriodLabel(period, loopCount) {
@@ -2548,7 +2708,7 @@ async function openDetails(chart, options = {}) {
   els.detailWithdraw.hidden = responseMode;
   els.detailWithdraw.onclick = () => requestWithdrawal(chart);
   els.detailUpvote.onclick = () => { void castVote(chart); };
-  els.detailFeedback.onclick = () => openFeedback(chart);
+  els.detailComments.onclick = () => openComments(chart);
   if (!responseMode) renderVoteControls(chart);
   els.detailBackdrop.hidden = false;
   document.body.style.overflow = 'hidden';
@@ -2677,6 +2837,7 @@ function refreshLocalizedView() {
     renderCharacterPicker();
   }
   if (state.detailChart) void openDetails(state.detailChart, state.detailOptions || {});
+  if (state.commentsChart) renderComments();
   if (state.commissionDetail) renderCommissionDetail();
   if (!els.uploadBackdrop.hidden) {
     const commissionUpload = state.uploadMode === 'commission';
@@ -2895,7 +3056,7 @@ document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
   if (!els.appDialogBackdrop.hidden) closeAppDialog(false);
   else if (!els.clientDownloadBackdrop.hidden) closeClientDownload();
-  else if (!els.feedbackBackdrop.hidden) closeFeedback();
+  else if (!els.commentsBackdrop.hidden) closeComments();
   else if (!els.uploadBackdrop.hidden) closeUpload();
   else if (!els.profileBackdrop.hidden) closeProfile();
   else if (!els.detailBackdrop.hidden) closeDetails();
@@ -2906,11 +3067,20 @@ document.addEventListener('keydown', (event) => {
 els.appDialogCancel?.addEventListener('click', () => closeAppDialog(false));
 els.appDialogAccept?.addEventListener('click', () => closeAppDialog(true));
 els.appDialogBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.appDialogBackdrop) closeAppDialog(false); });
-els.feedbackForm?.addEventListener('submit', submitFeedback);
-els.feedbackReason?.addEventListener('input', updateFeedbackCount);
-els.closeFeedback?.addEventListener('click', closeFeedback);
-els.cancelFeedback?.addEventListener('click', closeFeedback);
-els.feedbackBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.feedbackBackdrop) closeFeedback(); });
+els.commentForm?.addEventListener('submit', submitComment);
+els.commentInput?.addEventListener('input', updateCommentInputCount);
+els.commentsList?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-comment-reply]');
+  if (button) setCommentReplyTarget(button.dataset.commentReply);
+});
+els.cancelCommentReply?.addEventListener('click', () => {
+  state.commentReplyTarget = null;
+  renderComments();
+  els.commentInput.focus();
+});
+els.closeComments?.addEventListener('click', closeComments);
+els.cancelComments?.addEventListener('click', closeComments);
+els.commentsBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.commentsBackdrop) closeComments(); });
 els.reset.addEventListener('click', resetFilters);
 els.emptyReset.addEventListener('click', resetFilters);
 els.retry.addEventListener('click', () => { els.error.hidden = true; if (state.view === 'commissions') void loadCommissions(); else void loadIndex(); });
