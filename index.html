@@ -18,7 +18,7 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260802-5" />
+    <link rel="stylesheet" href="styles.css?v=20260806-comments" />
   </head>
   <body>
     <header class="site-header">
@@ -424,12 +424,12 @@
               <p id="detailSubmitter"></p>
             </section>
             <section class="detail-section vote-section" id="detailVoteSection">
-              <h3 data-i18n="vote.rating">评价</h3>
+              <h3 data-i18n="comments.button">评论</h3>
               <div class="vote-actions">
                 <button id="detailUpvote" type="button"><i data-lucide="thumbs-up" aria-hidden="true"></i><span data-vote-count="up">0</span></button>
-                <button id="detailFeedback" class="feedback-button" type="button"><i data-lucide="thumbs-down" aria-hidden="true"></i><span data-i18n="feedback.button">反馈</span></button>
+                <button id="detailComments" class="comments-button" type="button"><i data-lucide="message-circle" aria-hidden="true"></i><span data-i18n="comments.button">评论</span><strong id="detailCommentCount">0</strong></button>
               </div>
-              <p class="vote-hint" id="detailVoteHint" data-i18n="vote.downloadRequired">下载后可以点赞或发送一次匿名反馈。</p>
+              <p class="vote-hint" id="detailVoteHint" data-i18n="comments.hint">评论和回复只保存在当前浏览器。</p>
             </section>
             <div class="detail-links">
               <a id="detailSourceLink" class="secondary-button" target="_blank" rel="noreferrer" hidden>
@@ -472,23 +472,27 @@
       </section>
     </div>
 
-    <div class="modal-backdrop feedback-backdrop" id="feedbackBackdrop" hidden>
-      <section class="feedback-dialog" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle" aria-describedby="feedbackHint">
+    <div class="modal-backdrop comments-backdrop" id="commentsBackdrop" hidden>
+      <section class="comments-dialog" role="dialog" aria-modal="true" aria-labelledby="commentsTitle" aria-describedby="commentsHint">
         <header class="modal-header">
           <div>
-            <p class="eyebrow">COMBO FEEDBACK</p>
-            <h2 id="feedbackTitle" data-i18n="feedback.title">向上传者反馈</h2>
-            <p id="feedbackHint" data-i18n="feedback.hint">反馈会匿名发送到上传者邮箱，每个浏览器对同一连段只能发送一次。</p>
+            <p class="eyebrow">COMBO COMMENTS</p>
+            <h2 id="commentsTitle" data-i18n="comments.title">评论区</h2>
+            <p id="commentsHint" data-i18n="comments.hint">评论和回复只保存在当前浏览器。</p>
           </div>
-          <button class="icon-button" id="closeFeedbackBtn" type="button" aria-label="关闭" data-i18n-aria-label="common.close"><i data-lucide="x" aria-hidden="true"></i></button>
+          <button class="icon-button" id="closeCommentsBtn" type="button" aria-label="关闭" data-i18n-aria-label="common.close"><i data-lucide="x" aria-hidden="true"></i></button>
         </header>
-        <form id="feedbackForm" class="feedback-form">
-          <label for="feedbackReason" data-i18n="feedback.reason">反馈理由</label>
-          <textarea id="feedbackReason" minlength="5" maxlength="1000" required placeholder="请具体说明问题或建议" data-i18n-placeholder="feedback.placeholder"></textarea>
-          <div class="feedback-form-meta"><span id="feedbackFormStatus" aria-live="polite"></span><output id="feedbackReasonCount" for="feedbackReason">0 / 1000</output></div>
+        <div class="comments-context"><strong id="commentsComboTitle"></strong><span id="commentsCount"></span></div>
+        <div class="comments-list" id="commentsList"></div>
+        <div class="comments-empty" id="commentsEmpty" hidden><i data-lucide="message-square" aria-hidden="true"></i><strong data-i18n="comments.empty">还没有评论</strong><span data-i18n="comments.emptyHint">来留下第一条评论吧。</span></div>
+        <form id="commentForm" class="comment-form">
+          <div class="comment-reply-context" id="commentReplyContext" hidden><span id="commentReplyLabel"></span><button id="cancelCommentReplyBtn" type="button" data-i18n="comments.cancelReply">取消回复</button></div>
+          <label class="sr-only" for="commentInput" data-i18n="comments.inputLabel">评论内容</label>
+          <textarea id="commentInput" maxlength="1000" required placeholder="写下你的评论..." data-i18n-placeholder="comments.placeholder"></textarea>
+          <div class="comment-form-meta"><span id="commentFormStatus" aria-live="polite"></span><output id="commentInputCount" for="commentInput">0 / 1000</output></div>
           <footer class="modal-footer">
-            <button id="cancelFeedbackBtn" type="button" data-i18n="common.cancel">取消</button>
-            <button class="primary-button" id="submitFeedbackBtn" type="submit"><i data-lucide="send" aria-hidden="true"></i><span data-i18n="feedback.submit">发送反馈</span></button>
+            <button id="cancelCommentsBtn" type="button" data-i18n="common.close">关闭</button>
+            <button class="primary-button" id="submitCommentBtn" type="submit"><i data-lucide="send" aria-hidden="true"></i><span id="submitCommentLabel" data-i18n="comments.submit">发表评论</span></button>
           </footer>
         </form>
       </section>
@@ -533,7 +537,7 @@
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
     <script src="assets/input-icons.js?v=20260801-1"></script>
     <script>window.WWComboInputIcons = WWComboInputIcons;</script>
-    <script src="i18n.js?v=20260802-1"></script>
-    <script src="app.js?v=20260802-9"></script>
+    <script src="i18n.js?v=20260806-comments"></script>
+    <script src="app.js?v=20260806-comments"></script>
   </body>
 </html>
