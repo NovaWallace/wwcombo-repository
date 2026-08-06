@@ -1,6 +1,7 @@
 const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/batch-icons/character';
 const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
 const UNKNOWN_CHARACTER_ICON = './assets/unknown-character.jpg';
+const CHARACTER_ICON_CACHE_KEY = 'wwcombo-character-icons-v1';
 const APP_RELEASE_MANIFEST_PATH = '/api/project-assets/v1/app-release.json';
 const APP_RELEASE_FALLBACK_ORIGIN = 'https://Nova.fb520.site';
 const PROFILE_STORAGE_KEY = 'wwcombo-community-profile-v1';
@@ -1186,28 +1187,80 @@ function submitterFor(chart) {
   };
 }
 
+function characterIconMap(payload) {
+  const entries = Array.isArray(payload)
+    ? payload
+    : payload && typeof payload === 'object'
+      ? Object.entries(payload)
+      : [];
+  const icons = new Map();
+  for (const item of entries) {
+    if (!Array.isArray(item) || typeof item[0] !== 'string' || typeof item[1] !== 'string') continue;
+    const name = item[0].trim();
+    const source = item[1].trim();
+    if (!name || !source || icons.has(name)) continue;
+    try {
+      const sourceUrl = new URL(source, location.href);
+      if (['http:', 'https:'].includes(sourceUrl.protocol)) icons.set(name, sourceUrl.href);
+    } catch {}
+  }
+  return icons;
+}
+
+function readCharacterIconCache() {
+  try {
+    const value = JSON.parse(localStorage.getItem(CHARACTER_ICON_CACHE_KEY) || '{}');
+    return characterIconMap(value?.entries);
+  } catch {
+    return new Map();
+  }
+}
+
+function writeCharacterIconCache(icons) {
+  try {
+    localStorage.setItem(CHARACTER_ICON_CACHE_KEY, JSON.stringify({
+      version: 1,
+      savedAt: Date.now(),
+      entries: [...icons.entries()]
+    }));
+  } catch {}
+}
+
+function avatarLoadingMode(className) {
+  return /(?:card-character-avatar|profile-avatar|submitter-avatar|character-avatar)/.test(className) ? 'eager' : 'lazy';
+}
+
+function unknownAvatarElement(className) {
+  const fallback = document.createElement('img');
+  fallback.className = `${className} unknown-avatar`;
+  fallback.src = UNKNOWN_CHARACTER_ICON;
+  fallback.alt = '';
+  fallback.loading = 'eager';
+  fallback.decoding = 'async';
+  return fallback;
+}
+
 function avatarElement(name, className = 'mini-avatar') {
   const source = state.characterIcons.get(name);
-  if (!source) {
-    const fallback = document.createElement('img');
-    fallback.className = `${className} unknown-avatar`;
-    fallback.src = UNKNOWN_CHARACTER_ICON;
-    fallback.alt = '';
-    fallback.loading = 'lazy';
-    return fallback;
-  }
+  if (!source) return unknownAvatarElement(className);
   const image = document.createElement('img');
   image.className = className;
   image.src = source;
   image.alt = '';
-  image.loading = 'lazy';
+  image.loading = avatarLoadingMode(className);
+  image.decoding = 'async';
+  image.fetchPriority = image.loading === 'eager' ? 'high' : 'low';
+  let retried = false;
   image.addEventListener('error', () => {
-    const fallback = document.createElement('img');
-    fallback.className = `${className} unknown-avatar`;
-    fallback.src = UNKNOWN_CHARACTER_ICON;
-    fallback.alt = '';
-    image.replaceWith(fallback);
-  }, { once: true });
+    if (!retried && /^https?:/i.test(source)) {
+      retried = true;
+      window.setTimeout(() => {
+        image.src = `${source}${source.includes('?') ? '&' : '?'}wwcombo-retry=1`;
+      }, 240);
+      return;
+    }
+    image.replaceWith(unknownAvatarElement(className));
+  });
   return image;
 }
 
@@ -2868,28 +2921,31 @@ function refreshLocalizedView() {
 }
 
 async function loadCharacterIcons() {
+  const cachedIcons = readCharacterIconCache();
+  if (cachedIcons.size) {
+    state.characterIcons = cachedIcons;
+    renderProfile();
+    render();
+  }
   try {
-    let response = await fetch(CHARACTER_ICON_MANIFEST, { cache: 'no-cache' });
+    let response = await fetch(CHARACTER_ICON_MANIFEST, { cache: 'force-cache' });
     if (!response.ok) response = await fetch(CHARACTER_ICON_API, { cache: 'force-cache' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
-    const entries = Array.isArray(payload) ? payload : payload && typeof payload === 'object' ? Object.entries(payload) : [];
-    const icons = new Map();
-    for (const item of entries) {
-      if (!Array.isArray(item) || typeof item[0] !== 'string' || typeof item[1] !== 'string') continue;
-      const name = item[0].trim();
-      const source = item[1].trim();
-      try {
-        const sourceUrl = new URL(source, location.href);
-        if (name && ['http:', 'https:'].includes(sourceUrl.protocol) && !icons.has(name)) icons.set(name, sourceUrl.href);
-      } catch {}
-    }
+    const icons = characterIconMap(payload);
+    if (!icons.size) throw new Error('Character icon manifest is empty');
+    writeCharacterIconCache(icons);
     state.characterIcons = icons;
     renderProfile();
     render();
     if (!els.characterPickerBackdrop.hidden) renderCharacterPicker();
   } catch {
-    state.characterIcons = new Map();
+    // Keep a previous manifest when the network or static host is briefly unavailable.
+    if (!state.characterIcons.size && cachedIcons.size) {
+      state.characterIcons = cachedIcons;
+      renderProfile();
+      render();
+    }
   }
 }
 
