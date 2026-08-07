@@ -51,6 +51,10 @@ const ADMIN_AXIS_ICON_MAPPINGS = [
   ['mouse-right-hold','长按闪避','长按闪避.png',['S','D','闪','长按闪避']],['mouse-left-hold','重击','重击.png',['z','Z','长按普攻','重击']],['skill-hold','长按技能','长按技能.png',['E','长按技能']],['echo-hold','长按声骸','长按声骸.png',['Q','长按声骸']],['liberation-hold','长按解放','长按解放.png',['R','长按解放','长按共鸣解放']],['jump-hold','长按跳跃','长按跳跃.png',['J','长按跳跃']],
   ['mouse-left','普攻','普攻.png',['a','普攻']],['skill','技能','技能.png',['e','技能']],['echo','声骸','声骸.png',['q','声骸']],['liberation','共鸣解放','解放.png',['r','共鸣解放']],['mouse-right','闪避','闪避.png',['s','d','闪避']],['jump','跳跃','跳跃.png',['j','跳跃','跳']],['tool','工具','工具.png',['t','工具']],['intro','变奏','变奏.png',['b','变奏']],['outro','延奏','延奏.png',['y','延奏']],['finisher','处决','处决.png',['f','处决','终结技']],['forward','前走','前走.png',['w','前走']],['iii','3','iii.png',['iii']],['ii','2','ii.png',['ii']],['i','1','i.png',['i']]
 ].map(([id,label,fileName,triggers])=>({ id,label,triggers,englishSrc:`/assets/button-icons/${id}.png`,graphicSrc:PURE_GRAPHIC_ICON_IDS.has(id)?`/assets/graphic-icons/${id}.png`:`/assets/botton/${encodeURIComponent(fileName)}`,gamepadCode:GAMEPAD_ICON_CODES[id] }));
+const ADMIN_BASIC_ATTACK_GRAPHIC = '/assets/button-icons/mouse-left.png';
+for (const mapping of ADMIN_AXIS_ICON_MAPPINGS) {
+  if (mapping.id === 'mouse-left') mapping.graphicSrc = ADMIN_BASIC_ATTACK_GRAPHIC;
+}
 const ADMIN_AXIS_ICON_TRIGGERS = ADMIN_AXIS_ICON_MAPPINGS.flatMap((mapping)=>mapping.triggers.map((trigger)=>({trigger,mapping}))).sort((left,right)=>right.trigger.length-left.trigger.length);
 const state = { csrf:'', status:null, pollTimer:0, review:null, manageDetail:null, icons:new Map(), chartPackages:new Map(), axisIconSet:'english', axisScale:1.25, chartQuery:'', chartCharacter:'', chartTag:'', projectAssets:null, projectAssetSelectedId:'', projectAssetImageDataUrl:'', confirmationResolve:null, confirmationMode:'confirm' };
 

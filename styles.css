@@ -688,6 +688,7 @@ html[data-theme='day'] .empty-state { border-color: #aebec2; color: #63777e; }
 .create-commission-button svg { width: 16px; height: 16px; }
 
 .commission-list { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; align-content: start; grid-auto-rows: max-content; gap: 16px; }
+.commission-list .commission-group-start { grid-column: 1; }
 .commission-card { position: relative; min-width: 0; min-height: 304px; height: auto; align-self: start; display: grid; grid-template-rows: auto auto; border: 1px solid #d1aa45; border-radius: 3px; background: rgba(188,145,35,.42); box-shadow: 5px 2.5px 0 #d71920, 0 14px 30px rgba(0,0,0,.42); isolation: isolate; overflow: hidden; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
 .commission-card::before { content: ''; position: absolute; z-index: 1; top: 8px; left: 50%; width: 58px; height: 8px; background: rgba(215,173,82,.56); transform: translateX(-50%) rotate(-2deg); pointer-events: none; }
 .commission-card::after { content: ''; position: absolute; z-index: 2; right: -18px; bottom: 88px; width: 150px; height: 132px; background: url("assets/commission-open-jianxin.png") right bottom / contain no-repeat; opacity: .33; pointer-events: none; }

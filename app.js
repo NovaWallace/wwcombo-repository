@@ -26,6 +26,9 @@ const BUTTON_ICON_BASES = {
   graphic: './assets/graphic-icons',
   chinese: './assets/botton'
 };
+const GRAPHIC_ICON_OVERRIDES = {
+  'mouse-left': `${BUTTON_ICON_BASES.english}/mouse-left.png`
+};
 const PURE_GRAPHIC_ICON_IDS = new Set([
   'echo-hold', 'echo', 'finisher', 'jump-hold', 'jump',
   'liberation-hold', 'liberation', 'mouse-left-hold', 'mouse-left',
@@ -97,9 +100,9 @@ const AXIS_ICON_MAPPINGS = [
   ['ii', '2', 'ii.png', ['ii']],
   ['i', '1', 'i.png', ['i']]
 ].map(([id, label, filename, triggers]) => {
-  const graphicSrc = PURE_GRAPHIC_ICON_IDS.has(id)
+  const graphicSrc = GRAPHIC_ICON_OVERRIDES[id] || (PURE_GRAPHIC_ICON_IDS.has(id)
     ? `${BUTTON_ICON_BASES.graphic}/${id}.png`
-    : `${BUTTON_ICON_BASES.chinese}/${encodeURIComponent(filename)}`;
+    : `${BUTTON_ICON_BASES.chinese}/${encodeURIComponent(filename)}`);
   const gamepadCode = GAMEPAD_ICON_CODES[id];
   return {
     id,
@@ -1661,6 +1664,24 @@ function commissionCreatedAt(commission) {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
+function commissionResponseCount(commission) {
+  const value = Number(commission?.responseCount ?? commission?.responses?.length ?? 0);
+  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+}
+
+function commissionTopInterestTiers(commissions) {
+  return new Set([...new Set(commissions.map(commissionInterestSortCount))]
+    .sort((left, right) => right - left)
+    .slice(0, 3));
+}
+
+function commissionSortGroup(commission, topInterestCounts) {
+  if (topInterestCounts.has(commissionInterestSortCount(commission))) return 0;
+  if (commission.status === 'completed' || commission.acceptedResponseId) return 3;
+  if (commissionResponseCount(commission) > 0) return 2;
+  return 1;
+}
+
 function filteredCommissions() {
   const titleQuery = normalizeText(state.title);
   const commissions = state.commissions.filter((commission) => {
@@ -1669,14 +1690,14 @@ function filteredCommissions() {
     const tagMatches = !state.tag || commissionTags(commission).includes(state.tag);
     return titleMatches && characterMatches && tagMatches;
   });
-  const topInterestCounts = new Set([...new Set(commissions.map(commissionInterestSortCount))].sort((left, right) => right - left).slice(0, 3));
+  const topInterestCounts = commissionTopInterestTiers(commissions);
   return commissions.sort((left, right) => {
+    const leftGroup = commissionSortGroup(left, topInterestCounts);
+    const rightGroup = commissionSortGroup(right, topInterestCounts);
+    if (leftGroup !== rightGroup) return leftGroup - rightGroup;
     const leftInterest = commissionInterestSortCount(left);
     const rightInterest = commissionInterestSortCount(right);
-    const leftIsTop = topInterestCounts.has(leftInterest);
-    const rightIsTop = topInterestCounts.has(rightInterest);
-    if (leftIsTop !== rightIsTop) return leftIsTop ? -1 : 1;
-    if (leftIsTop && leftInterest !== rightInterest) return rightInterest - leftInterest;
+    if (leftGroup === 0 && leftInterest !== rightInterest) return rightInterest - leftInterest;
     return commissionCreatedAt(right) - commissionCreatedAt(left)
       || collator.compare(left.title || '', right.title || '')
       || collator.compare(left.id || '', right.id || '');
@@ -2830,7 +2851,17 @@ function render() {
   const commissionView = state.view === 'commissions';
   const items = commissionView ? filteredCommissions() : filteredCharts();
   els.list.classList.toggle('commission-list', commissionView);
-  els.list.replaceChildren(...items.map((item) => commissionView ? renderCommissionCard(item) : renderCard(item)));
+  const topInterestCounts = commissionView ? commissionTopInterestTiers(items) : new Set();
+  const cards = items.map((item, index) => {
+    const card = commissionView ? renderCommissionCard(item) : renderCard(item);
+    if (commissionView && index > 0) {
+      const previousGroup = commissionSortGroup(items[index - 1], topInterestCounts);
+      const currentGroup = commissionSortGroup(item, topInterestCounts);
+      if (currentGroup !== previousGroup) card.classList.add('commission-group-start');
+    }
+    return card;
+  });
+  els.list.replaceChildren(...cards);
   els.count.textContent = t(commissionView ? 'commission.results' : 'unit.results', { count: items.length });
   els.empty.querySelector('strong').textContent = t(commissionView ? 'commission.empty' : 'empty.title');
   els.empty.querySelector('span').textContent = t(commissionView ? 'commission.emptyHint' : 'empty.body');
