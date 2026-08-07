@@ -642,6 +642,15 @@ async function publicIndex(voterId = '') {
 }
 
 async function handleCommunityApi(req, res, pathname) {
+  if (req.method === 'POST' && pathname === '/api/community/preflight') {
+    try {
+      const preflight = community.preflight(await readJsonBody(req, 1400 * 1024));
+      sendJson(res, 200, { preflight });
+    } catch (error) {
+      sendJson(res, Number(error.statusCode || 422), { error: error.message || String(error) });
+    }
+    return;
+  }
   if (req.method === 'GET' && pathname === '/api/community/commissions') {
     const identity = readVoterIdentity(req) || createVoterIdentity();
     sendJson(res, 200, await community.publicCommissions(identity.id, req.headers['x-wwcombo-profile-email']), { 'set-cookie': voterCookie(req, identity.token) });
@@ -676,9 +685,12 @@ async function handleCommunityApi(req, res, pathname) {
     const address = clientAddress(req);
     if (!acceptSubmissionFrom(address)) return sendJson(res, 429, { error: '操作过于频繁，请稍后再试。' });
     const identity = readVoterIdentity(req) || createVoterIdentity();
+    const body = await readJsonBody(req, 1400 * 1024);
+    const preflight = community.preflight(body.content);
+    if (!preflight.lowRisk) return sendJson(res, 422, { error: 'Upload preflight failed. Please fix the combo before submitting.', preflight });
     const result = await community.submitCommissionResponse(
       decodeURIComponent(commissionResponses[1]),
-      await readJsonBody(req, 1400 * 1024),
+      body,
       address,
       identity.id
     );
@@ -720,7 +732,10 @@ async function handleCommunityApi(req, res, pathname) {
   if (req.method === 'POST' && pathname === '/api/community/submit') {
     const address = clientAddress(req);
     if (!acceptSubmissionFrom(address)) return sendJson(res, 429, { error: '投稿过于频繁，请稍后再试。' });
-    const result = await community.submit(await readJsonBody(req, 1400 * 1024), address);
+    const body = await readJsonBody(req, 1400 * 1024);
+    const preflight = community.preflight(body.content);
+    if (!preflight.lowRisk) return sendJson(res, 422, { error: 'Upload preflight failed. Please fix the combo before submitting.', preflight });
+    const result = await community.submit(body, address);
     sendJson(res, 202, result);
     return;
   }

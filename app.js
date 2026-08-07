@@ -286,6 +286,7 @@ const state = {
   uploadChart: null,
   uploadPackage: null,
   uploadSource: null,
+  uploadPreflight: null,
   uploadMode: 'community',
   uploadCommissionId: '',
   clientLibrary: [],
@@ -740,6 +741,7 @@ function openUpload(commissionId = '', initialPackage = null) {
   state.uploadChart = null;
   state.uploadPackage = null;
   state.uploadSource = null;
+  state.uploadPreflight = null;
   state.uploadMode = commissionId ? 'commission' : 'community';
   state.uploadCommissionId = commissionId;
   if (commissionId && !els.commissionDetailBackdrop.hidden) {
@@ -760,6 +762,7 @@ function openUpload(commissionId = '', initialPackage = null) {
   requestClientLibrary();
   els.uploadFeedback.textContent = '';
   els.uploadFeedback.className = 'form-feedback';
+  els.confirmUpload.disabled = true;
   els.uploadBackdrop.hidden = false;
   document.body.style.overflow = 'hidden';
   if (initialPackage) applyUploadPackage(initialPackage, 'client');
@@ -770,6 +773,7 @@ function closeUpload() {
   state.uploadChart = null;
   state.uploadPackage = null;
   state.uploadSource = null;
+  state.uploadPreflight = null;
   state.uploadMode = 'community';
   state.uploadCommissionId = '';
   els.uploadBackdrop.hidden = true;
@@ -811,6 +815,49 @@ function renderUploadAxisPreview() {
   renderAxisPreview(state.uploadPackage, state.uploadChart, { preview: els.uploadAxisPreview, summary: els.uploadAxisSummary });
 }
 
+function uploadPreflightMessage(preflight) {
+  const issues = Array.isArray(preflight?.issues) ? preflight.issues.filter(Boolean) : [];
+  if (i18n.language === 'en-US') {
+    return issues.length
+      ? `Preflight blocked: ${issues.join('; ')}`
+      : 'Preflight passed. You can submit.';
+  }
+  return issues.length
+    ? `预审核未通过：${issues.join('；')}`
+    : '预审核通过，可以提交。';
+}
+
+async function runUploadPreflight(content, previewToken) {
+  els.confirmUpload.disabled = true;
+  els.uploadFeedback.textContent = i18n.language === 'en-US'
+    ? 'Running preflight check...'
+    : '正在执行上传预审核...';
+  els.uploadFeedback.className = 'form-feedback';
+  try {
+    const response = await fetch('/api/community/preflight', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(content)
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.preflight) throw new Error(body.error || `HTTP ${response.status}`);
+    if (previewToken !== uploadPreviewToken || state.uploadPackage !== content) return;
+    state.uploadPreflight = body.preflight;
+    const passed = body.preflight.lowRisk === true;
+    els.uploadFeedback.textContent = uploadPreflightMessage(body.preflight);
+    els.uploadFeedback.className = `form-feedback${passed ? ' success' : ''}`;
+    els.confirmUpload.disabled = !passed;
+  } catch (error) {
+    if (previewToken !== uploadPreviewToken || state.uploadPackage !== content) return;
+    state.uploadPreflight = null;
+    els.uploadFeedback.textContent = i18n.language === 'en-US'
+      ? `Preflight unavailable: ${error.message}`
+      : `预审核失败，暂时不能提交：${error.message}`;
+    els.uploadFeedback.className = 'form-feedback';
+    els.confirmUpload.disabled = true;
+  }
+}
+
 function normalizedClientUploadPackage(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const filename = typeof value.filename === 'string' ? value.filename.trim().slice(0, 180) : '';
@@ -830,8 +877,10 @@ function applyUploadPackage(value, source = 'client') {
   els.comboFileName.textContent = packageValue.filename;
   els.uploadFeedback.textContent = '';
   els.uploadFeedback.className = 'form-feedback';
+  state.uploadPreflight = null;
   renderUploadAxisPreview();
   renderClientComboPicker();
+  void runUploadPreflight(packageValue.payload, uploadPreviewToken);
   return true;
 }
 
@@ -891,6 +940,8 @@ async function previewUploadFile() {
   state.uploadChart = null;
   state.uploadPackage = null;
   state.uploadSource = null;
+  state.uploadPreflight = null;
+  els.confirmUpload.disabled = true;
   els.uploadAxisPreview.replaceChildren();
   if (!file) {
     resetUploadAxisPreview();
@@ -922,6 +973,12 @@ async function submitCombo(event) {
   event.preventDefault();
   const source = state.uploadSource;
   if (!source) return;
+  if (state.uploadPreflight?.lowRisk !== true) {
+    els.uploadFeedback.textContent = i18n.language === 'en-US'
+      ? 'Preflight has not passed. Submission is disabled.'
+      : '预审核尚未通过，暂时不能提交。';
+    return;
+  }
   const serialized = JSON.stringify(source.payload);
   if (new TextEncoder().encode(serialized).byteLength > 1024 * 1024) {
     els.uploadFeedback.textContent = t('upload.tooLarge');
@@ -946,6 +1003,7 @@ async function submitCombo(event) {
     state.uploadChart = null;
     state.uploadPackage = null;
     state.uploadSource = null;
+    state.uploadPreflight = null;
     resetUploadAxisPreview();
     renderClientComboPicker();
     if (commissionId && body.commission) {
@@ -957,7 +1015,7 @@ async function submitCombo(event) {
   } catch (error) {
     els.uploadFeedback.textContent = error instanceof SyntaxError ? t('upload.invalidJson') : error.message;
   } finally {
-    els.confirmUpload.disabled = false;
+    els.confirmUpload.disabled = state.uploadPreflight?.lowRisk !== true;
   }
 }
 

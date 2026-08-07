@@ -1137,6 +1137,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     adoptCommissionResponse: (...args) => serializeMutation(() => adoptCommissionResponse(...args)),
     withdrawCommissionResponse: (...args) => serializeMutation(() => withdrawCommissionResponse(...args)),
     withdrawCommission: (...args) => serializeMutation(() => withdrawCommission(...args)),
-    status
+    status,
+    preflight: (payload) => preflightReview(payload)
   };
 }
