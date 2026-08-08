@@ -1727,15 +1727,18 @@ function commissionResponseCount(commission) {
 }
 
 function commissionTopInterestTiers(commissions) {
-  return new Set([...new Set(commissions.map(commissionInterestSortCount))]
+  return new Set([...new Set(commissions
+    .filter((commission) => commission.status !== 'completed' && !commission.acceptedResponseId && commissionResponseCount(commission) === 0)
+    .map(commissionInterestSortCount)
+    .filter((count) => count > 0))]
     .sort((left, right) => right - left)
     .slice(0, 5));
 }
 
 function commissionSortGroup(commission, topInterestCounts) {
-  if (topInterestCounts.has(commissionInterestSortCount(commission))) return 0;
   if (commission.status === 'completed' || commission.acceptedResponseId) return 3;
   if (commissionResponseCount(commission) > 0) return 2;
+  if (topInterestCounts.has(commissionInterestSortCount(commission))) return 0;
   return 1;
 }
 
