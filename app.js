@@ -461,7 +461,6 @@ const els = {
   detailUpvote: document.getElementById('detailUpvote'),
   detailComments: document.getElementById('detailComments'),
   detailCommentCount: document.getElementById('detailCommentCount'),
-  detailVoteHint: document.getElementById('detailVoteHint'),
   commentsBackdrop: document.getElementById('commentsBackdrop'),
   commentsComboTitle: document.getElementById('commentsComboTitle'),
   commentsCount: document.getElementById('commentsCount'),
@@ -1730,7 +1729,7 @@ function commissionResponseCount(commission) {
 function commissionTopInterestTiers(commissions) {
   return new Set([...new Set(commissions.map(commissionInterestSortCount))]
     .sort((left, right) => right - left)
-    .slice(0, 3));
+    .slice(0, 5));
 }
 
 function commissionSortGroup(commission, topInterestCounts) {
@@ -1764,6 +1763,24 @@ function filteredCommissions() {
 
 function commissionStatusLabel(commission) {
   return t(commission.status === 'completed' ? 'commission.completed' : 'commission.open');
+}
+
+function commissionGroupTitle(group) {
+  const labels = {
+    'zh-CN': ['大家想要', '看看这个', '等待采纳', '已完成'],
+    'en-US': ['Most wanted', 'Take a look', 'Awaiting adoption', 'Completed'],
+    'ja-JP': ['みんなが欲しい', 'こちらも注目', '採用待ち', '完了'],
+    'ko-KR': ['모두가 원하는 것', '이것도 확인', '채택 대기', '완료']
+  };
+  return labels[i18n.language]?.[group] || labels['zh-CN'][group] || '';
+}
+
+function renderCommissionGroupHeading(group) {
+  const heading = document.createElement('h3');
+  heading.className = 'commission-group-heading';
+  heading.dataset.group = String(group);
+  heading.textContent = commissionGroupTitle(group);
+  return heading;
 }
 
 function commissionInterestTotal(commission) {
@@ -2217,13 +2234,6 @@ function renderVoteControls(chart) {
   els.detailCommentCount.hidden = commentCount === 0;
   els.detailComments.disabled = false;
   els.detailComments.setAttribute('aria-label', `${t('comments.button')} ${commentCount}`);
-  const commentHints = {
-    'zh-CN': '评论和回复会保存到社区服务器。',
-    'en-US': 'Comments and replies are saved on the community server.',
-    'ja-JP': 'コメントと返信はコミュニティサーバーに保存されます。',
-    'ko-KR': '댓글과 답글은 커뮤니티 서버에 저장됩니다.'
-  };
-  els.detailVoteHint.textContent = commentHints[i18n.language] || t('comments.hint');
 }
 
 async function castVote(chart) {
@@ -2910,15 +2920,16 @@ function render() {
   const items = commissionView ? filteredCommissions() : filteredCharts();
   els.list.classList.toggle('commission-list', commissionView);
   const topInterestCounts = commissionView ? commissionTopInterestTiers(items) : new Set();
-  const cards = items.map((item, index) => {
-    const card = commissionView ? renderCommissionCard(item) : renderCard(item);
-    if (commissionView && index > 0) {
-      const previousGroup = commissionSortGroup(items[index - 1], topInterestCounts);
-      const currentGroup = commissionSortGroup(item, topInterestCounts);
-      if (currentGroup !== previousGroup) card.classList.add('commission-group-start');
+  const cards = [];
+  let previousGroup = -1;
+  for (const item of items) {
+    const currentGroup = commissionView ? commissionSortGroup(item, topInterestCounts) : -1;
+    if (commissionView && currentGroup !== previousGroup) {
+      cards.push(renderCommissionGroupHeading(currentGroup));
+      previousGroup = currentGroup;
     }
-    return card;
-  });
+    cards.push(commissionView ? renderCommissionCard(item) : renderCard(item));
+  }
   els.list.replaceChildren(...cards);
   els.count.textContent = t(commissionView ? 'commission.results' : 'unit.results', { count: items.length });
   els.empty.querySelector('strong').textContent = t(commissionView ? 'commission.empty' : 'empty.title');

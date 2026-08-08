@@ -429,7 +429,6 @@
                 <button id="detailUpvote" type="button"><i data-lucide="thumbs-up" aria-hidden="true"></i><span data-vote-count="up">0</span></button>
                 <button id="detailComments" class="comments-button" type="button"><i data-lucide="message-circle" aria-hidden="true"></i><span data-i18n="comments.button">评论</span><strong id="detailCommentCount">0</strong></button>
               </div>
-              <p class="vote-hint" id="detailVoteHint" data-i18n="comments.hint">评论和回复只保存在当前浏览器。</p>
             </section>
             <div class="detail-links">
               <a id="detailSourceLink" class="secondary-button" target="_blank" rel="noreferrer" hidden>
@@ -473,12 +472,11 @@
     </div>
 
     <div class="modal-backdrop comments-backdrop" id="commentsBackdrop" hidden>
-      <section class="comments-dialog" role="dialog" aria-modal="true" aria-labelledby="commentsTitle" aria-describedby="commentsHint">
+      <section class="comments-dialog" role="dialog" aria-modal="true" aria-labelledby="commentsTitle">
         <header class="modal-header">
           <div>
             <p class="eyebrow">COMBO COMMENTS</p>
             <h2 id="commentsTitle" data-i18n="comments.title">评论区</h2>
-            <p id="commentsHint" data-i18n="comments.hint">评论和回复只保存在当前浏览器。</p>
           </div>
           <button class="icon-button" id="closeCommentsBtn" type="button" aria-label="关闭" data-i18n-aria-label="common.close"><i data-lucide="x" aria-hidden="true"></i></button>
         </header>
