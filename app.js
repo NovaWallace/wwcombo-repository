@@ -300,6 +300,7 @@ const state = {
   commissionResponse: null,
   commissionResponsePackage: null,
   commentsChart: null,
+  commentsKind: 'combo',
   commentReplyTarget: null,
   // Comments are fetched from the community server when a thread is opened.
   commentsByChart: {},
@@ -430,6 +431,8 @@ const els = {
   commissionDetailOwner: document.getElementById('commissionDetailOwner'),
   commissionDetailMeta: document.getElementById('commissionDetailMeta'),
   commissionInterest: document.getElementById('commissionInterestBtn'),
+  commissionComments: document.getElementById('commissionCommentsBtn'),
+  commissionDetailCommentCount: document.getElementById('commissionDetailCommentCount'),
   commissionResponseUpload: document.getElementById('commissionResponseUploadBtn'),
   commissionWithdraw: document.getElementById('commissionWithdrawBtn'),
   commissionResponseSummary: document.getElementById('commissionResponseSummary'),
@@ -1791,6 +1794,21 @@ function commissionInterestTotal(commission) {
   return 1 + (Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0);
 }
 
+function commissionCommentsId(commission) {
+  return commission?.id ? `commission:${commission.id}` : '';
+}
+
+function commentTargetId(target, kind = state.commentsKind) {
+  if (!target?.id) return '';
+  return kind === 'commission' ? commissionCommentsId(target) : String(target.id);
+}
+
+function commentCountFor(target, kind = 'combo') {
+  const id = commentTargetId(target, kind);
+  const loaded = state.commentsByChart[id];
+  return Array.isArray(loaded) ? loaded.length : Math.max(0, Number(target?.commentCount || 0));
+}
+
 function renderCommissionCard(commission) {
   const card = els.commissionTemplate.content.firstElementChild.cloneNode(true);
   i18n.apply(card);
@@ -1831,7 +1849,7 @@ function renderCommissionCard(commission) {
   const viewerInterested = Boolean(commission.viewerInterested || commission.viewerIsOwner);
   interest.disabled = commission.status === 'completed' || viewerInterested;
   interest.classList.toggle('selected', viewerInterested);
-  interest.querySelector('span').textContent = viewerInterested ? t('commission.interested') : '+1';
+  interest.querySelector('span').textContent = viewerInterested ? t('commission.interested') : t('commission.interest');
   interest.addEventListener('click', () => { void addCommissionInterest(commission); });
   card.querySelector('.commission-detail-button').addEventListener('click', () => openCommissionDetail(commission));
   return card;
@@ -2166,6 +2184,10 @@ function renderCommissionDetail() {
   els.commissionInterest.disabled = commission.status === 'completed' || viewerInterested;
   els.commissionInterest.classList.toggle('selected', viewerInterested);
   els.commissionInterest.querySelector('span').textContent = viewerInterested ? t('commission.interested') : t('commission.interest');
+  const commentTotal = commentCountFor(commission, 'commission');
+  els.commissionDetailCommentCount.hidden = commentTotal < 1;
+  els.commissionDetailCommentCount.textContent = commentTotal > 0 ? String(commentTotal) : '';
+  els.commissionComments.setAttribute('aria-label', `${t('comments.button')} ${commentTotal}`);
   els.commissionResponseUpload.disabled = commission.status === 'completed';
   els.commissionWithdraw.hidden = commission.status === 'completed' || !isLikelyCommissionOwner(commission);
   els.commissionWithdraw.disabled = false;
@@ -2231,8 +2253,7 @@ function renderVoteControls(chart) {
   els.detailUpvote.querySelector('[data-vote-count]').textContent = String(Number(chart.votes?.up || 0));
   els.detailUpvote.classList.toggle('selected', vote === 'up');
   els.detailUpvote.disabled = !canVote;
-  const loadedComments = state.commentsByChart[String(chart.id || '')];
-  const commentCount = Array.isArray(loadedComments) ? loadedComments.length : Math.max(0, Number(chart.commentCount || 0));
+  const commentCount = commentCountFor(chart, 'combo');
   els.detailCommentCount.textContent = String(commentCount);
   els.detailCommentCount.hidden = commentCount === 0;
   els.detailComments.disabled = false;
@@ -2262,7 +2283,7 @@ async function castVote(chart) {
 
 function commentsFor(chart) {
   if (!chart?.id) return [];
-  const chartId = String(chart.id);
+  const chartId = commentTargetId(chart);
   const merged = new Map();
   for (const item of Array.isArray(chart.comments) ? chart.comments : []) {
     const comment = normalizedComment(item, `${chartId}-remote-${merged.size}`);
@@ -2362,29 +2383,41 @@ function updateCommentInputCount() {
   els.commentInputCount.textContent = `${els.commentInput.value.length} / 1000`;
 }
 
-async function loadCommentsFor(chart) {
+function refreshCommentCount(target, kind) {
+  if (kind === 'commission') {
+    render();
+    if (state.commissionDetail?.id === target.id) renderCommissionDetail();
+    return;
+  }
+  renderVoteControls(target);
+  render();
+}
+
+async function loadCommentsFor(chart, kind = state.commentsKind) {
   if (!chart?.id) return;
+  const chartId = commentTargetId(chart, kind);
   try {
-    const response = await fetch(`/api/community/comments/${encodeURIComponent(chart.id)}`, { cache: 'no-store', credentials: 'same-origin' });
+    const response = await fetch(`/api/community/comments/${encodeURIComponent(chartId)}`, { cache: 'no-store', credentials: 'same-origin' });
     const value = await response.json().catch(() => ({}));
     if (!response.ok || !Array.isArray(value.comments)) throw new Error(value.error || `HTTP ${response.status}`);
-    state.commentsByChart[String(chart.id)] = value.comments.map((item, index) => normalizedComment(item, `${chart.id}-${index}`)).filter(Boolean);
-    chart.commentCount = Number(value.count || state.commentsByChart[String(chart.id)].length);
-    if (state.commentsChart?.id === chart.id) {
+    state.commentsByChart[chartId] = value.comments.map((item, index) => normalizedComment(item, `${chartId}-${index}`)).filter(Boolean);
+    chart.commentCount = Number(value.count || state.commentsByChart[chartId].length);
+    if (state.commentsChart?.id === chart.id && state.commentsKind === kind) {
       renderComments();
-      renderVoteControls(chart);
+      refreshCommentCount(chart, kind);
     }
   } catch (error) {
-    if (state.commentsChart?.id === chart.id) {
+    if (state.commentsChart?.id === chart.id && state.commentsKind === kind) {
       els.commentFormStatus.textContent = `Comments could not be loaded: ${error.message}`;
       els.commentFormStatus.className = 'error';
     }
   }
 }
 
-function openComments(chart) {
+function openComments(chart, kind = 'combo') {
   if (!chart?.id) return;
   state.commentsChart = chart;
+  state.commentsKind = kind;
   state.commentReplyTarget = null;
   els.commentsBackdrop.hidden = false;
   els.commentInput.value = '';
@@ -2393,12 +2426,13 @@ function openComments(chart) {
   updateCommentInputCount();
   renderComments();
   syncModalBody();
-  void loadCommentsFor(chart);
+  void loadCommentsFor(chart, kind);
   requestAnimationFrame(() => els.commentInput.focus());
 }
 
 function closeComments() {
   state.commentsChart = null;
+  state.commentsKind = 'combo';
   state.commentReplyTarget = null;
   els.commentsBackdrop.hidden = true;
   syncModalBody();
@@ -2415,6 +2449,7 @@ function setCommentReplyTarget(commentId) {
 async function submitComment(event) {
   event.preventDefault();
   const chart = state.commentsChart;
+  const kind = state.commentsKind;
   const body = els.commentInput.value.trim();
   if (!chart?.id) return;
   if (!body) {
@@ -2422,7 +2457,7 @@ async function submitComment(event) {
     els.commentFormStatus.className = 'error';
     return;
   }
-  const chartId = String(chart.id);
+  const chartId = commentTargetId(chart, kind);
   const payload = {
     parentId: state.commentReplyTarget?.id || '',
     username: state.profile.username || t('comments.guest'),
@@ -2455,7 +2490,7 @@ async function submitComment(event) {
   els.commentFormStatus.className = '';
   updateCommentInputCount();
   renderComments();
-  renderVoteControls(chart);
+  refreshCommentCount(chart, kind);
   els.commentInput.focus();
 }
 
@@ -3165,6 +3200,7 @@ els.commissionCreateForm?.addEventListener('submit', submitCommission);
 els.closeCommissionDetail?.addEventListener('click', closeCommissionDetail);
 els.commissionDetailBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.commissionDetailBackdrop) closeCommissionDetail(); });
 els.commissionInterest?.addEventListener('click', () => { if (state.commissionDetail) void addCommissionInterest(state.commissionDetail); });
+els.commissionComments?.addEventListener('click', () => { if (state.commissionDetail) openComments(state.commissionDetail, 'commission'); });
 els.commissionResponseUpload?.addEventListener('click', () => { if (state.commissionDetail) openUpload(state.commissionDetail.id); });
 els.commissionWithdraw?.addEventListener('click', () => { if (state.commissionDetail) void withdrawCommission(state.commissionDetail); });
 els.languageSelect?.addEventListener('change', () => i18n.setLanguage(els.languageSelect.value));

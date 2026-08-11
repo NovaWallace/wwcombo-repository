@@ -793,7 +793,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     return { feedbackSubmitted: true, canFeedback: false };
   }
 
-  function commissionPublic(item, voterId = '', upEmails = new Set(), viewerEmail = '') {
+  function commissionPublic(item, voterId = '', upEmails = new Set(), viewerEmail = '', counts = {}) {
     const owner = record(item.owner);
     const viewer = normalizeEmail(viewerEmail);
     const responses = (Array.isArray(item.responses) ? item.responses : []).map((response) => {
@@ -843,6 +843,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       interestCount: Object.keys(interests).length,
       viewerInterested: Boolean(voterId && interests[voterId]),
       responseCount: responses.length,
+      commentCount: Math.max(0, Number(counts[`commission:${item.id}`] || 0)),
       responses,
       ...(item.acceptedResponseId ? { acceptedResponseId: String(item.acceptedResponseId) } : {}),
       ...(item.publishedComboId ? { publishedComboId: String(item.publishedComboId) } : {})
@@ -855,17 +856,18 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   }
 
   async function commissionPublicValue(item, voterId = '', viewerEmail = '') {
-    return commissionPublic(item, voterId, new Set(await whitelist()), viewerEmail);
+    const [emails, counts] = await Promise.all([whitelist(), commentCounts()]);
+    return commissionPublic(item, voterId, new Set(emails), viewerEmail, counts);
   }
 
   async function publicCommissions(voterId = '', viewerEmail = '') {
-    const [state, emails] = await Promise.all([commissionState(), whitelist()]);
+    const [state, emails, counts] = await Promise.all([commissionState(), whitelist(), commentCounts()]);
     const upEmails = new Set(emails);
     return {
       version: 1,
       updatedAt: Math.max(0, ...state.commissions.map((item) => Number(item.updatedAt || item.createdAt || 0))),
       commissions: state.commissions
-        .map((item) => commissionPublic(item, voterId, upEmails, viewerEmail))
+        .map((item) => commissionPublic(item, voterId, upEmails, viewerEmail, counts))
         .sort((left, right) => Number(left.status === 'completed') - Number(right.status === 'completed') || right.updatedAt - left.updatedAt)
     };
   }
@@ -1073,6 +1075,13 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     state.commissions.splice(index, 1);
     await writeJson(commissionsFile, state);
     await rm(path.join(commissionResponsesRoot, item.id), { recursive: true, force: true }).catch(() => {});
+    const commentsId = `commission:${item.id}`;
+    await rm(commentsFile(commentsId), { force: true }).catch(() => {});
+    const counts = await commentCounts();
+    if (Object.hasOwn(counts, commentsId)) {
+      delete counts[commentsId];
+      await writeJson(commentCountsFile, counts);
+    }
     return { id: item.id, status: 'withdrawn' };
   }
 

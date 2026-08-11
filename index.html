@@ -18,7 +18,7 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260806-gamepad" />
+    <link rel="stylesheet" href="styles.css?v=20260811-want-font" />
   </head>
   <body>
     <header class="site-header">
@@ -228,7 +228,7 @@
             </div>
             <div class="commission-rank">
               <strong class="commission-grade"></strong>
-              <div class="commission-interest-stat"><span class="commission-plus-icon" aria-hidden="true">+1</span><strong class="commission-interest-count"></strong></div>
+              <div class="commission-interest-stat"><span class="commission-want-icon" aria-hidden="true" data-i18n="commission.wantBadge">想要</span><strong class="commission-interest-count"></strong></div>
             </div>
           </div>
         </div>
@@ -236,7 +236,7 @@
           <div class="commission-owner"><span class="commission-owner-avatar profile-avatar"></span><div><strong></strong><small></small></div><em hidden>UP</em></div>
           <time class="commission-updated"></time>
           <div class="commission-card-actions">
-            <button class="commission-interest-button" type="button"><i data-lucide="plus" aria-hidden="true"></i><span>+1</span></button>
+            <button class="commission-interest-button" type="button"><i data-lucide="plus" aria-hidden="true"></i><span data-i18n="commission.interest">我也想要</span></button>
             <button class="detail-button commission-detail-button" type="button"><i data-lucide="panel-right-open" aria-hidden="true"></i><span data-i18n="commission.previewResponse">预览</span><strong class="commission-response-count" hidden></strong></button>
           </div>
         </div>
@@ -346,7 +346,8 @@
             <section class="detail-section"><h3 data-i18n="commission.owner">委托人</h3><div class="commission-detail-owner" id="commissionDetailOwner"></div></section>
             <dl class="detail-meta" id="commissionDetailMeta"></dl>
             <div class="commission-detail-actions">
-              <button class="secondary-button" id="commissionInterestBtn" type="button"><i data-lucide="plus" aria-hidden="true"></i><span data-i18n="commission.interest">我也想要 +1</span></button>
+              <button class="secondary-button" id="commissionInterestBtn" type="button"><i data-lucide="plus" aria-hidden="true"></i><span data-i18n="commission.interest">我也想要</span></button>
+              <button class="secondary-button commission-comment-button" id="commissionCommentsBtn" type="button"><i data-lucide="message-circle" aria-hidden="true"></i><span data-i18n="comments.button">评论</span><strong id="commissionDetailCommentCount" hidden></strong></button>
               <button class="primary-button" id="commissionResponseUploadBtn" type="button"><i data-lucide="upload" aria-hidden="true"></i><span data-i18n="commission.uploadResponse">上传方案</span></button>
               <button class="secondary-button commission-withdraw-button" id="commissionWithdrawBtn" type="button" hidden><i data-lucide="undo-2" aria-hidden="true"></i><span data-i18n="commission.withdraw">撤回委托</span></button>
             </div>
@@ -429,6 +430,7 @@
                 <button id="detailUpvote" type="button"><i data-lucide="thumbs-up" aria-hidden="true"></i><span data-vote-count="up">0</span></button>
                 <button id="detailComments" class="comments-button" type="button"><i data-lucide="message-circle" aria-hidden="true"></i><span data-i18n="comments.button">评论</span><strong id="detailCommentCount">0</strong></button>
               </div>
+              <p class="vote-hint" id="detailVoteHint" data-i18n="comments.hint">评论和回复会保存到社区服务器。</p>
             </section>
             <div class="detail-links">
               <a id="detailSourceLink" class="secondary-button" target="_blank" rel="noreferrer" hidden>
@@ -472,11 +474,12 @@
     </div>
 
     <div class="modal-backdrop comments-backdrop" id="commentsBackdrop" hidden>
-      <section class="comments-dialog" role="dialog" aria-modal="true" aria-labelledby="commentsTitle">
+      <section class="comments-dialog" role="dialog" aria-modal="true" aria-labelledby="commentsTitle" aria-describedby="commentsHint">
         <header class="modal-header">
           <div>
-            <p class="eyebrow">COMBO COMMENTS</p>
+            <p class="eyebrow">COMMUNITY COMMENTS</p>
             <h2 id="commentsTitle" data-i18n="comments.title">评论区</h2>
+            <p id="commentsHint" data-i18n="comments.hint">评论和回复会保存到社区服务器。</p>
           </div>
           <button class="icon-button" id="closeCommentsBtn" type="button" aria-label="关闭" data-i18n-aria-label="common.close"><i data-lucide="x" aria-hidden="true"></i></button>
         </header>
@@ -535,7 +538,7 @@
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
     <script src="assets/input-icons.js?v=20260801-1"></script>
     <script>window.WWComboInputIcons = WWComboInputIcons;</script>
-    <script src="i18n.js?v=20260806-gamepad"></script>
-    <script src="app.js?v=20260806-gamepad"></script>
+    <script src="i18n.js?v=20260811-commission-comments"></script>
+    <script src="app.js?v=20260811-commission-comments"></script>
   </body>
 </html>
