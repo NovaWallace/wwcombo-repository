@@ -819,14 +819,13 @@ function renderUploadAxisPreview() {
 
 function uploadPreflightMessage(preflight) {
   const issues = Array.isArray(preflight?.issues) ? preflight.issues.filter(Boolean) : [];
-  if (i18n.language === 'en-US') {
-    return issues.length
-      ? `Preflight blocked: ${issues.join('; ')}`
-      : 'Preflight passed. You can submit.';
-  }
-  return issues.length
-    ? `预审核未通过：${issues.join('；')}`
-    : '预审核通过，可以提交。';
+  const messages = {
+    'zh-CN': issues.length ? `预审核提醒：${issues.join('；')}。仍可提交，投稿会进入人工审核。` : '预审核通过，可以提交。',
+    'en-US': issues.length ? `Preflight warning: ${issues.join('; ')}. You can still submit; it will enter manual review.` : 'Preflight passed. You can submit.',
+    'ja-JP': issues.length ? `事前チェック警告：${issues.join('；')}。そのまま投稿できますが、手動審査に送られます。` : '事前チェックに合格しました。投稿できます。',
+    'ko-KR': issues.length ? `사전 검사 알림: ${issues.join('; ')}. 계속 제출할 수 있으며 수동 검토로 전송됩니다.` : '사전 검사를 통과했습니다. 제출할 수 있습니다.'
+  };
+  return messages[i18n.language] || messages['zh-CN'];
 }
 
 async function runUploadPreflight(content, previewToken) {
@@ -848,15 +847,19 @@ async function runUploadPreflight(content, previewToken) {
     const passed = body.preflight.lowRisk === true;
     els.uploadFeedback.textContent = uploadPreflightMessage(body.preflight);
     els.uploadFeedback.className = `form-feedback${passed ? ' success' : ''}`;
-    els.confirmUpload.disabled = !passed;
+    els.confirmUpload.disabled = false;
   } catch (error) {
     if (previewToken !== uploadPreviewToken || state.uploadPackage !== content) return;
     state.uploadPreflight = null;
-    els.uploadFeedback.textContent = i18n.language === 'en-US'
-      ? `Preflight unavailable: ${error.message}`
-      : `预审核失败，暂时不能提交：${error.message}`;
+    const unavailableMessages = {
+      'zh-CN': `预审核暂时不可用，仍可提交：${error.message}`,
+      'en-US': `Preflight is temporarily unavailable. You can still submit: ${error.message}`,
+      'ja-JP': `事前チェックは一時的に利用できませんが、そのまま投稿できます：${error.message}`,
+      'ko-KR': `사전 검사를 일시적으로 사용할 수 없지만 계속 제출할 수 있습니다: ${error.message}`
+    };
+    els.uploadFeedback.textContent = unavailableMessages[i18n.language] || unavailableMessages['zh-CN'];
     els.uploadFeedback.className = 'form-feedback';
-    els.confirmUpload.disabled = true;
+    els.confirmUpload.disabled = false;
   }
 }
 
@@ -975,12 +978,6 @@ async function submitCombo(event) {
   event.preventDefault();
   const source = state.uploadSource;
   if (!source) return;
-  if (state.uploadPreflight?.lowRisk !== true) {
-    els.uploadFeedback.textContent = i18n.language === 'en-US'
-      ? 'Preflight has not passed. Submission is disabled.'
-      : '预审核尚未通过，暂时不能提交。';
-    return;
-  }
   const serialized = JSON.stringify(source.payload);
   if (new TextEncoder().encode(serialized).byteLength > 1024 * 1024) {
     els.uploadFeedback.textContent = t('upload.tooLarge');
@@ -1017,7 +1014,7 @@ async function submitCombo(event) {
   } catch (error) {
     els.uploadFeedback.textContent = error instanceof SyntaxError ? t('upload.invalidJson') : error.message;
   } finally {
-    els.confirmUpload.disabled = state.uploadPreflight?.lowRisk !== true;
+    els.confirmUpload.disabled = !state.uploadSource;
   }
 }
 

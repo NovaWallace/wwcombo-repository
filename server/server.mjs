@@ -686,8 +686,6 @@ async function handleCommunityApi(req, res, pathname) {
     if (!acceptSubmissionFrom(address)) return sendJson(res, 429, { error: '操作过于频繁，请稍后再试。' });
     const identity = readVoterIdentity(req) || createVoterIdentity();
     const body = await readJsonBody(req, 1400 * 1024);
-    const preflight = community.preflight(body.content);
-    if (!preflight.lowRisk) return sendJson(res, 422, { error: 'Upload preflight failed. Please fix the combo before submitting.', preflight });
     const result = await community.submitCommissionResponse(
       decodeURIComponent(commissionResponses[1]),
       body,
@@ -733,8 +731,6 @@ async function handleCommunityApi(req, res, pathname) {
     const address = clientAddress(req);
     if (!acceptSubmissionFrom(address)) return sendJson(res, 429, { error: '投稿过于频繁，请稍后再试。' });
     const body = await readJsonBody(req, 1400 * 1024);
-    const preflight = community.preflight(body.content);
-    if (!preflight.lowRisk) return sendJson(res, 422, { error: 'Upload preflight failed. Please fix the combo before submitting.', preflight });
     const result = await community.submit(body, address);
     sendJson(res, 202, result);
     return;
