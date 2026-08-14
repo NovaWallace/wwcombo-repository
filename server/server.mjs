@@ -9,6 +9,7 @@ import { createCommunityService } from './community.mjs';
 import { buildRelease, currentRelease, updateRepositoriesAndBuild } from './release.mjs';
 import { replaceWithRetry } from './fsSafe.mjs';
 import { createProjectAssetsService } from './projectAssets.mjs';
+import { createTrafficService, isHumanPageRequest } from './traffic.mjs';
 
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const MAIN_ROOT = path.dirname(SERVER_DIR);
@@ -78,6 +79,8 @@ const community = createCommunityService({ runtimeRoot: RUNTIME_ROOT, rebuildRel
 await community.initialize();
 const projectAssets = createProjectAssetsService({ runtimeRoot: RUNTIME_ROOT, serverDir: SERVER_DIR });
 await projectAssets.initialize();
+const traffic = createTrafficService({ runtimeRoot: RUNTIME_ROOT });
+await traffic.initialize();
 
 const loginAttempts = new Map();
 const updateState = {
@@ -340,6 +343,7 @@ async function publicStatus(session) {
     server: { host: HOST, port: PORT, publicUrl: PUBLIC_URL, startedAt: serverStartedAt },
     release: BUILD_INFO,
     update: { ...updateState, output: updateState.output.slice(-80) },
+    traffic: traffic.summary(),
     community: { ...(await community.status()), currentCharts: Array.isArray(currentIndex.charts) ? currentIndex.charts : [] }
   };
 }
@@ -425,7 +429,10 @@ async function handleAdminApi(req, res, pathname) {
       updateState.status = 'completed';
       updateState.finishedAt = Date.now();
       sendJson(res, 200, { ok: true, restart: true, releaseId: nextRelease.releaseId });
-      setTimeout(() => process.exit(75), 800);
+      setTimeout(async () => {
+        await traffic.flush().catch(() => {});
+        process.exit(75);
+      }, 800);
     } catch (error) {
       updateState.status = 'failed';
       updateState.finishedAt = Date.now();
@@ -876,7 +883,18 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (pathname === '/' || pathname === '/index.html') {
-      await serveFile(req, res, PUBLIC_ROOT, 'index.html', { cacheControl: 'no-store' });
+      const identity = readPublicVoterIdentity(req) || createVoterIdentity();
+      if (req.method === 'GET' && isHumanPageRequest(req.headers['user-agent'])) {
+        traffic.record({
+          visitorId: identity.id,
+          section: url.searchParams.get('view') === 'commissions' ? 'commissions' : 'combos',
+          source: url.searchParams.get('client') === '1' ? 'client' : 'browser'
+        });
+      }
+      await serveFile(req, res, PUBLIC_ROOT, 'index.html', {
+        cacheControl: 'no-store',
+        headers: { 'set-cookie': voterCookie(req, identity.token) }
+      });
       return;
     }
     if (pathname === '/community-index.json') {
@@ -916,5 +934,8 @@ server.listen(PORT, HOST, () => {
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
-  process.on(signal, () => server.close(() => process.exit(0)));
+  process.on(signal, () => server.close(async () => {
+    await traffic.flush().catch(() => {});
+    process.exit(0);
+  }));
 }

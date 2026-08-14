@@ -31,7 +31,10 @@ const els = {
   projectAssetMessage: byId('projectAssetMessage'), deleteProjectAsset: byId('deleteProjectAssetBtn'), newProjectAsset: byId('newProjectAssetBtn'), refreshProjectAssets: byId('refreshProjectAssetsBtn'), syncProjectAssets: byId('syncProjectAssetsBtn'),
   copyProjectApi: byId('copyProjectApiBtn'), projectApiUrl: byId('projectApiUrl'), projectApiRevision: byId('projectApiRevision'),
   appReleaseForm: byId('appReleaseForm'), appReleaseVersion: byId('appReleaseVersion'), appReleaseTitle: byId('appReleaseTitle'), appReleaseNotes: byId('appReleaseNotes'), appReleaseQuarkUrl: byId('appReleaseQuarkUrl'), appReleaseBaiduUrl: byId('appReleaseBaiduUrl'), appReleaseCloud123Url: byId('appReleaseCloud123Url'), appReleaseGithubUrl: byId('appReleaseGithubUrl'),
-  appReleaseCurrent: byId('appReleaseCurrent'), appReleaseMessage: byId('appReleaseMessage')
+  appReleaseCurrent: byId('appReleaseCurrent'), appReleaseMessage: byId('appReleaseMessage'),
+  trafficUpdatedAt: byId('trafficUpdatedAt'), trafficTotalViews: byId('trafficTotalViews'), trafficSince: byId('trafficSince'), trafficTodayViews: byId('trafficTodayViews'), trafficTodayCompare: byId('trafficTodayCompare'),
+  trafficTodayVisitors: byId('trafficTodayVisitors'), trafficWeekViews: byId('trafficWeekViews'), trafficWeekVisitors: byId('trafficWeekVisitors'), trafficPeakWindow: byId('trafficPeakWindow'), trafficPeakViews: byId('trafficPeakViews'),
+  trafficBusiestDay: byId('trafficBusiestDay'), trafficDailyChart: byId('trafficDailyChart'), trafficHourlyChart: byId('trafficHourlyChart'), trafficSectionBreakdown: byId('trafficSectionBreakdown'), trafficSourceBreakdown: byId('trafficSourceBreakdown')
 };
 
 const PROFILE_KEY = 'wwcombo-maintainer-publish-profile-v1';
@@ -70,6 +73,7 @@ async function api(url, options = {}) {
 function formatDate(value) { const date = new Date(value || 0); return value && !Number.isNaN(date.getTime()) ? date.toLocaleString('zh-CN') : '-'; }
 function formatDuration(value) { const seconds = Math.max(0, Number(value || 0)) / 1000; return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2,'0')}`; }
 function short(value) { return value ? String(value).slice(0, 12) : '-'; }
+function formatCount(value) { return Math.max(0, Number(value || 0)).toLocaleString('zh-CN'); }
 function button(label, className, handler) { const item = document.createElement('button'); item.type='button'; item.className=className; item.textContent=label; item.addEventListener('click', handler); return item; }
 function empty(text) { const item=document.createElement('div'); item.className='empty-row'; item.textContent=text; return item; }
 function syncModalBody() { const open=[els.reviewBackdrop,els.manageDetailBackdrop,els.uploadBackdrop,els.confirmBackdrop].some((item)=>item&&!item.hidden); document.body.classList.toggle('modal-open',open); }
@@ -197,6 +201,46 @@ async function saveWhitelist(emails) { await api('/api/server/community/whitelis
 function renderSmtp(smtp) { if(document.activeElement?.closest('#smtpForm')) return; els.smtpHost.value=smtp.host||''; els.smtpPort.value=smtp.port||465; els.smtpUser.value=smtp.user||''; els.smtpPass.value=''; els.smtpPass.placeholder=smtp.hasPassword?'已保存，留空则不修改':'填写邮箱授权码'; els.smtpFrom.value=smtp.from||''; els.smtpTo.value=smtp.to||''; els.smtpSecure.checked=smtp.secure!==false; }
 function renderReviewSettings(settings={}) { const enabled=settings.autoApproveLowRisk===true; els.autoApproveLowRisk.checked=enabled; els.autoApproveLowRiskStatus.textContent=enabled?'已开启 · 新投稿自动发布':'关闭 · 低风险仍需审核'; els.autoApproveLowRisk.title=enabled?'低风险投稿将自动发布':'低风险投稿仍进入审核队列'; }
 
+function renderTrafficBreakdown(target, entries, rowClass='') {
+  const total=entries.reduce((sum,item)=>sum+Number(item.value||0),0);
+  target.replaceChildren(...entries.map((item)=>{
+    const row=document.createElement('div');row.className=`traffic-breakdown-row ${rowClass}`.trim();
+    const label=document.createElement('span');label.textContent=item.label;
+    const track=document.createElement('div');track.className='traffic-breakdown-track';
+    const fill=document.createElement('div');fill.className='traffic-breakdown-fill';fill.style.width=`${total?Math.max(2,Number(item.value||0)/total*100):0}%`;track.appendChild(fill);
+    const value=document.createElement('strong');value.textContent=total?`${Math.round(Number(item.value||0)/total*100)}%`:'0%';value.title=`${formatCount(item.value)} 次访问`;
+    row.append(label,track,value);return row;
+  }));
+}
+
+function renderTraffic(traffic={}) {
+  const today=traffic.today||{};const yesterday=traffic.yesterday||{};const week=traffic.last7Days||{};const month=traffic.last30Days||{};const peak=month.peakWindow||{};
+  els.trafficUpdatedAt.textContent=formatDate(traffic.updatedAt);
+  els.trafficTotalViews.textContent=formatCount(traffic.totalViews);
+  els.trafficSince.textContent=traffic.startedAt?`自 ${new Date(traffic.startedAt).toLocaleDateString('zh-CN')} 起`:'尚未开始记录';
+  els.trafficTodayViews.textContent=formatCount(today.views);els.trafficTodayCompare.textContent=`昨日 ${formatCount(yesterday.views)}`;
+  els.trafficTodayVisitors.textContent=formatCount(today.visitors);els.trafficWeekViews.textContent=formatCount(week.views);els.trafficWeekVisitors.textContent=formatCount(week.visitors);
+  els.trafficPeakWindow.textContent=peak.label||'--:--';els.trafficPeakViews.textContent=peak.views?`近 30 天共 ${formatCount(peak.views)} 次`:'近 30 天暂无数据';
+  const busiest=month.busiestDay||{};els.trafficBusiestDay.textContent=busiest.date?`最高 ${busiest.date.slice(5).replace('-','/')} · ${formatCount(busiest.views)} 次`:'暂无数据';
+
+  const daily=Array.isArray(traffic.daily)?traffic.daily:[];const maxDay=Math.max(1,...daily.map((item)=>Number(item.views||0)));
+  els.trafficDailyChart.replaceChildren(...daily.map((item)=>{
+    const column=document.createElement('div');column.className='traffic-day';column.title=`${item.date}：${formatCount(item.views)} 次访问，${formatCount(item.visitors)} 位访客`;
+    const track=document.createElement('div');track.className='traffic-day-track';const bar=document.createElement('div');bar.className='traffic-day-bar';bar.style.height=`${item.views?Math.max(4,Number(item.views)/maxDay*100):1}%`;track.appendChild(bar);
+    const value=document.createElement('strong');value.textContent=formatCount(item.views);const date=document.createElement('small');date.textContent=String(item.date||'').slice(5).replace('-','/');column.append(track,value,date);return column;
+  }));
+
+  const hourly=Array.isArray(traffic.hourly)?traffic.hourly:Array(24).fill(0);const maxHour=Math.max(1,...hourly.map(Number));const peakHours=new Set([0,1,2].map((offset)=>(Number(peak.start||0)+offset)%24));
+  els.trafficHourlyChart.replaceChildren(...hourly.map((value,hour)=>{
+    const column=document.createElement('div');column.className=`traffic-hour${peakHours.has(hour)&&peak.views?' peak':''}`;column.title=`${String(hour).padStart(2,'0')}:00-${String((hour+1)%24).padStart(2,'0')}:00：${formatCount(value)} 次`;
+    const track=document.createElement('div');track.className='traffic-hour-track';const bar=document.createElement('div');bar.className='traffic-hour-bar';bar.style.height=`${value?Math.max(4,Number(value)/maxHour*100):1}%`;track.appendChild(bar);
+    const label=document.createElement('small');label.textContent=hour%3===0?String(hour).padStart(2,'0'):'';column.append(track,label);return column;
+  }));
+
+  renderTrafficBreakdown(els.trafficSectionBreakdown,[{label:'连段社区',value:month.sections?.combos},{label:'委托广场',value:month.sections?.commissions}]);
+  renderTrafficBreakdown(els.trafficSourceBreakdown,[{label:'浏览器',value:month.sources?.browser},{label:'客户端内置',value:month.sources?.client}],'traffic-source-row');
+}
+
 async function saveReviewSettings(enabled) {
   els.autoApproveLowRisk.disabled=true;
   els.autoApproveLowRiskStatus.textContent='正在保存';
@@ -217,7 +261,7 @@ function renderStatus(data) {
   els.statusDot.classList.toggle('busy',busy); els.statusDot.classList.toggle('error',failed); els.serviceStatus.textContent=busy?'正在更新仓库':failed?'上次更新失败':'服务运行中';
   els.releaseSummary.textContent=`${Number(data.release?.charts||0)} 个连段 · ${formatDate(data.release?.createdAt)}`; els.releaseId.textContent=data.release?.releaseId||'-'; els.releaseTime.textContent=formatDate(data.release?.createdAt); els.chartCount.textContent=`${Number(data.release?.charts||0)} 个`; els.listenAddress.textContent=`${data.server?.host||'-'}:${data.server?.port||'-'}`; els.mainCommit.textContent=short(data.release?.commits?.repository); els.data1Commit.textContent=short(data.release?.commits?.deta1); els.data2Commit.textContent=short(data.release?.commits?.deta2);
   els.update.disabled=busy; els.update.textContent=busy?'正在更新':'从 GitHub 更新并重启'; els.updateStatus.textContent=busy?'运行中':failed?'失败':update.status==='completed'?'已完成':'等待操作'; const output=[...(update.output||[])]; if(update.error) output.push('',`错误：${update.error}`); els.output.textContent=output.length?output.join('\n'):'尚未执行更新。';
-  const community=data.community||{}; renderSubmissions(community.submissions?.pending||[]); renderManagedCharts(community.currentCharts||[]); renderWithdrawals(community.withdrawals?.pending||[]); renderWhitelist(community.whitelist||[]); renderSmtp(community.smtp||{}); renderReviewSettings(community.reviewSettings||{}); const failedNotifications=Number(community.failedNotifications||0); els.smtpResend.textContent=failedNotifications?`补发失败邮件 (${failedNotifications})`:'补发失败邮件';
+  const community=data.community||{}; renderSubmissions(community.submissions?.pending||[]); renderManagedCharts(community.currentCharts||[]); renderWithdrawals(community.withdrawals?.pending||[]); renderWhitelist(community.whitelist||[]); renderSmtp(community.smtp||{}); renderReviewSettings(community.reviewSettings||{}); renderTraffic(data.traffic||{}); const failedNotifications=Number(community.failedNotifications||0); els.smtpResend.textContent=failedNotifications?`补发失败邮件 (${failedNotifications})`:'补发失败邮件';
 }
 
 function showLogin(message='') { clearTimeout(state.pollTimer); els.dashboard.hidden=true; els.topActions.hidden=true; els.loginPanel.hidden=false; els.loginMessage.textContent=message; state.csrf=''; }

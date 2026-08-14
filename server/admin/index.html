@@ -7,7 +7,7 @@
     <title>椰果朋克2077维护端</title>
     <link rel="icon" type="image/png" href="/assets/logo.png" />
     <link rel="apple-touch-icon" href="/assets/logo.png" />
-    <link rel="stylesheet" href="/admin/styles.css?v=20260801-3" />
+    <link rel="stylesheet" href="/admin/styles.css?v=20260814-traffic" />
     <link rel="stylesheet" href="/admin/community-cards.css?v=20260730-1" />
   </head>
   <body>
@@ -45,6 +45,7 @@
           <button class="active" type="button" data-tab="submissions">投稿审核 <span id="submissionCount">0</span></button>
           <button type="button" data-tab="charts">连段管理 <span id="chartManageCount">0</span></button>
           <button type="button" data-tab="withdrawals">撤回申请 <span id="withdrawalCount">0</span></button>
+          <button type="button" data-tab="traffic">访问统计</button>
           <button type="button" data-tab="whitelist">UP 白名单</button>
           <button type="button" data-tab="project-api">项目 API</button>
           <button type="button" data-tab="smtp">邮件通知</button>
@@ -69,6 +70,24 @@
         <section class="tab-panel" data-panel="withdrawals" hidden>
           <div class="section-heading"><div><h2>撤回申请</h2><p>邮箱一致的请求已自动执行，此处只保留无法自动核验的申请。</p></div></div>
           <div class="task-list" id="withdrawalList"></div>
+        </section>
+
+        <section class="tab-panel traffic-dashboard" data-panel="traffic" hidden>
+          <div class="section-heading"><div><h2>访问统计</h2><p>按北京时间统计用户端首页访问，维护台、接口、下载和常见爬虫不计入。</p></div><div class="traffic-updated"><span>数据更新</span><strong id="trafficUpdatedAt">-</strong></div></div>
+          <div class="traffic-metrics">
+            <article><span>累计访问</span><strong id="trafficTotalViews">0</strong><small id="trafficSince">尚未开始记录</small></article>
+            <article><span>今日访问</span><strong id="trafficTodayViews">0</strong><small id="trafficTodayCompare">昨日 0</small></article>
+            <article><span>今日访客</span><strong id="trafficTodayVisitors">0</strong><small>匿名浏览器去重</small></article>
+            <article><span>近 7 天访问</span><strong id="trafficWeekViews">0</strong><small>含今天</small></article>
+            <article><span>近 7 天访客</span><strong id="trafficWeekVisitors">0</strong><small>跨天去重</small></article>
+            <article class="traffic-peak-card"><span>集中时段</span><strong id="trafficPeakWindow">--:--</strong><small id="trafficPeakViews">近 30 天暂无数据</small></article>
+          </div>
+          <div class="traffic-grid">
+            <section class="traffic-chart-panel traffic-daily-panel"><header><div><span>DAILY TREND</span><h3>近 14 天趋势</h3></div><strong id="trafficBusiestDay">-</strong></header><div class="traffic-chart-scroll"><div class="traffic-daily-chart" id="trafficDailyChart"></div></div></section>
+            <section class="traffic-chart-panel traffic-hourly-panel"><header><div><span>HOURLY DISTRIBUTION</span><h3>一天内访问分布</h3></div><small>近 30 天</small></header><div class="traffic-chart-scroll"><div class="traffic-hourly-chart" id="trafficHourlyChart"></div></div></section>
+            <section class="traffic-chart-panel traffic-breakdown-panel"><header><div><span>ACCESS MIX</span><h3>访问构成</h3></div><small>近 30 天</small></header><div class="traffic-breakdowns"><div><h4>页面</h4><div id="trafficSectionBreakdown"></div></div><div><h4>入口</h4><div id="trafficSourceBreakdown"></div></div></div></section>
+          </div>
+          <p class="traffic-privacy">仅保存每日聚合数字和匿名短哈希；不保存访客 IP、邮箱、用户名或完整浏览记录。</p>
         </section>
 
         <section class="tab-panel" data-panel="whitelist" hidden>
@@ -205,6 +224,6 @@
         <div class="confirm-actions"><button class="quiet" id="confirmCancelBtn" type="button">取消</button><button class="primary" id="confirmAcceptBtn" type="button">确认</button></div>
       </section>
     </div>
-    <script src="/admin/app.js?v=20260802-2"></script>
+    <script src="/admin/app.js?v=20260814-traffic"></script>
   </body>
 </html>
