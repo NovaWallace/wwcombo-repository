@@ -372,7 +372,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     await transport.sendMail({
       from: settings.from || settings.user,
       to: settings.to,
-      subject: `[椰果朋克2077] 新连段待审核：${submission.fileName}`,
+      subject: `[椰之城] 新连段待审核：${submission.fileName}`,
       text: `用户名：${submission.username}\n邮箱：${submission.email}\n文件：${submission.fileName}\n投稿编号：${submission.id}\n\n请登录服务器管理后台审核。`
     });
     return '';
@@ -591,7 +591,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     if (!settings.host || !settings.user || !settings.pass || !settings.to) throw new Error('请先保存 SMTP 设置。');
     const { createTransport } = await import('nodemailer');
     const transport = createTransport({ host: settings.host, port: Number(settings.port || 465), secure: settings.secure !== false, auth: { user: settings.user, pass: settings.pass } });
-    await transport.sendMail({ from: settings.from || settings.user, to: settings.to, subject: '[椰果朋克2077] SMTP 测试', text: '服务器投稿通知已配置成功。' });
+    await transport.sendMail({ from: settings.from || settings.user, to: settings.to, subject: '[椰之城] SMTP 测试', text: '服务器投稿通知已配置成功。' });
   }
 
   async function resendFailedNotifications() {
@@ -646,15 +646,15 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
         if (String(response.notificationError || '').trim()) {
           await retry('commissionResponses', response.id, response, 'notificationError', 'notificationSentAt', () => sendCommunityMail(
             commission.owner?.email,
-            `[椰果朋克2077] 委托收到新方案：${commission.title}`,
-            `你的委托收到了一份新方案。\n\n委托：${commission.title}\n方案：${response.preview?.title || response.fileName}\n上传者：${response.username}\n提交时间：${new Date(response.submittedAt).toLocaleString('zh-CN')}\n\n请打开椰果朋克2077委托广场查看和预览。`
+            `[椰之城] 委托收到新方案：${commission.title}`,
+            `你的委托收到了一份新方案。\n\n委托：${commission.title}\n方案：${response.preview?.title || response.fileName}\n上传者：${response.username}\n提交时间：${new Date(response.submittedAt).toLocaleString('zh-CN')}\n\n请打开椰之城委托广场查看和预览。`
           ));
           commissionsChanged = true;
         }
         if (String(response.adoptionNotificationError || '').trim()) {
           await retry('adoptions', response.id, response, 'adoptionNotificationError', 'adoptionNotificationSentAt', () => sendCommunityMail(
             response.email,
-            `[椰果朋克2077] 你的委托方案已被采纳：${commission.title}`,
+            `[椰之城] 你的委托方案已被采纳：${commission.title}`,
             `你为委托“${commission.title}”提交的方案“${response.preview?.title || response.fileName}”已被采纳，并已进入连段社区审核流程。\n\n审核状态：${response.moderationStatus === 'published' ? '已通过预审核并发布' : '等待维护者审核'}\n投稿编号：${response.moderationSubmissionId || '未知'}`
           ));
           commissionsChanged = true;
@@ -785,8 +785,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     await transport.sendMail({
       from: settings.from || settings.user,
       to: ownerEmail,
-      subject: `[椰果朋克2077] 连段反馈：${title}`,
-      text: `你的连段收到了一条匿名反馈。\n\n连段：${title}\nID：${comboId}\n\n反馈内容：\n${reason}\n\n此邮件由椰果朋克2077社区自动发送，请勿直接回复站点邮箱。`
+      subject: `[椰之城] 连段反馈：${title}`,
+      text: `你的连段收到了一条匿名反馈。\n\n连段：${title}\nID：${comboId}\n\n反馈内容：\n${reason}\n\n此邮件由椰之城社区自动发送，请勿直接回复站点邮箱。`
     });
     engagement.feedbacks[voterId] = { ...voterFeedbacks, [comboId]: Date.now() };
     await writeJson(engagementFile, engagement);
@@ -966,8 +966,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     try {
       response.notificationError = await sendCommunityMail(
         item.owner?.email,
-        `[椰果朋克2077] 委托收到新方案：${item.title}`,
-        `你的委托收到了一份新方案。\n\n委托：${item.title}\n方案：${preview.title}\n上传者：${username}\n提交时间：${new Date(response.submittedAt).toLocaleString('zh-CN')}\n\n请打开椰果朋克2077委托广场查看和预览。`
+        `[椰之城] 委托收到新方案：${item.title}`,
+        `你的委托收到了一份新方案。\n\n委托：${item.title}\n方案：${preview.title}\n上传者：${username}\n提交时间：${new Date(response.submittedAt).toLocaleString('zh-CN')}\n\n请打开椰之城委托广场查看和预览。`
       );
     } catch (error) {
       response.notificationError = error.message || String(error);
@@ -1023,7 +1023,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     try {
       response.adoptionNotificationError = await sendCommunityMail(
         response.email,
-        `[椰果朋克2077] 你的委托方案已被采纳：${item.title}`,
+        `[椰之城] 你的委托方案已被采纳：${item.title}`,
         `你为委托“${item.title}”提交的方案“${response.preview?.title || response.fileName}”已被采纳，并已进入连段社区审核流程。\n\n审核状态：${moderation.status === 'published' ? '已通过预审核并发布' : '等待维护者审核'}\n投稿编号：${moderation.id}`
       );
     } catch (error) {

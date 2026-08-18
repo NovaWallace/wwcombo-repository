@@ -16,19 +16,21 @@ const MAIN_ROOT = path.dirname(SERVER_DIR);
 const RUNTIME_ROOT = path.resolve(process.env.WWCOMBO_RUNTIME_ROOT || path.join(path.dirname(MAIN_ROOT), 'wwcombo-server-runtime'));
 const HOST = String(process.env.WWCOMBO_HOST || '').trim() || '0.0.0.0';
 const PORT = Number(process.env.WWCOMBO_PORT || 9881);
-const PUBLIC_URL = String(process.env.WWCOMBO_PUBLIC_URL || 'https://Nova.fb520.site').replace(/\/+$/, '');
+const PUBLIC_URL = String(process.env.WWCOMBO_PUBLIC_URL || 'https://nova.fb520.site').replace(/\/+$/, '');
 const TRUST_PROXY = process.env.WWCOMBO_TRUST_PROXY === '1';
 const ADMIN_AUTH_DISABLED = process.env.WWCOMBO_DISABLE_ADMIN_AUTH === '1';
 const SESSION_SECONDS = 12 * 60 * 60;
 const LOGIN_WINDOW_MS = 60 * 1000;
 const MAX_LOGIN_FAILURES = 5;
 const VOTER_COOKIE_SECONDS = 2 * 365 * 24 * 60 * 60;
-const PUBLIC_ROOT_FILES = new Set(['/index.html', '/app.js', '/i18n.js', '/styles.css', '/site.webmanifest', '/build-info.json']);
+const PUBLIC_ROOT_FILES = new Set(['/index.html', '/app.js', '/i18n.js', '/styles.css', '/site.webmanifest', '/robots.txt', '/sitemap.xml', '/build-info.json']);
 const CONTENT_TYPES = new Map([
   ['.html', 'text/html; charset=utf-8'],
   ['.css', 'text/css; charset=utf-8'],
   ['.js', 'text/javascript; charset=utf-8'],
   ['.json', 'application/json; charset=utf-8'],
+  ['.xml', 'application/xml; charset=utf-8'],
+  ['.txt', 'text/plain; charset=utf-8'],
   ['.png', 'image/png'],
   ['.jpg', 'image/jpeg'],
   ['.jpeg', 'image/jpeg'],
@@ -883,17 +885,28 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (pathname === '/' || pathname === '/index.html') {
-      const identity = readPublicVoterIdentity(req) || createVoterIdentity();
-      if (req.method === 'GET' && isHumanPageRequest(req.headers['user-agent'])) {
-        traffic.record({
-          visitorId: identity.id,
-          section: url.searchParams.get('view') === 'commissions' ? 'commissions' : 'combos',
-          source: url.searchParams.get('client') === '1' ? 'client' : 'browser'
+      const humanRequest = isHumanPageRequest(req.headers['user-agent']);
+      if (humanRequest) {
+        const identity = readPublicVoterIdentity(req) || createVoterIdentity();
+        if (req.method === 'GET') {
+          traffic.record({
+            visitorId: identity.id,
+            section: url.searchParams.get('view') === 'commissions' ? 'commissions' : 'combos',
+            source: url.searchParams.get('client') === '1' ? 'client' : 'browser'
+          });
+        }
+        await serveFile(req, res, PUBLIC_ROOT, 'index.html', {
+          cacheControl: 'no-store',
+          headers: { 'set-cookie': voterCookie(req, identity.token) }
         });
+        return;
       }
       await serveFile(req, res, PUBLIC_ROOT, 'index.html', {
-        cacheControl: 'no-store',
-        headers: { 'set-cookie': voterCookie(req, identity.token) }
+        cacheControl: 'no-cache',
+        headers: {
+          link: `<${PUBLIC_URL}/>; rel="canonical"`,
+          'x-robots-tag': 'index, follow, max-image-preview:large'
+        }
       });
       return;
     }

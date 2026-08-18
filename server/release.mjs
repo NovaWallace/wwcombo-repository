@@ -7,7 +7,7 @@ import { promisify } from 'node:util';
 import { moveWithRetry, replaceWithRetry } from './fsSafe.mjs';
 
 const execFileAsync = promisify(execFile);
-const PUBLIC_SITE_ENTRIES = ['.nojekyll', 'index.html', 'app.js', 'i18n.js', 'styles.css', 'site.webmanifest', 'assets'];
+const PUBLIC_SITE_ENTRIES = ['.nojekyll', 'index.html', 'app.js', 'i18n.js', 'styles.css', 'site.webmanifest', 'robots.txt', 'sitemap.xml', 'assets'];
 const DEFAULT_REPOSITORY_URLS = {
   deta1: 'https://github.com/NovaWallace/wwcombo-deta1.git',
   deta2: 'https://github.com/NovaWallace/wwcombo-deta2.git'
