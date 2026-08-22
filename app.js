@@ -785,7 +785,7 @@ function closeUpload() {
 function uploadedIndexChart(pack, fileName = '') {
   const chart = pack?.chart || (Array.isArray(pack?.charts) ? pack.charts[0] : null) || (Array.isArray(pack?.steps) ? pack : null);
   const community = chart?.community || {};
-  const characters = (Array.isArray(community.characters) ? community.characters : [chart?.character]).filter(Boolean).slice(0, 3);
+  const characters = splitCharacterNames(Array.isArray(community.characters) ? community.characters : chart?.character).slice(0, 3);
   const firstStep = [...(Array.isArray(chart?.steps) ? chart.steps : [])].sort((left, right) => Number(left.startMin || 0) - Number(right.startMin || 0))[0];
   const firstSlot = Math.max(1, Math.round(Number(firstStep?.characterSlot || 1)));
   return {
@@ -1153,9 +1153,10 @@ function normalizeText(value) {
 function splitCharacterNames(value) {
   const values = Array.isArray(value) ? value : [value];
   return [...new Set(values.flatMap((item) => String(item || '')
-    .split(/[\/／]/)
+    .split(/[\/／、,，;；]/)
     .map((name) => name.trim())
-    .filter(Boolean)))];
+    .filter(Boolean)
+    .map((name) => name === '清宵' ? '青霄' : name)))];
 }
 
 function uniqueSorted(values) {
@@ -1274,7 +1275,7 @@ function characterIconMap(payload) {
   const icons = new Map();
   for (const item of entries) {
     if (!Array.isArray(item) || typeof item[0] !== 'string' || typeof item[1] !== 'string') continue;
-    const name = item[0].trim();
+    const name = item[0].trim() === '清宵' ? '青霄' : item[0].trim();
     const source = item[1].trim();
     if (!name || !source || icons.has(name)) continue;
     try {
@@ -1417,7 +1418,7 @@ window.addEventListener('message', (event) => {
       return [{
         id: item.id.trim().slice(0, 160),
         title: typeof item.title === 'string' ? item.title.trim().slice(0, 120) : '',
-        characters: Array.isArray(item.characters) ? item.characters.filter((name) => typeof name === 'string' && name.trim()).map((name) => name.trim().slice(0, 80)).slice(0, 3) : [],
+        characters: splitCharacterNames(item.characters).map((name) => name.slice(0, 80)).slice(0, 3),
         stepCount: Math.max(0, Math.round(Number(item.stepCount) || 0)),
         updatedAt: Number(item.updatedAt) || 0
       }];
@@ -1474,7 +1475,7 @@ function availableCharacters() {
     ...state.characterIcons.keys(),
     ...state.charts.flatMap(chartCharacters),
     ...state.commissions.flatMap(commissionCharacters),
-    ...state.commissions.flatMap((commission) => (commission.responses || []).flatMap((response) => response.characters || []))
+    ...state.commissions.flatMap((commission) => (commission.responses || []).flatMap((response) => splitCharacterNames(response.characters)))
   ]);
 }
 
@@ -1990,8 +1991,8 @@ function responseDetailChart(pack, response) {
     ...packageChart,
     id: response.id,
     title: response.title || packageChart.title,
-    characters: response.characters?.length ? response.characters : packageChart.characters,
-    character: response.characters?.[0] || packageChart.character,
+    characters: response.characters?.length ? splitCharacterNames(response.characters) : chartCharacters(packageChart),
+    character: splitCharacterNames(response.characters)?.[0] || packageChart.character,
     tags: response.tags?.length ? response.tags : packageChart.tags,
     rounds: response.rounds || packageChart.rounds || 1,
     durationMs: response.durationMs || 0,
