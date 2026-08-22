@@ -1,7 +1,7 @@
 const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/batch-icons/character';
 const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
 const UNKNOWN_CHARACTER_ICON = './assets/unknown-character.jpg';
-const CHARACTER_ICON_CACHE_KEY = 'wwcombo-character-icons-v1';
+const CHARACTER_ICON_CACHE_KEY = 'wwcombo-character-icons-v2';
 const APP_RELEASE_MANIFEST_PATH = '/api/project-assets/v1/app-release.json';
 const APP_RELEASE_FALLBACK_ORIGIN = 'https://Nova.fb520.site';
 const PROFILE_STORAGE_KEY = 'wwcombo-community-profile-v1';
@@ -688,14 +688,12 @@ function profileInitial() {
 }
 
 function renderProfileAvatarNode(target, name, fallbackText = profileInitial()) {
-  target.replaceChildren();
-  const avatarName = String(name || '').trim();
-  if (avatarName && state.characterIcons.has(avatarName)) {
-    const image = avatarElement(avatarName, 'profile-avatar-image');
-    image.title = avatarName;
-    target.appendChild(image);
+  const count = appendAvatarSet(target, name, 'profile-avatar-image');
+  if (count) {
+    target.classList.add('profile-avatar');
     return;
   }
+  target.classList.remove('avatar-stack');
   target.textContent = fallbackText;
 }
 
@@ -826,6 +824,18 @@ function uploadPreflightMessage(preflight) {
     'ko-KR': issues.length ? `사전 검사 알림: ${issues.join('; ')}. 계속 제출할 수 있으며 수동 검토로 전송됩니다.` : '사전 검사를 통과했습니다. 제출할 수 있습니다.'
   };
   return messages[i18n.language] || messages['zh-CN'];
+}
+
+function replaceEmbeddedImportedCombos(comboIds) {
+  if (!isEmbeddedClient) return;
+  embeddedImportedCombos.clear();
+  comboIds.forEach((comboId) => {
+    const normalized = String(comboId || '').trim();
+    if (normalized) embeddedImportedCombos.add(normalized);
+  });
+  try {
+    localStorage.setItem(EMBEDDED_IMPORTED_COMBOS_STORAGE_KEY, JSON.stringify([...embeddedImportedCombos].slice(-500)));
+  } catch {}
 }
 
 async function runUploadPreflight(content, previewToken) {
@@ -1140,6 +1150,14 @@ function normalizeText(value) {
   return String(value || '').trim().toLocaleLowerCase('zh-CN');
 }
 
+function splitCharacterNames(value) {
+  const values = Array.isArray(value) ? value : [value];
+  return [...new Set(values.flatMap((item) => String(item || '')
+    .split(/[\/／]/)
+    .map((name) => name.trim())
+    .filter(Boolean)))];
+}
+
 function uniqueSorted(values) {
   return [...new Set(values.filter(Boolean))].sort(collator.compare);
 }
@@ -1149,8 +1167,8 @@ function normalizedTags(values) {
 }
 
 function chartCharacters(chart) {
-  if (Array.isArray(chart.characters) && chart.characters.length) return chart.characters.filter(Boolean);
-  return String(chart.character || '').split('/').map((item) => item.trim()).filter(Boolean);
+  if (Array.isArray(chart.characters) && chart.characters.length) return splitCharacterNames(chart.characters);
+  return splitCharacterNames(chart.character);
 }
 
 function formatDuration(ms) {
@@ -1243,7 +1261,7 @@ function submitterFor(chart) {
     nickname: /^unknown$/i.test(nickname) ? 'known' : nickname || t('submitter.historical'),
     email: email || t('submitter.noEmail'),
     badge: String(chart.submitter?.badge || '').toUpperCase() === 'UP' ? 'UP' : '',
-    avatar: String(chart.submitter?.avatar || '').trim()
+    avatars: splitCharacterNames(chart.submitter?.avatar)
   };
 }
 
@@ -1324,6 +1342,14 @@ function avatarElement(name, className = 'mini-avatar') {
   return image;
 }
 
+function appendAvatarSet(target, names, className, limit = 3) {
+  const validNames = splitCharacterNames(names).filter((name) => state.characterIcons.has(name)).slice(0, limit);
+  target.replaceChildren();
+  target.classList.toggle('avatar-stack', validNames.length > 1);
+  for (const name of validNames) target.appendChild(avatarElement(name, className));
+  return validNames.length;
+}
+
 async function downloadChart(event, chart) {
   const link = event.currentTarget;
   const url = chart.downloadUrl || chart.url || '';
@@ -1396,7 +1422,9 @@ window.addEventListener('message', (event) => {
         updatedAt: Number(item.updatedAt) || 0
       }];
     });
+    replaceEmbeddedImportedCombos(state.clientLibrary.map((item) => item.id));
     renderClientComboPicker();
+    if (state.detailChart) updateEmbeddedClientControls(embeddedImportedCombos.has(String(state.detailChart.id || '')));
     return;
   }
   if (result.type === 'wwcombo:community-upload' && result.version === 1) {
@@ -1631,8 +1659,7 @@ function renderCard(chart) {
   card.querySelector('.submitter-email').textContent = submitter.email;
   const submitterAvatar = card.querySelector('.submitter-avatar');
   submitterAvatar.replaceChildren();
-  if (submitter.avatar) submitterAvatar.appendChild(avatarElement(submitter.avatar, 'submitter-avatar-img'));
-  submitterAvatar.hidden = !submitter.avatar;
+  submitterAvatar.hidden = appendAvatarSet(submitterAvatar, submitter.avatars, 'submitter-avatar-img') < 1;
   const submitterBadge = card.querySelector('.submitter-badge');
   submitterBadge.hidden = !submitter.badge;
   submitterBadge.textContent = submitter.badge;
@@ -1704,7 +1731,7 @@ function commissionReadyStatus() {
 }
 
 function commissionCharacters(commission) {
-  return Array.isArray(commission?.characters) ? commission.characters.filter(Boolean).slice(0, MAX_SELECTED_CHARACTERS) : [];
+  return splitCharacterNames(commission?.characters).slice(0, MAX_SELECTED_CHARACTERS);
 }
 
 function commissionTags(commission) {
@@ -2106,7 +2133,7 @@ function renderCommissionResponseCard(commission, response) {
   }
   const characters = document.createElement('div');
   characters.className = 'commission-response-characters';
-  for (const name of response.characters || []) characters.appendChild(avatarElement(name));
+  for (const name of splitCharacterNames(response.characters)) characters.appendChild(avatarElement(name));
   const submitter = document.createElement('p');
   submitter.textContent = `${response.submitter?.nickname || t('common.unknown')} · ${response.submitter?.email || ''}`;
   const meta = document.createElement('small');
