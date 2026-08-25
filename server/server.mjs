@@ -5,7 +5,7 @@ import { chmod, readFile, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createCommunityService } from './community.mjs';
+import { canonicalCharacterNames, createCommunityService } from './community.mjs';
 import { buildRelease, currentRelease, updateRepositoriesAndBuild } from './release.mjs';
 import { replaceWithRetry } from './fsSafe.mjs';
 import { createProjectAssetsService } from './projectAssets.mjs';
@@ -631,6 +631,9 @@ async function publicIndex(voterId = '') {
     else delete submitter.badge;
     return {
       ...chart,
+      character: canonicalCharacterNames(chart.character)[0] || chart.character,
+      characters: canonicalCharacterNames(Array.isArray(chart.characters) && chart.characters.length ? chart.characters : chart.character),
+      firstCharacter: canonicalCharacterNames(chart.firstCharacter)[0] || chart.firstCharacter,
       submitter,
       tags: [...new Set((Array.isArray(chart.tags) ? chart.tags : []).map((tag) => tag === '全局' ? '错轮' : tag))],
       downloadCount: Math.max(0, Number(communityStatus.downloads[chart.id] || 0)),

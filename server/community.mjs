@@ -42,10 +42,31 @@ function stableVersion(value) {
   return /^\d+\.\d+$/.test(version) ? version : '3.5';
 }
 
+export function canonicalCharacterName(value) {
+  const name = String(value || '').trim();
+  return name === '青霄' || name === '清宵' ? '清霄' : name;
+}
+
+export function canonicalCharacterNames(value) {
+  const values = Array.isArray(value) ? value : [value];
+  return [...new Set(values.flatMap((item) => typeof item === 'string'
+    ? item.split(/[\/／、,，;；|]/u).map(canonicalCharacterName).filter(Boolean)
+    : []).map((item) => item.slice(0, 80)))].slice(0, 3);
+}
+
 function characterNames(value) {
-  return [...new Set((Array.isArray(value) ? value : [])
-    .filter((item) => typeof item === 'string' && item.trim())
-    .map((item) => item.trim().slice(0, 80)))].slice(0, 3);
+  return canonicalCharacterNames(value);
+}
+
+function canonicalizeChartCharacters(chart) {
+  const source = record(chart);
+  const character = typeof source.character === 'string' ? characterNames(source.character).join(' / ') : source.character;
+  const community = record(source.community);
+  return {
+    ...source,
+    ...(typeof character === 'string' ? { character } : {}),
+    ...(Object.keys(community).length ? { community: { ...community, characters: characterNames(community.characters) } } : {})
+  };
 }
 
 function commissionTag(value) {
@@ -163,8 +184,7 @@ function preflightReview(payload) {
 function submissionPreview(payload) {
   const { chart } = submittedChart(payload);
   const community = record(chart.community);
-  const characters = (Array.isArray(community.characters) ? community.characters : [chart.character])
-    .filter((value) => typeof value === 'string' && value.trim()).map((value) => value.trim()).slice(0, 3);
+  const characters = characterNames(Array.isArray(community.characters) && community.characters.length ? community.characters : chart.character);
   return {
     title: String(community.name || community.title || chart.title || '未命名连段').trim().slice(0, 120),
     characters,
@@ -179,8 +199,7 @@ function submissionPreview(payload) {
 function chartSummary(payload, submitter) {
   const { chart } = submittedChart(payload);
   const community = record(chart.community);
-  const characters = (Array.isArray(community.characters) ? community.characters : [chart.character])
-    .filter((value) => typeof value === 'string' && value.trim()).map((value) => value.trim()).slice(0, 3);
+  const characters = characterNames(Array.isArray(community.characters) && community.characters.length ? community.characters : chart.character);
   const firstStep = [...chart.steps].sort((left, right) => Number(left.startMin || 0) - Number(right.startMin || 0))[0];
   const firstSlot = Math.max(1, Math.round(Number(firstStep?.characterSlot || 1)));
   const id = String(community.id || chart.id || '').trim() || `wwc_${randomUUID()}`;
@@ -441,7 +460,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const up = (await whitelist()).includes(normalizeEmail(submission.email));
     const submitter = { nickname: submission.username, email: publicEmail(submission.email), ...(submission.avatar ? { avatar: submission.avatar } : {}), ...(up ? { badge: 'UP' } : {}) };
     const summary = chartSummary(payload, submitter);
-    const { chart } = submittedChart(payload);
+    const { chart: sourceChart } = submittedChart(payload);
+    const chart = canonicalizeChartCharacters(sourceChart);
     const publicPackage = {
       ...payload,
       type: 'wwcombo-chart',

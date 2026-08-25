@@ -19,6 +19,11 @@ function cleanText(value, maxLength = 120) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
 }
 
+function canonicalCharacterName(value) {
+  const name = cleanText(value, 80);
+  return name === '青霄' || name === '清宵' ? '清霄' : name;
+}
+
 function bounded(value, min, max, fallback) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
@@ -26,7 +31,7 @@ function bounded(value, min, max, fallback) {
 
 function normalizeNames(value, fallbackName = '') {
   const names = Object.fromEntries(LANGUAGES.map((language) => [language, cleanText(value?.[language], 80)]));
-  names['zh-CN'] ||= cleanText(fallbackName, 80);
+  names['zh-CN'] = canonicalCharacterName(names['zh-CN'] || fallbackName);
   if (!names['zh-CN']) throw new Error('请填写角色中文名。');
   return names;
 }
@@ -191,10 +196,12 @@ export function createProjectAssetsService({ runtimeRoot, serverDir }) {
       await cp(path.join(seedRoot, 'images'), imageRoot, { recursive: true, force: false, errorOnExist: false });
     }
     if (existsSync(manifestPath)) {
-      manifest = normalizeManifest(JSON.parse((await readFile(manifestPath, 'utf8')).replace(/^\ufeff/, '')));
+      const storedManifest = JSON.parse((await readFile(manifestPath, 'utf8')).replace(/^\ufeff/, ''));
+      manifest = normalizeManifest(storedManifest);
       const now = new Date().toISOString();
       const seedById = new Map(seed.characters.map((item) => [item.id, item]));
-      let namesChanged = false;
+      const storedById = new Map((Array.isArray(storedManifest?.characters) ? storedManifest.characters : []).map((item) => [cleanText(item?.id, 100), item]));
+      let namesChanged = manifest.characters.some((item) => cleanText(storedById.get(item.id)?.names?.['zh-CN'], 80) !== item.names['zh-CN']);
       const mergedCharacters = manifest.characters.map((item) => {
         const seeded = seedById.get(item.id);
         if (!seeded) return item;

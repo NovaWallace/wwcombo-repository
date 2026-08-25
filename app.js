@@ -1150,13 +1150,43 @@ function normalizeText(value) {
   return String(value || '').trim().toLocaleLowerCase('zh-CN');
 }
 
+function canonicalCharacterName(value) {
+  const name = String(value || '').trim();
+  return name === '青霄' || name === '清宵' ? '清霄' : name;
+}
+
 function splitCharacterNames(value) {
   const values = Array.isArray(value) ? value : [value];
   return [...new Set(values.flatMap((item) => String(item || '')
     .split(/[\/／、,，;；]/)
-    .map((name) => name.trim())
-    .filter(Boolean)
-    .map((name) => name === '清宵' ? '青霄' : name)))];
+    .map(canonicalCharacterName)
+    .filter(Boolean)))];
+}
+
+function canonicalizeComboPackageCharacters(value) {
+  if (!value || typeof value !== 'object') return value;
+  const packageValue = Array.isArray(value) ? [...value] : { ...value };
+  const charts = Array.isArray(packageValue)
+    ? packageValue
+    : Array.isArray(packageValue.charts)
+      ? packageValue.charts
+      : packageValue.chart && typeof packageValue.chart === 'object'
+        ? [packageValue.chart]
+        : [packageValue];
+  const normalizedCharts = charts.map((source) => {
+    if (!source || typeof source !== 'object') return source;
+    const chart = { ...source };
+    if (typeof chart.character === 'string') chart.character = splitCharacterNames(chart.character).join(' / ');
+    if (chart.community && typeof chart.community === 'object') {
+      chart.community = { ...chart.community, characters: splitCharacterNames(chart.community.characters) };
+    }
+    return chart;
+  });
+  if (Array.isArray(packageValue)) return normalizedCharts;
+  if (Array.isArray(packageValue.charts)) packageValue.charts = normalizedCharts;
+  else if (packageValue.chart && typeof packageValue.chart === 'object') packageValue.chart = normalizedCharts[0];
+  else return normalizedCharts[0];
+  return packageValue;
 }
 
 function uniqueSorted(values) {
@@ -1275,7 +1305,7 @@ function characterIconMap(payload) {
   const icons = new Map();
   for (const item of entries) {
     if (!Array.isArray(item) || typeof item[0] !== 'string' || typeof item[1] !== 'string') continue;
-    const name = item[0].trim() === '清宵' ? '青霄' : item[0].trim();
+    const name = canonicalCharacterName(item[0]);
     const source = item[1].trim();
     if (!name || !source || icons.has(name)) continue;
     try {
@@ -1362,9 +1392,9 @@ async function downloadChart(event, chart) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     rememberEmbeddedVoterToken(response, url);
     const source = await response.text();
+    const payload = canonicalizeComboPackageCharacters(JSON.parse(source.replace(/^\uFEFF/, '')));
     if (isEmbeddedClient) {
       const requestId = crypto.randomUUID?.() || `community-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      const payload = JSON.parse(source.replace(/^\uFEFF/, ''));
       pendingClientImports.set(requestId, String(chart.id || ''));
       window.parent.postMessage({ type: 'wwcombo:community-import', version: 1, requestId, filename: filenameFor(chart), payload }, '*');
       chart.viewerDownloaded = true;
@@ -1374,7 +1404,7 @@ async function downloadChart(event, chart) {
       render();
       return;
     }
-    const blobUrl = URL.createObjectURL(new Blob([source], { type: response.headers.get('content-type') || 'application/json;charset=utf-8' }));
+    const blobUrl = URL.createObjectURL(new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: response.headers.get('content-type') || 'application/json;charset=utf-8' }));
     const anchor = document.createElement('a');
     anchor.href = blobUrl;
     anchor.download = filenameFor(chart);
