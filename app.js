@@ -23,17 +23,28 @@ const HERO_SPINE_ASSETS = {
 };
 const BUTTON_ICON_BASES = {
   english: './assets/button-icons',
-  graphic: './assets/graphic-icons',
+  tide: './assets/button-icons/tide',
   chinese: './assets/botton'
 };
-const GRAPHIC_ICON_OVERRIDES = {
-  'mouse-left': `${BUTTON_ICON_BASES.english}/mouse-left.png`
+const TIDE_ICON_FILES = {
+  'mouse-left': 'basic_attack',
+  'mouse-left-hold': 'heavy_attack',
+  skill: 'skill',
+  'skill-hold': 'skill_hold',
+  echo: 'echo',
+  'echo-hold': 'echo_hold',
+  liberation: 'liberation',
+  'liberation-hold': 'liberation_hold',
+  'mouse-right': 'dodge',
+  'mouse-right-hold': 'dodge_hold',
+  jump: 'jump',
+  'jump-hold': 'jump_hold',
+  tool: 'tool',
+  intro: 'intro',
+  outro: 'outro',
+  finisher: 'finisher',
+  forward: 'forward'
 };
-const PURE_GRAPHIC_ICON_IDS = new Set([
-  'echo-hold', 'echo', 'finisher', 'jump-hold', 'jump',
-  'liberation-hold', 'liberation', 'mouse-left-hold', 'mouse-left',
-  'mouse-right-hold', 'mouse-right', 'skill-hold', 'skill', 'tool'
-]);
 const GAMEPAD_ICON_CODES = {
   'mouse-left': 'GamepadX',
   'mouse-left-hold': 'GamepadXHold',
@@ -100,19 +111,18 @@ const AXIS_ICON_MAPPINGS = [
   ['ii', '2', 'ii.png', ['ii']],
   ['i', '1', 'i.png', ['i']]
 ].map(([id, label, filename, triggers]) => {
-  const graphicSrc = GRAPHIC_ICON_OVERRIDES[id] || (PURE_GRAPHIC_ICON_IDS.has(id)
-    ? `${BUTTON_ICON_BASES.graphic}/${id}.png`
-    : `${BUTTON_ICON_BASES.chinese}/${encodeURIComponent(filename)}`);
+  const tideFile = TIDE_ICON_FILES[id];
+  const tideSrc = tideFile ? `${BUTTON_ICON_BASES.tide}/${tideFile}.png` : '';
   const gamepadCode = GAMEPAD_ICON_CODES[id];
   return {
     id,
     label,
     triggers,
     gamepadCode,
-    graphicSrc,
+    tideSrc,
     englishSrc: `${BUTTON_ICON_BASES.english}/${id}.png`,
-    xboxSrc: gamepadCode ? gamepadIconSource(gamepadCode, 'xbox') : graphicSrc,
-    playstationSrc: gamepadCode ? gamepadIconSource(gamepadCode, 'playstation') : graphicSrc
+    xboxSrc: gamepadCode ? gamepadIconSource(gamepadCode, 'xbox') : tideSrc || `${BUTTON_ICON_BASES.chinese}/${encodeURIComponent(filename)}`,
+    playstationSrc: gamepadCode ? gamepadIconSource(gamepadCode, 'playstation') : tideSrc || `${BUTTON_ICON_BASES.chinese}/${encodeURIComponent(filename)}`
   };
 });
 const AXIS_ICON_TRIGGERS = AXIS_ICON_MAPPINGS
@@ -2592,7 +2602,7 @@ function axisLabelMatchesMove(label, moveId) {
 function axisStepDisplay(step, labels) {
   const label = axisStepLabel(step, labels);
   const custom = String(labels[step.id] || '').trim();
-  if (!state.axisKeySettings || !axisLabelMatchesMove(custom, step.moveId) || state.axisIconSet === 'graphic') return { label, iconSrc: '', iconWidthScale: 1 };
+  if (!state.axisKeySettings || !axisLabelMatchesMove(custom, step.moveId) || state.axisIconSet === 'tide') return { label, iconSrc: '', iconWidthScale: 1 };
   if (state.axisIconSet === 'english') {
     const code = axisBindingCode(step.moveId, 'keyboard');
     return { label, iconSrc: code ? axisCustomIconSource('keyboard', code) || keyboardMouseIconSource(code) || '' : '', iconWidthScale: keyboardMouseIconWidthScale(code) };
@@ -2713,7 +2723,9 @@ function axisActionContent(display) {
     }
     const icon = document.createElement('img');
     icon.className = 'axis-action-icon';
-    icon.src = part.mapping[`${state.axisIconSet}Src`] || part.mapping.englishSrc;
+    icon.src = state.axisIconSet === 'tide'
+      ? part.mapping.tideSrc || part.mapping.englishSrc
+      : part.mapping[`${state.axisIconSet}Src`] || part.mapping.englishSrc;
     if (['xbox', 'playstation'].includes(state.axisIconSet) && part.mapping.gamepadCode?.includes('+')) {
       icon.classList.add('is-wide');
     }
@@ -3287,7 +3299,7 @@ els.detailBackdrop.addEventListener('mousedown', (event) => { if (event.target =
 for (const button of els.axisIconSetButtons) {
   button.addEventListener('click', () => {
     const next = button.dataset.iconSet;
-    if (!['english', 'graphic', 'xbox', 'playstation'].includes(next) || next === state.axisIconSet) return;
+    if (!['english', 'tide', 'xbox', 'playstation'].includes(next) || next === state.axisIconSet) return;
     state.axisIconSet = next;
     renderAxisIconSet();
     renderActiveAxisPreviews();
