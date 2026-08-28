@@ -10,6 +10,7 @@ const MAX_DURATION_MS = 10 * 60 * 1000;
 const MAX_COMMISSION_RESPONSES = 50;
 const MAX_COMMENTS_PER_COMBO = 200;
 const MAX_COMMENT_BODY = 1000;
+const COMMISSION_AUTO_ADOPT_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 const COMMISSION_TAGS = ['轮椅', '基础', '标准', '进阶', '冒烟', '错轮'];
 const ICON_TRIGGERS = [
   '长按共鸣解放', '长按普攻', '长按技能', '长按声骸', '长按解放', '长按闪避', '长按跳跃',
@@ -1007,16 +1008,15 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     return JSON.parse(await readFile(path.join(commissionResponsesRoot, item.id, storedFile), 'utf8'));
   }
 
-  async function adoptCommissionResponse(commissionId, responseId, body, voterId = '') {
-    const email = normalizeEmail(body.email);
-    if (!email) throw new Error('请先登记委托时使用的邮箱。');
+  async function adoptCommissionResponseInternal(commissionId, responseId, { email = '', voterId = '', automatic = false, admin = false } = {}) {
     const state = await commissionState();
     const item = state.commissions.find((commission) => commission.id === commissionId);
     if (!item) throw new Error('委托不存在。');
-    if (normalizeEmail(item.owner?.email) !== email) throw new Error('只有委托发布者可以采纳方案。');
+    if (!automatic && !admin && normalizeEmail(item.owner?.email) !== email) throw new Error('只有委托发布者可以采纳方案。');
     if (item.status === 'completed') throw new Error('这个委托已经完成。');
     const response = (Array.isArray(item.responses) ? item.responses : []).find((entry) => entry.id === responseId);
     if (!response) throw new Error('委托方案不存在。');
+    if (response.status !== 'submitted') throw new Error('这份委托方案当前不可采纳。');
     const storedFile = path.basename(String(response.storedFile || ''));
     if (!storedFile || storedFile !== response.storedFile) throw new Error('委托方案文件路径不安全。');
     const content = JSON.parse(await readFile(path.join(commissionResponsesRoot, item.id, storedFile), 'utf8'));
@@ -1032,8 +1032,10 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     item.acceptedResponseId = response.id;
     item.completedAt = now;
     item.updatedAt = now;
+    if (automatic) item.autoAdopted = true;
     response.status = 'accepted';
     response.acceptedAt = now;
+    if (automatic) response.autoAdopted = true;
     response.moderationSubmissionId = moderation.id;
     response.moderationStatus = moderation.status;
     if (moderation.chart?.id) {
@@ -1054,6 +1056,61 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       commission: await commissionPublicValue(item, voterId, email),
       moderation: { id: moderation.id, status: moderation.status, ...(moderation.chart?.id ? { comboId: moderation.chart.id } : {}) }
     };
+  }
+
+  async function adminCommissions() {
+    const state = await commissionState();
+    return {
+      version: 1,
+      updatedAt: Math.max(0, ...state.commissions.map((item) => Number(item.updatedAt || item.createdAt || 0))),
+      commissions: state.commissions.map((item) => ({
+        id: String(item.id || ''), title: String(item.title || '未命名委托'), description: String(item.description || ''), characters: characterNames(item.characters), tag: commissionTag(item.tag),
+        owner: { username: String(item.owner?.username || '未命名用户'), email: normalizeEmail(item.owner?.email), avatar: String(item.owner?.avatar || '') },
+        status: item.status === 'completed' ? 'completed' : 'open', createdAt: Number(item.createdAt || 0), updatedAt: Number(item.updatedAt || item.createdAt || 0), completedAt: Number(item.completedAt || 0), acceptedResponseId: String(item.acceptedResponseId || ''), publishedComboId: String(item.publishedComboId || ''), interestCount: Object.keys(record(item.interests)).length + 1, responseCount: Array.isArray(item.responses) ? item.responses.length : 0,
+        responses: (Array.isArray(item.responses) ? item.responses : []).map((response) => ({
+          id: String(response.id || ''), title: String(response.preview?.title || response.fileName || '未命名连段'), fileName: String(response.fileName || ''), username: String(response.username || '未命名用户'), email: normalizeEmail(response.email), avatar: String(response.avatar || ''), characters: characterNames(response.preview?.characters), tags: Array.isArray(response.preview?.tags) ? response.preview.tags : [], rounds: Math.max(1, Number(response.preview?.rounds || 1)), durationMs: Math.max(0, Number(response.preview?.durationMs || 0)), stepCount: Math.max(0, Number(response.preview?.stepCount || 0)), submittedAt: Number(response.submittedAt || 0), status: response.status === 'accepted' ? 'accepted' : 'submitted', preflight: response.preflight || { lowRisk: false, issues: ['尚未完成预审核'] }, moderationSubmissionId: String(response.moderationSubmissionId || ''), moderationStatus: String(response.moderationStatus || '')
+        }))
+      })).sort((left, right) => Number(left.status === 'completed') - Number(right.status === 'completed') || right.updatedAt - left.updatedAt)
+    };
+  }
+
+  async function adoptCommissionResponse(commissionId, responseId, body, voterId = '') {
+    const email = normalizeEmail(body.email);
+    if (!email) throw new Error('请先登记委托时使用的邮箱。');
+    return adoptCommissionResponseInternal(commissionId, responseId, { email, voterId });
+  }
+
+  async function adminAdoptCommissionResponse(commissionId, responseId) {
+    return adoptCommissionResponseInternal(commissionId, responseId, { admin: true });
+  }
+
+  async function autoAdoptExpiredCommissions(now = Date.now()) {
+    const state = await commissionState();
+    const cutoff = Number(now) - COMMISSION_AUTO_ADOPT_AFTER_MS;
+    const candidates = state.commissions
+      .filter((commission) => commission.status !== 'completed' && !commission.acceptedResponseId)
+      .map((commission) => {
+        const response = (Array.isArray(commission.responses) ? commission.responses : [])
+          .filter((item) => item?.status === 'submitted')
+          .sort((left, right) => Number(left.submittedAt || 0) - Number(right.submittedAt || 0))[0];
+        const submittedAt = Number(response?.submittedAt || 0);
+        return response && Number.isFinite(submittedAt) && submittedAt > 0 && submittedAt <= cutoff
+          ? { commission, response }
+          : null;
+      })
+      .filter(Boolean)
+      .sort((left, right) => Number(left.response.submittedAt || 0) - Number(right.response.submittedAt || 0));
+
+    const results = [];
+    for (const { commission, response } of candidates) {
+      try {
+        const result = await adoptCommissionResponseInternal(commission.id, response.id, { automatic: true });
+        results.push({ commissionId: commission.id, responseId: response.id, status: 'completed', moderation: result.moderation });
+      } catch (error) {
+        results.push({ commissionId: commission.id, responseId: response.id, status: 'failed', error: String(error?.message || error) });
+      }
+    }
+    return { checked: state.commissions.length, eligible: candidates.length, results };
   }
 
   async function withdrawCommissionResponse(commissionId, responseId, body, voterId = '') {
@@ -1159,11 +1216,14 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     castVote,
     sendComboFeedback: (...args) => serializeMutation(() => sendComboFeedback(...args)),
     publicCommissions,
+    adminCommissions,
     createCommission: (...args) => serializeMutation(() => createCommission(...args)),
     addCommissionInterest: (...args) => serializeMutation(() => addCommissionInterest(...args)),
     submitCommissionResponse: (...args) => serializeMutation(() => submitCommissionResponse(...args)),
     commissionResponseContent,
     adoptCommissionResponse: (...args) => serializeMutation(() => adoptCommissionResponse(...args)),
+    adminAdoptCommissionResponse: (...args) => serializeMutation(() => adminAdoptCommissionResponse(...args)),
+    autoAdoptExpiredCommissions: (...args) => serializeMutation(() => autoAdoptExpiredCommissions(...args)),
     withdrawCommissionResponse: (...args) => serializeMutation(() => withdrawCommissionResponse(...args)),
     withdrawCommission: (...args) => serializeMutation(() => withdrawCommission(...args)),
     status,

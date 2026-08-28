@@ -7,8 +7,8 @@
     <title>椰之城维护端</title>
     <link rel="icon" type="image/png" href="/assets/logo.png" />
     <link rel="apple-touch-icon" href="/assets/logo.png" />
-    <link rel="stylesheet" href="/admin/styles.css?v=20260814-traffic" />
-    <link rel="stylesheet" href="/admin/community-cards.css?v=20260730-1" />
+    <link rel="stylesheet" href="/admin/styles.css?v=20260828-mobile-commission" />
+    <link rel="stylesheet" href="/admin/community-cards.css?v=20260828-mobile-commission" />
   </head>
   <body>
     <header class="topbar">
@@ -44,6 +44,7 @@
         <nav class="admin-tabs" aria-label="维护页面">
           <button class="active" type="button" data-tab="submissions">投稿审核 <span id="submissionCount">0</span></button>
           <button type="button" data-tab="charts">连段管理 <span id="chartManageCount">0</span></button>
+          <button type="button" data-tab="commissions">委托广场 <span id="commissionManageCount">0</span></button>
           <button type="button" data-tab="withdrawals">撤回申请 <span id="withdrawalCount">0</span></button>
           <button type="button" data-tab="traffic">访问统计</button>
           <button type="button" data-tab="whitelist">UP 白名单</button>
@@ -55,6 +56,11 @@
         <section class="tab-panel active" data-panel="submissions">
           <div class="section-heading"><div><h2>待审核投稿</h2><p>预审核会检查连续同招式、无法图标化的自定义文字和启动/循环轴时段；高风险投稿始终保留给你处理。</p></div><div class="review-heading-actions"><label class="review-automation"><input id="autoApproveLowRisk" type="checkbox" /><span><strong>低风险自动放行</strong><small id="autoApproveLowRiskStatus">关闭</small></span></label><button class="quiet" type="button" data-refresh>刷新</button></div></div>
           <div class="task-list submission-grid" id="submissionList"></div>
+        </section>
+
+        <section class="tab-panel" data-panel="commissions" hidden>
+          <div class="section-heading"><div><h2>委托广场</h2><p>查看所有委托及收到的方案。选中的方案会进入投稿审核流程，不会直接公开。</p></div><button class="quiet" type="button" data-refresh-commissions>刷新</button></div>
+          <div class="commission-admin-list" id="commissionAdminList"></div>
         </section>
 
         <section class="tab-panel" data-panel="charts" hidden>
@@ -112,6 +118,17 @@
             </div>
             <div class="release-current" id="appReleaseCurrent">尚未配置下载地址。</div>
             <div class="release-actions"><p class="form-message" id="appReleaseMessage" aria-live="polite"></p><button class="primary" type="submit">发布版本信息</button></div>
+          </form>
+          <form class="release-editor mobile-release-editor" id="mobileReleaseForm">
+            <div class="release-editor-head"><div><span>MOBILE UPDATE</span><h3>手机端更新链接 API</h3><p>手机端从独立接口读取版本和下载地址，不会与桌面端版本混用。</p></div><code>/api/project-assets/v1/mobile-release.json</code></div>
+            <div class="release-fields mobile-release-fields">
+              <label><span>手机端版本</span><input id="mobileReleaseVersion" inputmode="numeric" placeholder="0.1.0" required /></label>
+              <label><span>更新标题</span><input id="mobileReleaseTitle" maxlength="120" placeholder="WW Combo Trainer Mobile" /></label>
+              <label class="release-notes"><span>更新说明</span><textarea id="mobileReleaseNotes" maxlength="4000" rows="4" placeholder="每行填写一项主要改动"></textarea></label>
+              <label class="release-url-github"><span>Android 下载链接</span><input id="mobileReleaseAndroidUrl" type="url" placeholder="填写手机端安装包或下载页链接" /></label>
+            </div>
+            <div class="release-current" id="mobileReleaseCurrent">尚未填写手机端下载链接。</div>
+            <div class="release-actions"><p class="form-message" id="mobileReleaseMessage" aria-live="polite"></p><button class="primary" type="submit">保存手机端版本</button></div>
           </form>
           <div class="asset-manager">
             <aside class="asset-browser">

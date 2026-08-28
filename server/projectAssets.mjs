@@ -160,6 +160,24 @@ function normalizeRelease(value, previous = {}) {
   };
 }
 
+function normalizeMobileRelease(value, previous = {}) {
+  const version = cleanText(value?.version ?? previous.version, 40) || '0.1.0';
+  if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('手机端版本号必须使用 0.1.0 这样的三段数字。');
+  const links = value?.downloadLinks && typeof value.downloadLinks === 'object' ? value.downloadLinks : {};
+  const previousLinks = previous.downloadLinks && typeof previous.downloadLinks === 'object' ? previous.downloadLinks : {};
+  const android = value?.androidDownloadUrl !== undefined ? value.androidDownloadUrl : links.android !== undefined ? links.android : previousLinks.android || '';
+  if (android && !/^https?:\/\//i.test(String(android))) throw new Error('手机端下载链接必须使用 http:// 或 https://。');
+  return {
+    schemaVersion: 1,
+    platform: 'mobile',
+    version,
+    title: cleanText(value?.title ?? previous.title, 120),
+    notes: cleanText(value?.notes ?? previous.notes, 4000),
+    publishedAt: cleanText(value?.publishedAt ?? previous.publishedAt, 60) || new Date().toISOString(),
+    downloadLinks: { android: cleanText(android, 1000) }
+  };
+}
+
 function managedReleaseName(download) {
   if (download?.url !== '/api/app-release/download') return '';
   const fileName = cleanText(download?.storedName, 120);
@@ -172,10 +190,12 @@ export function createProjectAssetsService({ runtimeRoot, serverDir }) {
   const manifestPath = path.join(root, 'manifest.json');
   const releaseRoot = path.join(root, 'release');
   const releasePath = path.join(releaseRoot, 'release.json');
+  const mobileReleasePath = path.join(root, 'mobile-release.json');
   const seedRoot = path.join(serverDir, 'project-assets-seed');
   let manifest = normalizeManifest({ characters: [] });
   let seedManifest = normalizeManifest({ characters: [] });
   let release = normalizeRelease({ version: '0.2.0', title: 'WW Combo Trainer 0.2.0', notes: '', downloadUrl: '' });
+  let mobileRelease = normalizeMobileRelease({ version: '0.1.0', title: 'WW Combo Trainer Mobile' });
   let writeQueue = Promise.resolve();
 
   async function persist(next) {
@@ -232,6 +252,8 @@ export function createProjectAssetsService({ runtimeRoot, serverDir }) {
     }
     if (existsSync(releasePath)) release = normalizeRelease(JSON.parse((await readFile(releasePath, 'utf8')).replace(/^\ufeff/, '')));
     else await writeAtomicJson(releasePath, release);
+    if (existsSync(mobileReleasePath)) mobileRelease = normalizeMobileRelease(JSON.parse((await readFile(mobileReleasePath, 'utf8')).replace(/^\ufeff/, '')));
+    else await writeAtomicJson(mobileReleasePath, mobileRelease);
     return manifest;
   }
 
@@ -340,6 +362,23 @@ export function createProjectAssetsService({ runtimeRoot, serverDir }) {
     return { ...release, maxPackageBytes: MAX_RELEASE_BYTES };
   }
 
+  function publicMobileRelease() {
+    return mobileRelease;
+  }
+
+  function adminMobileRelease() {
+    return mobileRelease;
+  }
+
+  async function saveMobileRelease(payload) {
+    return serialize(async () => {
+      mobileRelease = normalizeMobileRelease(payload, mobileRelease);
+      mobileRelease.publishedAt = new Date().toISOString();
+      await writeAtomicJson(mobileReleasePath, mobileRelease);
+      return mobileRelease;
+    });
+  }
+
   async function saveRelease(payload) {
     return serialize(async () => {
       const previousName = managedReleaseName(release.download);
@@ -395,5 +434,5 @@ export function createProjectAssetsService({ runtimeRoot, serverDir }) {
     });
   }
 
-  return { initialize, publicManifest, adminManifest, upsert, remove, syncSeedNames, imageRoot, publicRelease, adminRelease, saveRelease, uploadReleasePackage, releaseRoot };
+  return { initialize, publicManifest, adminManifest, upsert, remove, syncSeedNames, imageRoot, publicRelease, adminRelease, saveRelease, uploadReleasePackage, releaseRoot, publicMobileRelease, adminMobileRelease, saveMobileRelease };
 }

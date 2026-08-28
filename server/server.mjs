@@ -23,6 +23,7 @@ const SESSION_SECONDS = 12 * 60 * 60;
 const LOGIN_WINDOW_MS = 60 * 1000;
 const MAX_LOGIN_FAILURES = 5;
 const VOTER_COOKIE_SECONDS = 2 * 365 * 24 * 60 * 60;
+const COMMISSION_AUTO_ADOPT_INTERVAL_MS = 10 * 60 * 1000;
 const PUBLIC_ROOT_FILES = new Set(['/index.html', '/app.js', '/i18n.js', '/styles.css', '/site.webmanifest', '/robots.txt', '/sitemap.xml', '/build-info.json']);
 const CONTENT_TYPES = new Map([
   ['.html', 'text/html; charset=utf-8'],
@@ -83,6 +84,30 @@ const projectAssets = createProjectAssetsService({ runtimeRoot: RUNTIME_ROOT, se
 await projectAssets.initialize();
 const traffic = createTrafficService({ runtimeRoot: RUNTIME_ROOT });
 await traffic.initialize();
+
+let commissionAutoAdoptionRunning = false;
+async function runCommissionAutoAdoption(trigger) {
+  if (commissionAutoAdoptionRunning) return;
+  commissionAutoAdoptionRunning = true;
+  try {
+    const result = await community.autoAdoptExpiredCommissions();
+    const completed = result.results.filter((item) => item.status === 'completed');
+    const failed = result.results.filter((item) => item.status === 'failed');
+    if (completed.length || failed.length) {
+      console.log(`[wwcombo] 委托自动采纳（${trigger}）：完成 ${completed.length}，失败 ${failed.length}，检查 ${result.checked}`);
+    }
+  } catch (error) {
+    console.error(`[wwcombo] 委托自动采纳失败（${trigger}）：${error.message || error}`);
+  } finally {
+    commissionAutoAdoptionRunning = false;
+  }
+}
+
+void runCommissionAutoAdoption('启动检查');
+const commissionAutoAdoptionTimer = setInterval(() => {
+  void runCommissionAutoAdoption('定时检查');
+}, COMMISSION_AUTO_ADOPT_INTERVAL_MS);
+commissionAutoAdoptionTimer.unref?.();
 
 const loginAttempts = new Map();
 const updateState = {
@@ -469,6 +494,29 @@ async function handleAdminApi(req, res, pathname) {
     return;
   }
 
+  if (req.method === 'GET' && pathname === '/api/server/community/commissions') {
+    const session = requireSession(req, res);
+    if (!session) return;
+    sendJson(res, 200, await community.adminCommissions());
+    return;
+  }
+
+  const adminCommissionPackage = /^\/api\/server\/community\/commissions\/([^/]+)\/responses\/([^/]+)\/package$/.exec(pathname);
+  if (req.method === 'GET' && adminCommissionPackage) {
+    const session = requireSession(req, res);
+    if (!session) return;
+    sendJson(res, 200, await community.commissionResponseContent(decodeURIComponent(adminCommissionPackage[1]), decodeURIComponent(adminCommissionPackage[2])));
+    return;
+  }
+
+  const adminCommissionImport = /^\/api\/server\/community\/commissions\/([^/]+)\/responses\/([^/]+)\/import$/.exec(pathname);
+  if (req.method === 'POST' && adminCommissionImport) {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    sendJson(res, 200, { ok: true, ...(await community.adminAdoptCommissionResponse(decodeURIComponent(adminCommissionImport[1]), decodeURIComponent(adminCommissionImport[2]))) });
+    return;
+  }
+
   const chartDelete = /^\/api\/server\/charts\/([^/]+)\/delete$/.exec(pathname);
   if (req.method === 'POST' && chartDelete) {
     const session = requireSession(req, res, true);
@@ -579,6 +627,20 @@ async function handleAdminApi(req, res, pathname) {
     const fileName = decodeURIComponent(String(req.headers['x-file-name'] || ''));
     const release = await projectAssets.uploadReleasePackage(req, fileName, Number(req.headers['content-length'] || 0));
     sendJson(res, 200, { ok: true, release });
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/api/server/mobile-release') {
+    const session = requireSession(req, res);
+    if (!session) return;
+    sendJson(res, 200, projectAssets.adminMobileRelease());
+    return;
+  }
+
+  if (req.method === 'PUT' && pathname === '/api/server/mobile-release') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    sendJson(res, 200, { ok: true, release: await projectAssets.saveMobileRelease(await readJsonBody(req, 8 * 1024)) });
     return;
   }
 
@@ -910,6 +972,14 @@ const server = createServer(async (req, res) => {
           link: `<${PUBLIC_URL}/>; rel="canonical"`,
           'x-robots-tag': 'index, follow, max-image-preview:large'
         }
+      });
+      return;
+    }
+    if (pathname === '/api/project-assets/v1/mobile-release.json') {
+      if (req.method !== 'GET' && req.method !== 'HEAD') return sendJson(res, 405, { error: 'Method not allowed' }, { 'access-control-allow-origin': '*' });
+      sendJson(res, 200, projectAssets.publicMobileRelease(), {
+        'access-control-allow-origin': '*',
+        'cache-control': 'no-cache'
       });
       return;
     }
