@@ -3499,12 +3499,13 @@ async function loadCharacterIcons() {
 function characterBasePresetMap(payload, manifestUrl) {
   const entries = Array.isArray(payload?.characters) ? payload.characters : [];
   const presets = new Map();
+  const resolvedManifestUrl = new URL(manifestUrl, location.href).href;
   for (const entry of entries) {
     const name = canonicalCharacterName(entry?.names?.['zh-CN']);
     const preset = entry?.basePreset;
     if (!name || !preset || typeof preset.src !== 'string') continue;
     try {
-      const src = new URL(preset.src, manifestUrl).href;
+      const src = new URL(preset.src, resolvedManifestUrl).href;
       if (!['http:', 'https:'].includes(new URL(src).protocol)) continue;
       presets.set(name, {
         src,
