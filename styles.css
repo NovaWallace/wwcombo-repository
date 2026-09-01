@@ -171,9 +171,9 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .combo-decoration-avatar { width: 40px; height: 52px; margin-left: 2px; border: 0; border-radius: 0; object-fit: contain; filter: saturate(.8); }
 .combo-decoration-avatar:first-child { margin-left: 0; }
 .combo-title-row { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; position: relative; top: -4px; }
-.combo-title-copy { position: relative; align-self: flex-start; top: -1px; }
+.combo-title-copy { min-width: 0; flex: 1 1 auto; position: relative; align-self: flex-start; top: -1px; overflow: hidden; }
 .combo-title-row > div:first-child { min-width: 0; }
-.combo-card h3 { margin: 0; color: var(--text); font-size: 18px; line-height: 1.35; overflow-wrap: anywhere; }
+.combo-card h3 { min-width: 0; margin: 0; color: var(--text); font-size: 18px; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .combo-card-meta { position: absolute; left: 21px; bottom: 5px; max-width: calc(100% - 42px); margin: 0; color: #858b8f; font-size: 10px; font-weight: 750; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .characters { margin: 2px 0 0; color: var(--cyan); font-size: 12px; font-weight: 800; overflow-wrap: anywhere; }
 .combo-classification { flex: 0 0 auto; display: grid; grid-template-columns: auto auto auto auto; grid-template-areas: "tags video grade links"; align-items: center; justify-content: end; gap: 0 8px; position: relative; right: 32px; transform: scale(1.2); transform-origin: right center; }
@@ -194,6 +194,9 @@ h1 { margin: 0; font-size: 34px; line-height: 1.18; letter-spacing: 0; }
 .combo-video-link:hover, .combo-video-link:focus-visible { border-color: #8c969b; background: #30393e; color: #fff; outline: 0; transform: translateY(-1px); }
 .combo-video-link.bilibili { width: 28px; border: 0; background: transparent; color: inherit; }
 .combo-video-link.bilibili:hover, .combo-video-link.bilibili:focus-visible { border-color: transparent; background: rgba(0, 174, 236, .12); }
+.combo-video-link.douyin { width: 42px; border: 0; background: transparent; color: inherit; }
+.combo-video-link.douyin .combo-video-logo { width: 40px; }
+.combo-video-link.douyin:hover, .combo-video-link.douyin:focus-visible { border-color: transparent; background: rgba(255, 255, 255, .08); }
 .combo-video-link svg { width: 14px; height: 14px; stroke-width: 2.8; }
 .combo-video-logo { display: block; width: 28px; height: auto; }
 .combo-tag { padding: 4px 9px; border: 1px solid #5d6368; border-radius: 3px; background: rgba(255,255,255,.035); color: #d8dcde; font-size: 12px; font-weight: 850; line-height: 1.2; }
@@ -632,6 +635,8 @@ html[data-theme='day'] .combo-video-link { border-color: #9dafb4; background: #e
 html[data-theme='day'] .combo-video-link:hover, html[data-theme='day'] .combo-video-link:focus-visible { border-color: #71868d; background: #e1ebed; color: #17282d; }
 html[data-theme='day'] .combo-video-link.bilibili { border-color: transparent; background: transparent; color: inherit; }
 html[data-theme='day'] .combo-video-link.bilibili:hover, html[data-theme='day'] .combo-video-link.bilibili:focus-visible { border-color: transparent; background: rgba(0, 174, 236, .1); }
+html[data-theme='day'] .combo-video-link.douyin { border-color: transparent; background: transparent; }
+html[data-theme='day'] .combo-video-link.douyin:hover, html[data-theme='day'] .combo-video-link.douyin:focus-visible { border-color: transparent; background: rgba(0, 0, 0, .06); }
 
 html[data-theme='day'] .modal-backdrop { background: rgba(40, 59, 65, .48); }
 html[data-theme='day'] .character-picker-dialog,

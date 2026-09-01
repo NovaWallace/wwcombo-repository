@@ -1476,6 +1476,7 @@ function videoLinkPlatform(value) {
   const source = safeHttpUrl(value);
   if (!source) return '';
   const hostname = new URL(source).hostname.toLowerCase().replace(/^www\./, '');
+  if (hostname.includes('douyin')) return 'douyin';
   if (hostname === 'bilibili.com' || hostname.endsWith('.bilibili.com') || hostname === 'b23.tv') return 'bilibili';
   return 'video';
 }
@@ -1962,11 +1963,14 @@ function renderCard(chart) {
   card.classList.toggle('has-video', Boolean(videoSource));
   videoLink.hidden = !videoSource;
   videoLink.classList.toggle('bilibili', videoPlatform === 'bilibili');
+  videoLink.classList.toggle('douyin', videoPlatform === 'douyin');
   videoLink.href = videoSource || '#';
   videoLink.title = t('detail.demo');
   videoLink.setAttribute('aria-label', t('detail.demo'));
   videoLink.innerHTML = videoPlatform === 'bilibili'
     ? '<img class="combo-video-logo" src="./assets/bilibili.png" alt="" aria-hidden="true">'
+    : videoPlatform === 'douyin'
+      ? '<img class="combo-video-logo" src="./assets/douyin.png" alt="" aria-hidden="true">'
     : '<i data-lucide="video" aria-hidden="true"></i>';
 
   const videoAction = card.querySelector('.combo-video-action');
@@ -1976,7 +1980,9 @@ function renderCard(chart) {
   videoAction.setAttribute('aria-label', t('detail.demo'));
   videoAction.innerHTML = videoPlatform === 'bilibili'
     ? '<img class="combo-video-logo" src="./assets/bilibili.png" alt="" aria-hidden="true"><span>' + t('detail.demo') + '</span>'
-    : '<i data-lucide="video" aria-hidden="true"></i><span>' + t('detail.demo') + '</span>';
+    : videoPlatform === 'douyin'
+      ? '<img class="combo-video-logo" src="./assets/douyin.png" alt="" aria-hidden="true"><span>' + t('detail.demo') + '</span>'
+      : '<i data-lucide="video" aria-hidden="true"></i><span>' + t('detail.demo') + '</span>';
 
   const detailButton = card.querySelector('.detail-button');
   const downloadBadge = card.querySelector('.detail-download-badge');
