@@ -7,7 +7,7 @@
     <title>椰之城维护端</title>
     <link rel="icon" type="image/png" href="/assets/logo.png" />
     <link rel="apple-touch-icon" href="/assets/logo.png" />
-    <link rel="stylesheet" href="/admin/styles.css?v=20260828-mobile-commission" />
+    <link rel="stylesheet" href="/admin/styles.css?v=20260831-wiki-admin" />
     <link rel="stylesheet" href="/admin/community-cards.css?v=20260828-mobile-commission" />
   </head>
   <body>
@@ -48,6 +48,7 @@
           <button type="button" data-tab="withdrawals">撤回申请 <span id="withdrawalCount">0</span></button>
           <button type="button" data-tab="traffic">访问统计</button>
           <button type="button" data-tab="whitelist">UP 白名单</button>
+          <button type="button" data-tab="wiki-admins">Wiki 管理员</button>
           <button type="button" data-tab="project-api">项目 API</button>
           <button type="button" data-tab="smtp">邮件通知</button>
           <button type="button" data-tab="server">服务器</button>
@@ -100,6 +101,12 @@
           <div class="section-heading"><div><h2>UP 白名单</h2><p>名单内邮箱发布后，用户名旁会展示 UP 标识。</p></div></div>
           <form class="inline-form" id="whitelistForm"><input id="whitelistEmail" type="email" autocomplete="off" placeholder="name@example.com" required /><button class="primary" type="submit">添加邮箱</button></form>
           <div class="chip-list" id="whitelistList"></div>
+        </section>
+
+        <section class="tab-panel" data-panel="wiki-admins" hidden>
+          <div class="section-heading"><div><h2>角色 Wiki 管理员</h2><p>只有完成邮箱验证码登录且邮箱在此名单中的账号，才会在本体角色 Wiki 看到维护编辑入口。</p></div></div>
+          <form class="inline-form" id="wikiAdminForm"><input id="wikiAdminEmail" type="email" autocomplete="off" placeholder="name@example.com" required /><button class="primary" type="submit">授予权限</button></form>
+          <div class="chip-list" id="wikiAdminList"></div>
         </section>
 
         <section class="tab-panel" data-panel="project-api" hidden>
@@ -241,6 +248,6 @@
         <div class="confirm-actions"><button class="quiet" id="confirmCancelBtn" type="button">取消</button><button class="primary" id="confirmAcceptBtn" type="button">确认</button></div>
       </section>
     </div>
-    <script src="/admin/app.js?v=20260814-traffic"></script>
+    <script src="/admin/app.js?v=20260831-wiki-admin"></script>
   </body>
 </html>

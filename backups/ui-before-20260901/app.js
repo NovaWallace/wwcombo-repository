@@ -3,10 +3,8 @@ const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
 const UNKNOWN_CHARACTER_ICON = './assets/unknown-character.jpg';
 const CHARACTER_ICON_CACHE_KEY = 'wwcombo-character-icons-v2';
 const APP_RELEASE_MANIFEST_PATH = '/api/project-assets/v1/app-release.json';
-const PROJECT_ASSET_MANIFEST_PATH = '/api/project-assets/v1/manifest.json';
 const APP_RELEASE_FALLBACK_ORIGIN = 'https://Nova.fb520.site';
 const PROFILE_STORAGE_KEY = 'wwcombo-community-profile-v1';
-const ACCOUNT_TOKEN_STORAGE_KEY = 'wwcombo-community-account-token-v1';
 const AXIS_KEY_SETTINGS_STORAGE_KEY = 'wwcombo-community-axis-key-settings-v1';
 const EMBEDDED_VOTER_TOKEN_STORAGE_KEY = 'wwcombo-community-client-voter-v1';
 const EMBEDDED_IMPORTED_COMBOS_STORAGE_KEY = 'wwcombo-community-client-imports-v1';
@@ -276,15 +274,6 @@ function savedHeroMotionEnabled() {
   }
 }
 
-function savedAccountToken() {
-  try {
-    const token = String(localStorage.getItem(ACCOUNT_TOKEN_STORAGE_KEY) || '').trim();
-    return token.length <= 2048 ? token : '';
-  } catch {
-    return '';
-  }
-}
-
 const savedKeys = savedAxisKeySettings();
 const state = {
   charts: [],
@@ -299,7 +288,6 @@ const state = {
   characters: [],
   characterQuery: '',
   characterIcons: new Map(),
-  characterBasePresets: new Map(),
   tag: '',
   sort: 'version',
   detailChart: null,
@@ -330,15 +318,11 @@ const state = {
   appDialogPreviousFocus: null,
   axisIconSet: 'english',
   axisScale: 1,
-  axisMergeSameMove: false,
   axisKeySettings: savedKeys.settings,
   axisKeySettingsFile: savedKeys.fileName,
   chartPackages: new Map(),
   appRelease: null,
-  appReleaseState: 'idle',
-  accountToken: savedAccountToken(),
-  accountSession: { authenticated: false, email: '', roles: [] },
-  accountLoadState: 'idle'
+  appReleaseState: 'idle'
 };
 if (state.axisKeySettings?.preferences.inputMode === 'gamepad') state.axisIconSet = state.axisKeySettings.preferences.gamepadIconSet;
 
@@ -374,14 +358,6 @@ const els = {
   profileForm: document.getElementById('profileForm'),
   profileUsernameInput: document.getElementById('profileUsernameInput'),
   profileEmailInput: document.getElementById('profileEmailInput'),
-  accountSession: document.querySelector('.profile-account-session'),
-  accountStatus: document.getElementById('accountStatus'),
-  accountStatusDetail: document.getElementById('accountStatusDetail'),
-  accountLoginControls: document.getElementById('accountLoginControls'),
-  accountCodeInput: document.getElementById('accountCodeInput'),
-  sendAccountCode: document.getElementById('sendAccountCodeBtn'),
-  verifyAccount: document.getElementById('verifyAccountBtn'),
-  accountLogout: document.getElementById('accountLogoutBtn'),
   profileAvatarGrid: document.getElementById('profileAvatarGrid'),
   profileAvatarChoice: document.getElementById('profileAvatarChoice'),
   profileFeedback: document.getElementById('profileFeedback'),
@@ -519,7 +495,6 @@ const els = {
   axisZoomValue: document.getElementById('axisZoomValue'),
   axisZoomControls: [...document.querySelectorAll('[data-axis-zoom]')],
   axisZoomValues: [...document.querySelectorAll('[data-axis-zoom-value]')],
-  axisMergeSameMoveControls: [...document.querySelectorAll('[data-axis-merge-same-move]')],
   axisKeymapButtons: [...document.querySelectorAll('[data-axis-keymap-import]')],
   axisKeymapInput: document.getElementById('axisKeymapInput'),
   axisPreview: document.getElementById('axisPreview'),
@@ -531,21 +506,6 @@ const params = new URLSearchParams(location.search);
 const isFilePreview = location.protocol === 'file:';
 const isEmbeddedClient = params.get('client') === '1' && window.parent !== window;
 const requestedSource = params.get('source') || '';
-const requestedCommissionSource = params.get('commissionSource') || '';
-
-function trustedEmbeddedParentOrigin() {
-  if (!isEmbeddedClient) return '';
-  try {
-    const origin = new URL(params.get('parentOrigin') || '').origin;
-    const parsed = new URL(origin);
-    const localWebOrigin = ['http:', 'https:'].includes(parsed.protocol) && ['127.0.0.1', 'localhost', 'tauri.localhost'].includes(parsed.hostname);
-    return localWebOrigin || (parsed.protocol === 'tauri:' && parsed.hostname === 'localhost') ? origin : '';
-  } catch {
-    return '';
-  }
-}
-
-const embeddedParentOrigin = trustedEmbeddedParentOrigin();
 
 function sameOriginUrl(value) {
   try {
@@ -647,9 +607,6 @@ function askAppConfirmation(message, options = {}) {
 const sourceUrl = (!isFilePreview && /(^|\/)demo-index\.json(?:$|\?)/i.test(requestedSource))
   ? './community-index.json'
   : requestedSource || (isFilePreview ? './demo-index.json' : './community-index.json');
-const commissionSourceUrl = requestedCommissionSource
-  ? new URL(requestedCommissionSource, location.href).href
-  : '/api/community/commissions';
 state.view = params.get('view') === 'commissions' ? 'commissions' : 'combos';
 
 function appReleaseManifestUrl() {
@@ -750,164 +707,6 @@ function renderProfileAvatarNode(target, name, fallbackText = profileInitial()) 
   target.textContent = fallbackText;
 }
 
-function accountSessionHeaders() {
-  return state.accountToken ? { authorization: `Bearer ${state.accountToken}`, 'x-wwcombo-account-client': '1' } : { 'x-wwcombo-account-client': '1' };
-}
-
-function postAccountSessionToParent() {
-  if (!isEmbeddedClient || window.parent === window || !embeddedParentOrigin) return;
-  window.parent.postMessage({
-    type: 'wwcombo:community-account-session',
-    version: 1,
-    token: state.accountSession.authenticated ? state.accountToken : '',
-    session: {
-      authenticated: Boolean(state.accountSession.authenticated),
-      email: String(state.accountSession.email || ''),
-      roles: Array.isArray(state.accountSession.roles) ? state.accountSession.roles.filter((role) => typeof role === 'string').slice(0, 20) : [],
-      expiresAt: Number(state.accountSession.expiresAt || 0) || 0
-    }
-  }, embeddedParentOrigin);
-}
-
-function renderAccountSession() {
-  if (!els.accountSession || !els.accountStatus || !els.accountStatusDetail) return;
-  const authenticated = Boolean(state.accountSession.authenticated && state.accountSession.email);
-  els.accountSession.classList.toggle('authenticated', authenticated);
-  els.accountSession.classList.toggle('error', state.accountLoadState === 'error');
-  if (state.accountLoadState === 'loading' && !authenticated) {
-    els.accountStatus.textContent = t('account.loading');
-    els.accountStatusDetail.textContent = t('account.loadingHint');
-  } else if (authenticated) {
-    els.accountStatus.textContent = t('account.signedIn');
-    els.accountStatusDetail.textContent = state.accountSession.roles.includes('wiki-admin')
-      ? t('account.admin')
-      : `${t('account.verified')} · ${maskProfileEmail(state.accountSession.email)}`;
-  } else if (state.accountLoadState === 'error') {
-    els.accountStatus.textContent = t('account.unavailable');
-    els.accountStatusDetail.textContent = t('account.unavailableHint');
-  } else {
-    els.accountStatus.textContent = t('account.signedOut');
-    els.accountStatusDetail.textContent = t('account.hint');
-  }
-  if (els.accountLoginControls) els.accountLoginControls.hidden = authenticated;
-  if (els.accountLogout) els.accountLogout.hidden = !authenticated;
-  if (els.accountCodeInput) els.accountCodeInput.disabled = authenticated;
-  if (els.sendAccountCode) els.sendAccountCode.disabled = authenticated;
-  if (els.verifyAccount) els.verifyAccount.disabled = authenticated;
-}
-
-function setAccountSession(session, token = '') {
-  const authenticated = Boolean(session?.authenticated && typeof session.email === 'string' && session.email.trim());
-  state.accountSession = {
-    authenticated,
-    email: authenticated ? session.email.trim().toLowerCase() : '',
-    roles: authenticated && Array.isArray(session.roles) ? session.roles.filter((role) => typeof role === 'string').slice(0, 20) : [],
-    expiresAt: authenticated ? Number(session.expiresAt || 0) || 0 : 0
-  };
-  if (authenticated && token) {
-    state.accountToken = String(token).trim().slice(0, 2048);
-    try { localStorage.setItem(ACCOUNT_TOKEN_STORAGE_KEY, state.accountToken); } catch {}
-  } else if (!authenticated) {
-    state.accountToken = '';
-    try { localStorage.removeItem(ACCOUNT_TOKEN_STORAGE_KEY); } catch {}
-  }
-  state.accountLoadState = 'ready';
-  renderAccountSession();
-  postAccountSessionToParent();
-}
-
-async function loadAccountSession() {
-  state.accountLoadState = 'loading';
-  renderAccountSession();
-  try {
-    const response = await fetch('/api/community/account/session', { cache: 'no-store', credentials: 'include', headers: accountSessionHeaders() });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
-    setAccountSession(body.session || {}, body.token || '');
-  } catch (error) {
-    state.accountLoadState = 'error';
-    state.accountSession = { authenticated: false, email: '', roles: [] };
-    renderAccountSession();
-    postAccountSessionToParent();
-    if (isEmbeddedClient) console.warn('Community account session unavailable', error);
-  }
-}
-
-async function sendAccountCode() {
-  const email = String(els.profileEmailInput?.value || '').trim().toLowerCase();
-  if (!email || !/^[^\s@]+@[^\s@]+$/.test(email)) {
-    if (els.accountStatusDetail) els.accountStatusDetail.textContent = t('account.emailRequired');
-    return;
-  }
-  if (!els.sendAccountCode) return;
-  els.sendAccountCode.disabled = true;
-  els.sendAccountCode.textContent = t('account.sending');
-  try {
-    const response = await fetch('/api/community/account/code', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify({ email }) });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
-    if (els.accountStatusDetail) els.accountStatusDetail.textContent = t('account.codeSent');
-    els.accountCodeInput?.focus();
-  } catch (error) {
-    if (els.accountStatusDetail) els.accountStatusDetail.textContent = `${t('account.codeFailed')} ${error.message || error}`;
-  } finally {
-    els.sendAccountCode.disabled = false;
-    els.sendAccountCode.textContent = t('account.sendCode');
-  }
-}
-
-async function verifyAccount() {
-  const email = String(els.profileEmailInput?.value || '').trim().toLowerCase();
-  const code = String(els.accountCodeInput?.value || '').trim();
-  if (!email || !/^\d{6}$/.test(code)) {
-    if (els.accountStatusDetail) els.accountStatusDetail.textContent = t('account.codeRequired');
-    return;
-  }
-  if (!els.verifyAccount) return;
-  els.verifyAccount.disabled = true;
-  els.verifyAccount.textContent = t('account.verifying');
-  try {
-    const response = await fetch('/api/community/account/verify', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify({ email, code }) });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
-    state.profile = { ...state.profile, email };
-    try { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.profile)); } catch {}
-    setAccountSession(body.session || {}, body.token || '');
-    renderProfile();
-    if (els.accountCodeInput) els.accountCodeInput.value = '';
-  } catch (error) {
-    if (els.accountStatusDetail) els.accountStatusDetail.textContent = `${t('account.verifyFailed')} ${error.message || error}`;
-  } finally {
-    if (!state.accountSession.authenticated && els.verifyAccount) {
-      els.verifyAccount.disabled = false;
-      els.verifyAccount.textContent = t('account.login');
-    }
-  }
-}
-
-async function logoutAccount() {
-  try { await fetch('/api/community/account/logout', { method: 'POST', credentials: 'include' }); } catch {}
-  setAccountSession({ authenticated: false });
-}
-
-function projectAssetManifestUrl() {
-  if (location.hostname.toLowerCase() === 'nova.fb520.site') return PROJECT_ASSET_MANIFEST_PATH;
-  if (['localhost', '127.0.0.1'].includes(location.hostname.toLowerCase())) return `${location.origin}${PROJECT_ASSET_MANIFEST_PATH}`;
-  return `${APP_RELEASE_FALLBACK_ORIGIN}${PROJECT_ASSET_MANIFEST_PATH}`;
-}
-
-function replaceEmbeddedImportedCombos(comboIds) {
-  if (!isEmbeddedClient) return;
-  embeddedImportedCombos.clear();
-  comboIds.forEach((comboId) => {
-    const normalized = String(comboId || '').trim();
-    if (normalized) embeddedImportedCombos.add(normalized);
-  });
-  try {
-    localStorage.setItem(EMBEDDED_IMPORTED_COMBOS_STORAGE_KEY, JSON.stringify([...embeddedImportedCombos].slice(-500)));
-  } catch {}
-}
-
 function renderProfile() {
   const ready = Boolean(state.profile.username && state.profile.email);
   renderProfileAvatarNode(els.profileAvatar, state.profile.avatar);
@@ -928,7 +727,6 @@ function openProfile() {
   els.profileUsernameInput.value = state.profile.username;
   els.profileEmailInput.value = state.profile.email;
   renderProfileAvatarGrid();
-  renderAccountSession();
   els.profileFeedback.textContent = '';
   els.profileFeedback.className = 'form-feedback';
   els.profileBackdrop.hidden = false;
@@ -1036,6 +834,18 @@ function uploadPreflightMessage(preflight) {
     'ko-KR': issues.length ? `사전 검사 알림: ${issues.join('; ')}. 계속 제출할 수 있으며 수동 검토로 전송됩니다.` : '사전 검사를 통과했습니다. 제출할 수 있습니다.'
   };
   return messages[i18n.language] || messages['zh-CN'];
+}
+
+function replaceEmbeddedImportedCombos(comboIds) {
+  if (!isEmbeddedClient) return;
+  embeddedImportedCombos.clear();
+  comboIds.forEach((comboId) => {
+    const normalized = String(comboId || '').trim();
+    if (normalized) embeddedImportedCombos.add(normalized);
+  });
+  try {
+    localStorage.setItem(EMBEDDED_IMPORTED_COMBOS_STORAGE_KEY, JSON.stringify([...embeddedImportedCombos].slice(-500)));
+  } catch {}
 }
 
 async function runUploadPreflight(content, previewToken) {
@@ -1476,7 +1286,7 @@ function videoLinkPlatform(value) {
   const source = safeHttpUrl(value);
   if (!source) return '';
   const hostname = new URL(source).hostname.toLowerCase().replace(/^www\./, '');
-  if (hostname === 'bilibili.com' || hostname.endsWith('.bilibili.com') || hostname === 'b23.tv') return 'bilibili';
+  if (hostname === 'bilibili.com' || hostname.endsWith('.bilibili.com')) return 'bilibili';
   return 'video';
 }
 
@@ -1489,7 +1299,7 @@ function submitterFor(chart) {
   const nickname = String(chart.submitter?.nickname || '').trim();
   const email = String(chart.submitter?.email || '').trim();
   return {
-    nickname: nickname || t('submitter.historical'),
+    nickname: /^unknown$/i.test(nickname) ? 'known' : nickname || t('submitter.historical'),
     email: email || t('submitter.noEmail'),
     badge: String(chart.submitter?.badge || '').toUpperCase() === 'UP' ? 'UP' : '',
     avatars: splitCharacterNames(chart.submitter?.avatar)
@@ -1638,10 +1448,6 @@ function updateEmbeddedClientControls(imported = false) {
 window.addEventListener('message', (event) => {
   if (!isEmbeddedClient || event.source !== window.parent || !event.data || typeof event.data !== 'object') return;
   const result = event.data;
-  if (result.type === 'wwcombo:community-account-session-request' && result.version === 1) {
-    if (embeddedParentOrigin && event.origin === embeddedParentOrigin) postAccountSessionToParent();
-    return;
-  }
   if (result.type === 'wwcombo:community-input-settings' && result.version === 1) {
     try { applyAxisKeySettings(result.settings, 'WW Combo Trainer'); } catch {}
     return;
@@ -1877,39 +1683,6 @@ function filteredCharts() {
   });
 }
 
-function chartMonthlyDownloadCount(chart) {
-  const value = Number(chart?.monthlyDownloadCount ?? chart?.downloadCount ?? 0);
-  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
-}
-
-function currentWeekStart() {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
-  return date.getTime();
-}
-
-function chartAddedThisWeek(chart) {
-  const updatedAt = Number(chart?.updatedAt || 0);
-  return Number.isFinite(updatedAt) && updatedAt >= currentWeekStart() && updatedAt <= Date.now();
-}
-
-function communityChartSections(charts) {
-  const newCharts = charts.filter(chartAddedThisWeek);
-  const oldCharts = charts.filter((chart) => !chartAddedThisWeek(chart));
-  const popularCharts = [...oldCharts]
-    .sort((left, right) => chartMonthlyDownloadCount(right) - chartMonthlyDownloadCount(left)
-      || Number(right.updatedAt || 0) - Number(left.updatedAt || 0)
-      || collator.compare(left.title || '', right.title || ''))
-    .slice(0, 10);
-  const popularIds = new Set(popularCharts.map((chart) => String(chart.id || '')));
-  return [
-    { group: 0, items: newCharts },
-    { group: 1, items: popularCharts },
-    { group: 2, items: oldCharts.filter((chart) => !popularIds.has(String(chart.id || ''))) }
-  ].filter((section) => section.items.length > 0);
-}
-
 function renderCard(chart) {
   const card = els.template.content.firstElementChild.cloneNode(true);
   i18n.apply(card);
@@ -1917,29 +1690,29 @@ function renderCard(chart) {
   const submitter = submitterFor(chart);
   card.style.setProperty('--accent', tagAccent(tags));
   card.querySelector('h3').textContent = chart.title || t('card.untitled');
-  card.querySelector('.combo-card-meta').textContent = `${formatDate(chart.updatedAt)} · v${chart.uploadVersion || state.gameVersion} · ${Math.max(1, Number(chart.rounds || 1))}${t('meta.rounds')}`;
+  card.querySelector('.characters').textContent = chartCharacters(chart).join(' / ') || t('card.charactersMissing');
+  card.querySelector('.rounds').textContent = t('unit.rounds', { count: Math.max(1, Number(chart.rounds || 1)) });
+  card.querySelector('.duration').textContent = formatDuration(chart.durationMs);
+  card.querySelector('.steps').textContent = t('unit.switches', { count: Number(chart.loopSwitchCount || 0) });
+  card.querySelector('.updated').textContent = formatDate(chart.updatedAt);
+  card.querySelector('.votes').textContent = t('vote.summary', { up: Number(chart.votes?.up || 0) });
   card.querySelector('.submitter-name').textContent = submitter.nickname;
-  const submitterEmail = card.querySelector('.submitter-email');
-  const rawSubmitterEmail = String(submitter.email || '').trim();
-  submitterEmail.textContent = rawSubmitterEmail.includes('@')
-    ? (/^[^@]{2}\*+@/u.test(rawSubmitterEmail) ? rawSubmitterEmail : maskProfileEmail(rawSubmitterEmail))
-    : rawSubmitterEmail;
+  card.querySelector('.submitter-email').textContent = submitter.email;
   const submitterAvatar = card.querySelector('.submitter-avatar');
   submitterAvatar.replaceChildren();
-  if (appendAvatarSet(submitterAvatar, submitter.avatars, 'submitter-avatar-img') < 1) {
-    submitterAvatar.appendChild(unknownAvatarElement('submitter-avatar-img'));
-  }
-  submitterAvatar.hidden = false;
+  submitterAvatar.hidden = appendAvatarSet(submitterAvatar, submitter.avatars, 'submitter-avatar-img') < 1;
   const submitterBadge = card.querySelector('.submitter-badge');
   submitterBadge.hidden = !submitter.badge;
   submitterBadge.textContent = submitter.badge;
 
   const characters = chartCharacters(chart).slice(0, MAX_SELECTED_CHARACTERS);
-  const decoration = card.querySelector('.combo-decoration');
-  decoration.replaceChildren(...characters.map((name) => avatarElement(name, 'combo-decoration-avatar')));
-  applyBaseDecoration(card.querySelector('.combo-base-decoration'), chart, characters);
-  const longestCharacter = canonicalCharacterName(chart.longestCharacter || chart.firstCharacter || characters[0] || '');
-  renderCommissionBaseDecorations(card.querySelector('.combo-base-layers'), longestCharacter ? [longestCharacter] : []);
+  const characterContainer = card.querySelector('.card-characters');
+  characterContainer.setAttribute('aria-label', characters.length ? t('character.usedAria', { names: characters.join(', ') }) : t('card.charactersMissing'));
+  for (const name of characters) {
+    const avatar = avatarElement(name, 'card-character-avatar');
+    avatar.title = name;
+    characterContainer.appendChild(avatar);
+  }
 
   const tagContainer = card.querySelector('.combo-tags');
   for (const tag of tags) {
@@ -1955,11 +1728,13 @@ function renderCard(chart) {
   comboGrade.hidden = !grade.grade;
   if (grade.tag) comboGrade.title = i18n.localizeTag(grade.tag);
   const downloadCount = Math.max(0, Math.floor(Number(chart.downloadCount || 0)) || 0);
+  const downloadCountNode = card.querySelector('.combo-download-count');
+  downloadCountNode.textContent = String(downloadCount);
+  downloadCountNode.setAttribute('aria-label', `${t('meta.downloads')}: ${downloadCount}`);
 
   const videoLink = card.querySelector('.combo-video-link');
   const videoSource = safeHttpUrl(chart.link);
   const videoPlatform = videoLinkPlatform(videoSource);
-  card.classList.toggle('has-video', Boolean(videoSource));
   videoLink.hidden = !videoSource;
   videoLink.classList.toggle('bilibili', videoPlatform === 'bilibili');
   videoLink.href = videoSource || '#';
@@ -1969,19 +1744,7 @@ function renderCard(chart) {
     ? '<img class="combo-video-logo" src="./assets/bilibili.png" alt="" aria-hidden="true">'
     : '<i data-lucide="video" aria-hidden="true"></i>';
 
-  const videoAction = card.querySelector('.combo-video-action');
-  videoAction.hidden = !videoSource;
-  videoAction.href = videoSource || '#';
-  videoAction.title = t('detail.demo');
-  videoAction.setAttribute('aria-label', t('detail.demo'));
-  videoAction.innerHTML = videoPlatform === 'bilibili'
-    ? '<img class="combo-video-logo" src="./assets/bilibili.png" alt="" aria-hidden="true"><span>' + t('detail.demo') + '</span>'
-    : '<i data-lucide="video" aria-hidden="true"></i><span>' + t('detail.demo') + '</span>';
-
   const detailButton = card.querySelector('.detail-button');
-  const downloadBadge = card.querySelector('.detail-download-badge');
-  downloadBadge.textContent = String(downloadCount);
-  downloadBadge.setAttribute('aria-label', `${t('meta.downloads')}: ${downloadCount}`);
   const commentCount = Math.max(0, Math.floor(Number(chart.commentCount || 0)) || 0);
   const commentCountNode = document.createElement('strong');
   commentCountNode.className = 'combo-comment-count';
@@ -1991,11 +1754,6 @@ function renderCard(chart) {
   detailButton.appendChild(commentCountNode);
   detailButton.setAttribute('aria-label', `${t('card.details')}: ${chart.title || t('card.untitled')}`);
   detailButton.addEventListener('click', () => openDetails(chart));
-  card.addEventListener('click', (event) => {
-    if (window.matchMedia('(max-width: 520px)').matches && !event.target.closest('button, a')) {
-      card.classList.toggle('is-mobile-active');
-    }
-  });
   return card;
 }
 
@@ -2092,42 +1850,7 @@ function renderCommissionGroupHeading(group) {
   const heading = document.createElement('h3');
   heading.className = 'commission-group-heading';
   heading.dataset.group = String(group);
-  const label = document.createElement('span');
-  label.className = 'commission-group-heading-label';
-  label.textContent = commissionGroupTitle(group);
-  const artSources = [
-    'assets/commission-heading-wanted.png',
-    'assets/commission-open-jianxin.png',
-    'assets/commission-heading-pending.png',
-    'assets/commission-heading-completed.png'
-  ];
-  const art = document.createElement('img');
-  art.className = 'commission-group-heading-art';
-  art.src = artSources[group] || artSources[0];
-  art.alt = '';
-  art.setAttribute('aria-hidden', 'true');
-  heading.append(art, label);
-  return heading;
-}
-
-function renderCommunityGroupHeading(group) {
-  const heading = document.createElement('h3');
-  heading.className = 'community-group-heading';
-  heading.dataset.group = String(group);
-  const label = document.createElement('span');
-  label.className = 'community-group-heading-label';
-  label.textContent = t(['community.groupNew', 'community.groupPopular', 'community.groupPlaza'][group]);
-  const artSources = [
-    'assets/combo-heading-new.png',
-    'assets/combo-heading-popular.png',
-    'assets/combo-heading-plaza.png'
-  ];
-  const art = document.createElement('img');
-  art.className = 'community-group-heading-art';
-  art.src = artSources[group] || artSources[2];
-  art.alt = '';
-  art.setAttribute('aria-hidden', 'true');
-  heading.append(art, label);
+  heading.textContent = commissionGroupTitle(group);
   return heading;
 }
 
@@ -2163,14 +1886,12 @@ function renderCommissionCard(commission) {
   card.querySelector('.commission-updated').textContent = `${t('commission.created')} ${formatDate(commission.createdAt || commission.updatedAt)}`;
   card.querySelector('h3').textContent = commission.title || t('commission.untitled');
   card.querySelector('.commission-excerpt').textContent = commission.description || '';
-  const characterNames = commissionCharacters(commission).slice(0, MAX_SELECTED_CHARACTERS);
   const characters = card.querySelector('.commission-characters');
-  for (const name of characterNames) {
+  for (const name of commissionCharacters(commission)) {
     const item = document.createElement('span');
     item.append(avatarElement(name), document.createTextNode(name));
     characters.appendChild(item);
   }
-  renderCommissionBaseDecorations(card.querySelector('.commission-base-decorations'), characterNames);
   const owner = commission.owner || {};
   const ownerAvatar = card.querySelector('.commission-owner-avatar');
   renderProfileAvatarNode(ownerAvatar, owner.avatar, String(owner.nickname || '?').slice(0, 1));
@@ -2180,16 +1901,9 @@ function renderCommissionCard(commission) {
   badge.hidden = !owner.badge;
   badge.textContent = owner.badge || '';
   const interestTotal = commissionInterestTotal(commission);
-  const interestCount = card.querySelector('.commission-owner .commission-interest-count');
+  const interestCount = card.querySelector('.commission-interest-count');
   interestCount.textContent = String(interestTotal);
   interestCount.parentElement.setAttribute('aria-label', `${t('commission.interestLabel')}: ${interestTotal}`);
-  const hoverGrade = card.querySelector('.commission-hover-grade');
-  hoverGrade.textContent = grade.grade;
-  hoverGrade.dataset.grade = grade.grade;
-  hoverGrade.title = i18n.localizeTag(grade.tag);
-  const hoverInterestCount = card.querySelector('.commission-hover-interest .commission-interest-count');
-  hoverInterestCount.textContent = String(interestTotal);
-  hoverInterestCount.parentElement.setAttribute('aria-label', `${t('commission.interestLabel')}: ${interestTotal}`);
   const rawResponseTotal = Number(commission.responseCount || 0);
   const responseTotal = Number.isFinite(rawResponseTotal) ? Math.max(0, Math.floor(rawResponseTotal)) : 0;
   const responseCount = card.querySelector('.commission-response-count');
@@ -2202,11 +1916,6 @@ function renderCommissionCard(commission) {
   interest.classList.toggle('selected', viewerInterested);
   interest.querySelector('span').textContent = viewerInterested ? t('commission.interested') : t('commission.interest');
   interest.addEventListener('click', () => { void addCommissionInterest(commission); });
-  const actions = card.querySelector('.commission-card-actions');
-  actions.addEventListener('pointermove', (event) => {
-    if (!event.target.closest('button')) card.classList.add('commission-actions-open');
-  });
-  actions.addEventListener('pointerleave', () => card.classList.remove('commission-actions-open'));
   card.querySelector('.commission-detail-button').addEventListener('click', () => openCommissionDetail(commission));
   return card;
 }
@@ -2943,7 +2652,7 @@ function groupAxisSteps(steps) {
   for (const step of steps) {
     const slotFromSwitch = /^switch_([123])$/.exec(String(step.moveId || ''));
     const slot = Math.max(1, Math.min(3, Number(step.characterSlot || slotFromSwitch?.[1] || 1)));
-    if (!current || slotFromSwitch || current.slot !== slot) {
+    if (!current || slotFromSwitch) {
       current = { slot, steps: [] };
       groups.push(current);
     }
@@ -2952,48 +2661,17 @@ function groupAxisSteps(steps) {
   return groups;
 }
 
-function axisStepMergeIconKey(step, labels, display) {
-  const custom = String(labels[step.id] || '').trim();
-  if (!axisLabelMatchesMove(custom, step.moveId)) return '';
-  if (display.iconSrc) return `${step.moveId}|src:${display.iconSrc}`;
+function estimateAxisActionWidth(display) {
+  if (display.iconSrc) return AXIS_ICON_SIZE * (display.iconWidthScale || 1);
   const parts = axisIconParts(display.label);
-  const icons = parts.filter((part) => part.kind === 'icon');
-  if (!icons.length || icons.length !== parts.length || !icons.every((part) => part.mapping.id === icons[0].mapping.id)) return '';
-  return `${step.moveId}|icon:${icons[0].mapping.id}`;
-}
-
-function axisMoveActions(steps, labels) {
-  const actions = [];
-  for (const step of steps) {
-    const display = axisStepDisplay(step, labels);
-    const mergeKey = state.axisMergeSameMove ? axisStepMergeIconKey(step, labels, display) : '';
-    const previous = actions[actions.length - 1];
-    if (mergeKey && previous?.mergeKey === mergeKey) {
-      previous.steps.push(step);
-      previous.count += 1;
-      continue;
+  const contentWidth = parts.reduce((width, part) => {
+    if (part.kind === 'icon') {
+      const wideGamepadIcon = ['xbox', 'playstation'].includes(state.axisIconSet) && part.mapping.gamepadCode?.includes('+');
+      return width + (wideGamepadIcon ? 49 : AXIS_ICON_SIZE);
     }
-    actions.push({ steps: [step], display, count: 1, mergeKey });
-  }
-  return actions;
-}
-
-function estimateAxisActionWidth(display, count = 1) {
-  let width;
-  if (display.iconSrc) {
-    width = AXIS_ICON_SIZE * (display.iconWidthScale || 1);
-  } else {
-    const parts = axisIconParts(display.label);
-    const contentWidth = parts.reduce((contentWidth, part) => {
-      if (part.kind === 'icon') {
-        const wideGamepadIcon = ['xbox', 'playstation'].includes(state.axisIconSet) && part.mapping.gamepadCode?.includes('+');
-        return contentWidth + (wideGamepadIcon ? 49 : AXIS_ICON_SIZE);
-      }
-      return contentWidth + Math.max(14, Array.from(part.value).length * 12);
-    }, 0);
-    width = Math.max(20, contentWidth + Math.max(0, parts.length - 1) * 2);
-  }
-  return count > 1 ? width + 8 + Math.max(26, `x${count}`.length * 14) : width;
+    return width + Math.max(14, Array.from(part.value).length * 12);
+  }, 0);
+  return Math.max(20, contentWidth + Math.max(0, parts.length - 1) * 2);
 }
 
 function axisBlockMaxWidth(target = els.axisPreview) {
@@ -3005,27 +2683,25 @@ function splitAxisMoveGroups(groups, labels, target = els.axisPreview) {
   const scale = state.axisScale;
   const chunks = [];
   for (const group of groups) {
-    const actions = axisMoveActions(group.steps, labels);
-    let chunk = { slot: group.slot, steps: [], actions: [], showAvatar: true };
+    let chunk = { slot: group.slot, steps: [], showAvatar: true };
     let width = (20 + AXIS_AVATAR_SIZE + 8) * scale;
-    for (const action of actions) {
-      const actionWidth = estimateAxisActionWidth(action.display, action.count) * scale;
-      const nextWidth = width + (chunk.actions.length ? 5 * scale : 0) + actionWidth;
-      if (chunk.actions.length && nextWidth > maxWidth) {
+    for (const step of group.steps) {
+      const actionWidth = estimateAxisActionWidth(axisStepDisplay(step, labels)) * scale;
+      const nextWidth = width + (chunk.steps.length ? 5 * scale : 0) + actionWidth;
+      if (chunk.steps.length && nextWidth > maxWidth) {
         chunks.push(chunk);
-        chunk = { slot: group.slot, steps: [], actions: [], showAvatar: false };
+        chunk = { slot: group.slot, steps: [], showAvatar: false };
         width = 20 * scale;
       }
-      width += (chunk.actions.length ? 5 * scale : 0) + actionWidth;
-      chunk.actions.push(action);
-      chunk.steps.push(...action.steps);
+      width += (chunk.steps.length ? 5 * scale : 0) + actionWidth;
+      chunk.steps.push(step);
     }
-    if (chunk.actions.length) chunks.push(chunk);
+    if (chunk.steps.length) chunks.push(chunk);
   }
   return chunks;
 }
 
-function axisActionContent(display, count = 1) {
+function axisActionContent(display) {
   const action = document.createElement('span');
   action.className = 'axis-action';
   if (display.iconSrc) {
@@ -3036,32 +2712,26 @@ function axisActionContent(display, count = 1) {
     icon.alt = display.label;
     icon.title = display.label;
     action.appendChild(icon);
-  } else {
-    for (const part of axisIconParts(display.label)) {
-      if (part.kind === 'text') {
-        const text = document.createElement('span');
-        text.textContent = part.value;
-        action.appendChild(text);
-        continue;
-      }
-      const icon = document.createElement('img');
-      icon.className = 'axis-action-icon';
-      icon.src = state.axisIconSet === 'tide'
-        ? part.mapping.tideSrc || part.mapping.englishSrc
-        : part.mapping[`${state.axisIconSet}Src`] || part.mapping.englishSrc;
-      if (['xbox', 'playstation'].includes(state.axisIconSet) && part.mapping.gamepadCode?.includes('+')) {
-        icon.classList.add('is-wide');
-      }
-      icon.alt = i18n.localizeMove(part.mapping.label);
-      icon.title = i18n.localizeMove(part.mapping.label);
-      action.appendChild(icon);
-    }
+    return action;
   }
-  if (count > 1) {
-    const countLabel = document.createElement('span');
-    countLabel.className = 'axis-action-count';
-    countLabel.textContent = `x${count}`;
-    action.appendChild(countLabel);
+  for (const part of axisIconParts(display.label)) {
+    if (part.kind === 'text') {
+      const text = document.createElement('span');
+      text.textContent = part.value;
+      action.appendChild(text);
+      continue;
+    }
+    const icon = document.createElement('img');
+    icon.className = 'axis-action-icon';
+    icon.src = state.axisIconSet === 'tide'
+      ? part.mapping.tideSrc || part.mapping.englishSrc
+      : part.mapping[`${state.axisIconSet}Src`] || part.mapping.englishSrc;
+    if (['xbox', 'playstation'].includes(state.axisIconSet) && part.mapping.gamepadCode?.includes('+')) {
+      icon.classList.add('is-wide');
+    }
+    icon.alt = i18n.localizeMove(part.mapping.label);
+    icon.title = i18n.localizeMove(part.mapping.label);
+    action.appendChild(icon);
   }
   return action;
 }
@@ -3115,10 +2785,6 @@ function syncAxisScaleControls() {
   const percent = Math.round(state.axisScale * 100);
   for (const input of els.axisZoomControls) input.value = String(percent);
   for (const output of els.axisZoomValues) output.value = `${percent}%`;
-}
-
-function syncAxisMergeSameMoveControls() {
-  for (const input of els.axisMergeSameMoveControls) input.checked = state.axisMergeSameMove;
 }
 
 function renderActiveAxisPreviews() {
@@ -3187,14 +2853,14 @@ function renderAxisPreview(pack, indexChart, targets = {}) {
       chip.style.setProperty('--role-color', ROLE_COLORS[slot - 1]);
       const firstStep = moveGroup.steps[0];
       const lastStep = moveGroup.steps[moveGroup.steps.length - 1];
-      const actions = moveGroup.actions || axisMoveActions(moveGroup.steps, labels);
-      const actionLabels = actions.map((action) => action.count > 1 ? `${action.display.label} x${action.count}` : action.display.label);
+      const actionDisplays = moveGroup.steps.map((step) => axisStepDisplay(step, labels));
+      const actionLabels = actionDisplays.map((display) => display.label);
       chip.title = `${character} · ${actionLabels.join('')} · ${formatDuration(firstStep.startMin)} - ${formatDuration(lastStep.startMin)}`;
       if (moveGroup.showAvatar) chip.appendChild(avatarElement(character));
       const content = document.createElement('div');
       content.className = 'axis-move-content';
       content.setAttribute('aria-label', actionLabels.join(''));
-      for (const action of actions) content.appendChild(axisActionContent(action.display, action.count));
+      for (const display of actionDisplays) content.appendChild(axisActionContent(display));
       chip.appendChild(content);
       flow.appendChild(chip);
     }
@@ -3358,23 +3024,16 @@ function render() {
   const commissionView = state.view === 'commissions';
   const items = commissionView ? filteredCommissions() : filteredCharts();
   els.list.classList.toggle('commission-list', commissionView);
+  const topInterestCounts = commissionView ? commissionTopInterestTiers(items) : new Set();
   const cards = [];
-  if (commissionView) {
-    const topInterestCounts = commissionTopInterestTiers(items);
-    let previousGroup = -1;
-    for (const item of items) {
-      const currentGroup = commissionSortGroup(item, topInterestCounts);
-      if (currentGroup !== previousGroup) {
-        cards.push(renderCommissionGroupHeading(currentGroup));
-        previousGroup = currentGroup;
-      }
-      cards.push(renderCommissionCard(item));
+  let previousGroup = -1;
+  for (const item of items) {
+    const currentGroup = commissionView ? commissionSortGroup(item, topInterestCounts) : -1;
+    if (commissionView && currentGroup !== previousGroup) {
+      cards.push(renderCommissionGroupHeading(currentGroup));
+      previousGroup = currentGroup;
     }
-  } else {
-    for (const section of communityChartSections(items)) {
-      cards.push(renderCommunityGroupHeading(section.group));
-      cards.push(...section.items.map(renderCard));
-    }
+    cards.push(commissionView ? renderCommissionCard(item) : renderCard(item));
   }
   els.list.replaceChildren(...cards);
   els.count.textContent = t(commissionView ? 'commission.results' : 'unit.results', { count: items.length });
@@ -3434,7 +3093,6 @@ function refreshLocalizedView() {
   updateMotionControl();
   refreshClientDownloadControl();
   renderProfile();
-  renderAccountSession();
   renderFilters();
   render();
   renderAxisKeymapButtons();
@@ -3496,130 +3154,6 @@ async function loadCharacterIcons() {
   }
 }
 
-function characterBasePresetMap(payload, manifestUrl) {
-  const entries = Array.isArray(payload?.characters) ? payload.characters : [];
-  const presets = new Map();
-  for (const entry of entries) {
-    const name = canonicalCharacterName(entry?.names?.['zh-CN']);
-    const preset = entry?.basePreset;
-    if (!name || !preset || typeof preset.src !== 'string') continue;
-    try {
-      const src = new URL(preset.src, manifestUrl).href;
-      if (!['http:', 'https:'].includes(new URL(src).protocol)) continue;
-      presets.set(name, {
-        src,
-        crop: preset.crop || {},
-        imageWidth: Number(preset.imageWidth) || 426,
-        imageHeight: Number(preset.imageHeight) || 426
-      });
-    } catch {}
-  }
-  return presets;
-}
-
-function commissionBasePresetFor(name) {
-  const canonicalName = canonicalCharacterName(name);
-  const aliases = {
-    '秧秧·玄翎': '玄翎',
-    '秧秧・玄翎': '玄翎',
-    '秧秧.玄翎': '玄翎',
-    '秧秧 · 玄翎': '玄翎',
-    '漂泊者·气动': '风主',
-    '漂泊者・气动': '风主',
-    '漂泊者.气动': '风主',
-    '漂泊者·湮灭': '暗主',
-    '漂泊者・湮灭': '暗主',
-    '漂泊者.湮灭': '暗主',
-    '漂泊者·衍射': '光主',
-    '漂泊者・衍射': '光主',
-    '漂泊者.衍射': '光主',
-    '漂泊者·电': '雷主',
-    '漂泊者・电': '雷主',
-    '漂泊者.电': '雷主',
-    '漂泊者·雷': '雷主',
-    '漂泊者・雷': '雷主',
-    '漂泊者.雷': '雷主',
-    '洛瑟菈': '洛瑟拉',
-    '嘉贝莉娜': '嘉贝丽娜'
-  };
-  return state.characterBasePresets.get(canonicalName)
-    || state.characterBasePresets.get(aliases[canonicalName] || '');
-}
-
-function renderCommissionBaseDecorations(target, characters) {
-  if (!target) return;
-  target.replaceChildren();
-  characters.slice(0, MAX_SELECTED_CHARACTERS).forEach((name, index) => {
-    const preset = commissionBasePresetFor(name);
-    if (!preset?.src) return;
-    const layer = document.createElement('span');
-    layer.className = `commission-base-layer commission-base-layer-${index + 1}`;
-    layer.dataset.character = name;
-    const crop = preset.crop || {};
-    // Narrow traveler banners use x as an editor guide, not as a hard left trim.
-    const cropX = preset.imageHeight < 100 ? 0 : Math.max(0, Math.min(100, Number(crop.x) || 0));
-    const cropY = Math.max(0, Math.min(100, Number(crop.y) || 0));
-    const cropHeight = Math.max(.1, Math.min(100 - cropY, Number(crop.h) || 100));
-    const image = document.createElement('img');
-    image.src = preset.src;
-    image.alt = '';
-    layer.title = name;
-    layer.appendChild(image);
-    target.appendChild(layer);
-    requestAnimationFrame(() => {
-      if (!layer.isConnected || !layer.clientHeight) return;
-      // The standard templates use 13% or 14% crop heights; normalize them so characters do not jump in scale.
-      const renderCropHeight = preset.imageHeight === 426 ? Math.min(cropHeight, 13) : cropHeight;
-      const renderedHeight = layer.clientHeight * 100 / renderCropHeight;
-      const renderedWidth = renderedHeight * preset.imageWidth / preset.imageHeight;
-      const cropLeft = renderedWidth * cropX / 100;
-      image.style.width = `${renderedWidth}px`;
-      image.style.height = `${renderedHeight}px`;
-      image.style.left = `${-cropLeft}px`;
-      const cropCenterY = cropY + cropHeight / 2;
-      image.style.top = `${layer.clientHeight / 2 - renderedHeight * cropCenterY / 100}px`;
-    });
-  });
-}
-
-function applyBaseDecoration(target, chart, characters) {
-  if (!target) return;
-  target.replaceChildren();
-  target.style.backgroundImage = '';
-  const name = canonicalCharacterName(chart.longestCharacter || chart.firstCharacter || characters[0] || '');
-  const preset = commissionBasePresetFor(name);
-  if (!preset?.src) return;
-  const crop = preset.crop || {};
-  const y = Math.max(0, Math.min(100, Number(crop.y) || 0));
-  const height = Math.max(.1, Math.min(100 - y, Number(crop.h) || 100));
-  target.style.backgroundImage = `url("${preset.src.replace(/"/g, '%22')}")`;
-  // Fit the cropped strip by height and let its width follow the source ratio.
-  // The card clips the excess width instead of stretching the character.
-  target.style.backgroundSize = `auto ${10000 / height}%`;
-  const yPosition = height >= 100 ? 0 : y / (100 - height) * 100;
-  target.style.backgroundPosition = `right ${yPosition}%`;
-  // Cards are still detached while they are being built, so align after layout.
-  requestAnimationFrame(() => {
-    if (!target.isConnected || !target.clientWidth) return;
-    const laidOutHeight = target.clientHeight * 100 / height;
-    const laidOutWidth = laidOutHeight * preset.imageWidth / preset.imageHeight;
-    target.style.backgroundPosition = `${target.clientWidth - laidOutWidth / 2 + 30}px ${yPosition}%`;
-  });
-  target.classList.add('is-ready');
-}
-
-async function loadCharacterBasePresets() {
-  try {
-    const manifestUrl = projectAssetManifestUrl();
-    const response = await fetch(manifestUrl, { cache: 'no-cache' });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    state.characterBasePresets = characterBasePresetMap(await response.json(), manifestUrl);
-    render();
-  } catch {
-    state.characterBasePresets = new Map();
-  }
-}
-
 async function loadAppRelease() {
   state.appReleaseState = 'loading';
   refreshClientDownloadControl();
@@ -3661,7 +3195,6 @@ async function loadIndex() {
     render();
     if (state.view === 'combos') setStatus('ready', t('status.ready', { count: state.charts.length, date: formatDate(data.updatedAt) }));
     void loadCharacterIcons();
-    void loadCharacterBasePresets();
   } catch (error) {
     state.charts = [];
     state.indexLoadState = 'error';
@@ -3680,7 +3213,7 @@ async function loadCommissions() {
   state.commissionLoadState = 'loading';
   if (state.view === 'commissions') setStatus('', t('commission.loading'));
   try {
-    const response = await fetch(commissionSourceUrl, {
+    const response = await fetch('/api/community/commissions', {
       cache: 'no-cache',
       credentials: 'same-origin',
       headers: state.profile.email ? { 'x-wwcombo-profile-email': state.profile.email } : {}
@@ -3781,13 +3314,6 @@ for (const input of els.axisZoomControls) {
     renderActiveAxisPreviews();
   });
 }
-for (const input of els.axisMergeSameMoveControls) {
-  input.addEventListener('change', () => {
-    state.axisMergeSameMove = input.checked;
-    syncAxisMergeSameMoveControls();
-    renderActiveAxisPreviews();
-  });
-}
 let axisResizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(axisResizeTimer);
@@ -3839,16 +3365,10 @@ els.motionToggle?.addEventListener('click', () => {
 els.profileButton?.addEventListener('click', openProfile);
 els.closeProfile?.addEventListener('click', closeProfile);
 els.profileBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.profileBackdrop) closeProfile(); });
-els.sendAccountCode?.addEventListener('click', () => { void sendAccountCode(); });
-els.verifyAccount?.addEventListener('click', () => { void verifyAccount(); });
-els.accountLogout?.addEventListener('click', () => { void logoutAccount(); });
-els.profileForm?.addEventListener('submit', async (event) => {
+els.profileForm?.addEventListener('submit', (event) => {
   event.preventDefault();
-  const nextProfile = { ...state.profile, username: els.profileUsernameInput.value.trim().slice(0, 40), email: els.profileEmailInput.value.trim().toLowerCase().slice(0, 254), avatar: state.profileDraftAvatar };
-  const accountChanged = state.accountSession.authenticated && state.accountSession.email !== nextProfile.email;
-  state.profile = nextProfile;
+  state.profile = { ...state.profile, username: els.profileUsernameInput.value.trim().slice(0, 40), email: els.profileEmailInput.value.trim().toLowerCase().slice(0, 254), avatar: state.profileDraftAvatar };
   try { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.profile)); } catch {}
-  if (accountChanged) await logoutAccount();
   renderProfile();
   if (state.commissionLoadState !== 'idle') void loadCommissions();
   els.profileFeedback.textContent = t('profile.saved');
@@ -3867,7 +3387,6 @@ els.clearProfile?.addEventListener('click', () => {
   els.profileUsernameInput.value = '';
   els.profileEmailInput.value = '';
   renderProfile();
-  void logoutAccount();
   if (state.commissionLoadState !== 'idle') void loadCommissions();
 });
 els.profileAvatarGrid?.addEventListener('click', (event) => {
@@ -3907,10 +3426,7 @@ updateThemeControl();
 updateMotionControl();
 updateEmbeddedClientControls(false);
 renderProfile();
-renderAccountSession();
-void loadAccountSession();
 renderAxisKeymapButtons();
-syncAxisMergeSameMoveControls();
 els.languageSelect.value = i18n.language;
 window.lucide?.createIcons();
 initHeroSpine();

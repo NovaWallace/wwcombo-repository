@@ -12,6 +12,7 @@ const MAX_COMMENTS_PER_COMBO = 200;
 const MAX_COMMENT_BODY = 1000;
 const COMMISSION_AUTO_ADOPT_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 const COMMISSION_TAGS = ['轮椅', '基础', '标准', '进阶', '冒烟', '错轮'];
+const ACCOUNT_ROLE_NAMES = new Set(['wiki-admin']);
 const ICON_TRIGGERS = [
   '长按共鸣解放', '长按普攻', '长按技能', '长按声骸', '长按解放', '长按闪避', '长按跳跃',
   '共鸣解放', '终结技', '普攻', '重击', '技能', '声骸', '解放', '闪避', '跳跃', '工具', '变奏', '延奏', '处决', '前走',
@@ -77,6 +78,36 @@ function commissionTag(value) {
 
 function chartDuration(chart) {
   return Math.max(Number(chart.timelineDurationMs || 0), ...chart.steps.map((step) => Number(step.startMax || 0) + Number(step.durationMax || 0)));
+}
+
+function longestActionCharacter(chart, characters) {
+  const intervalsBySlot = new Map();
+  for (const step of Array.isArray(chart.steps) ? chart.steps : []) {
+    const slot = Math.max(1, Math.round(Number(step.characterSlot || 1)));
+    const start = Number.isFinite(step.startMin) ? Number(step.startMin) : Number(step.startMax);
+    const duration = Number.isFinite(step.durationMax) ? Number(step.durationMax) : Number(step.durationMin);
+    if (!Number.isFinite(start) || !Number.isFinite(duration) || duration <= 0) continue;
+    const intervals = intervalsBySlot.get(slot) || [];
+    intervals.push([start, start + duration]);
+    intervalsBySlot.set(slot, intervals);
+  }
+  let longestSlot = 1;
+  let longestDuration = -1;
+  for (let slot = 1; slot <= characters.length; slot += 1) {
+    const intervals = (intervalsBySlot.get(slot) || []).sort((left, right) => left[0] - right[0] || left[1] - right[1]);
+    let total = 0;
+    let end = 0;
+    for (const [start, finish] of intervals) {
+      if (start > end) total += finish - start;
+      else if (finish > end) total += finish - end;
+      end = Math.max(end, finish);
+    }
+    if (total > longestDuration) {
+      longestDuration = total;
+      longestSlot = slot;
+    }
+  }
+  return characters[longestSlot - 1] || characters[0] || 'unknown';
 }
 
 function loopSwitchCount(chart) {
@@ -190,6 +221,7 @@ function submissionPreview(payload) {
     title: String(community.name || community.title || chart.title || '未命名连段').trim().slice(0, 120),
     characters,
     tags: (Array.isArray(community.tags) ? community.tags : chart.tags || []).filter((value) => typeof value === 'string' && value.trim()).map((value) => value.trim()).slice(0, 20),
+    longestCharacter: longestActionCharacter(chart, characters),
     stepCount: chart.steps.length,
     loopSwitchCount: loopSwitchCount(chart),
     rounds: Number.isFinite(community.rounds) ? Math.max(1, Math.round(community.rounds)) : 1,
@@ -211,6 +243,7 @@ function chartSummary(payload, submitter) {
     submitter,
     character: characters[0] || 'unknown',
     characters: characters.length ? characters : ['unknown'],
+    longestCharacter: longestActionCharacter(chart, characters.length ? characters : ['unknown']),
     firstCharacter: characters[firstSlot - 1] || characters[0] || 'unknown',
     tags: (Array.isArray(community.tags) ? community.tags : chart.tags || []).filter((tag) => typeof tag === 'string' && tag.trim()).map((tag) => tag.trim()).slice(0, 20),
     rounds: Number.isFinite(community.rounds) ? Math.max(1, Math.round(community.rounds)) : 1,
@@ -270,6 +303,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const ownersFile = path.join(root, 'owners.json');
   const withdrawalsFile = path.join(root, 'withdrawals.json');
   const whitelistFile = path.join(root, 'whitelist.json');
+  const accountRolesFile = path.join(root, 'account-roles.json');
   const downloadsFile = path.join(root, 'downloads.json');
   const engagementFile = path.join(root, 'engagement.json');
   const smtpFile = path.join(root, 'smtp.json');
@@ -354,6 +388,48 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     return [...new Set((Array.isArray(value.emails) ? value.emails : []).map(normalizeEmail).filter(Boolean))].sort();
   }
 
+  async function accountRoleMap() {
+    const value = record(await readJson(accountRolesFile, { version: 1, accounts: {} }));
+    const accounts = record(value.accounts);
+    return Object.fromEntries(Object.entries(accounts).flatMap(([rawEmail, rawRoles]) => {
+      const email = normalizeEmail(rawEmail);
+      const roles = [...new Set((Array.isArray(rawRoles) ? rawRoles : [])
+        .map((role) => String(role || '').trim())
+        .filter((role) => ACCOUNT_ROLE_NAMES.has(role)))].sort();
+      return email && roles.length ? [[email, roles]] : [];
+    }));
+  }
+
+  async function accountRoles(email) {
+    const normalized = normalizeEmail(email);
+    if (!normalized) return [];
+    return (await accountRoleMap())[normalized] || [];
+  }
+
+  async function wikiAdminEmails() {
+    const accounts = await accountRoleMap();
+    return Object.entries(accounts)
+      .filter(([, roles]) => roles.includes('wiki-admin'))
+      .map(([email]) => email)
+      .sort();
+  }
+
+  async function setWikiAdminEmails(emails) {
+    const normalized = [...new Set((Array.isArray(emails) ? emails : []).map(normalizeEmail).filter(Boolean))].sort();
+    const selected = new Set(normalized);
+    const accounts = await accountRoleMap();
+    for (const [email, roles] of Object.entries(accounts)) {
+      const nextRoles = roles.filter((role) => role !== 'wiki-admin');
+      if (selected.has(email)) nextRoles.push('wiki-admin');
+      if (nextRoles.length) accounts[email] = [...new Set(nextRoles)].sort();
+      else delete accounts[email];
+      selected.delete(email);
+    }
+    for (const email of selected) accounts[email] = ['wiki-admin'];
+    await writeJson(accountRolesFile, { version: 1, accounts });
+    return normalized;
+  }
+
   async function smtpSettings() {
     return record(await readJson(smtpFile, {}));
   }
@@ -372,6 +448,17 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     });
     await transport.sendMail({ from: settings.from || settings.user, to: recipient, subject, text });
     return '';
+  }
+
+  async function sendAccountLoginCode(email, code, expiresMinutes = 10) {
+    const recipient = normalizeEmail(email);
+    if (!recipient) throw new Error('邮箱格式不正确。');
+    const error = await sendCommunityMail(
+      recipient,
+      '[椰之城] 邮箱登录验证码',
+      `你的椰之城邮箱登录验证码是：${code}\n\n验证码将在 ${expiresMinutes} 分钟后失效。若不是你本人操作，请忽略这封邮件。`
+    );
+    if (error) throw new Error(error);
   }
 
   async function reviewSettings() {
@@ -824,6 +911,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
         id: String(response.id || ''),
         title: String(preview.title || response.fileName || '未命名连段'),
         characters: characterNames(preview.characters),
+        longestCharacter: String(preview.longestCharacter || '').trim(),
         tags: Array.isArray(preview.tags) ? preview.tags : [],
         rounds: Math.max(1, Number(preview.rounds || 1)),
         durationMs: Math.max(0, Number(preview.durationMs || 0)),
@@ -1163,17 +1251,18 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   }
 
   async function status() {
-    const [queue, published, withdrawals, emails, smtp, moderation, downloads, hidden, commissions] = await Promise.all([
+    const [queue, published, withdrawals, emails, wikiAdmins, smtp, moderation, downloads, hidden, commissions] = await Promise.all([
       readJson(queueFile, { pending: [], history: [] }),
       readJson(publishedFile, { charts: [] }),
       readJson(withdrawalsFile, { pending: [], history: [] }),
-      whitelist(), smtpSettings(), reviewSettings(), readJson(downloadsFile, {}), hiddenIds(), commissionState()
+      whitelist(), wikiAdminEmails(), smtpSettings(), reviewSettings(), readJson(downloadsFile, {}), hiddenIds(), commissionState()
     ]);
     return {
       submissions: { pending: queue.pending || [], history: (queue.history || []).slice(-30).reverse() },
       withdrawals: { pending: withdrawals.pending || [], history: (withdrawals.history || []).slice(-30).reverse() },
       published: published.charts || [],
       whitelist: emails,
+      wikiAdmins,
       smtp: smtpPublic(smtp),
       failedNotifications: [
         ...(queue.pending || []),
@@ -1203,6 +1292,9 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     requestWithdrawal: (...args) => serializeMutation(() => requestWithdrawal(...args)),
     resolveWithdrawal: (...args) => serializeMutation(() => resolveWithdrawal(...args)),
     setWhitelist: (...args) => serializeMutation(() => setWhitelist(...args)),
+    setWikiAdminEmails: (...args) => serializeMutation(() => setWikiAdminEmails(...args)),
+    accountRoles,
+    sendAccountLoginCode,
     setSmtp: (...args) => serializeMutation(() => setSmtp(...args)),
     setReviewSettings: (...args) => serializeMutation(() => setReviewSettings(...args)),
     testSmtp,

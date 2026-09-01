@@ -51,7 +51,7 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260901-commission-layout-v45" />
+    <link rel="stylesheet" href="styles.css?v=20260811-want-font" />
   </head>
   <body>
     <header class="site-header">
@@ -209,38 +209,42 @@
     <template id="comboTemplate">
       <article class="combo-card">
         <div class="combo-accent" aria-hidden="true"></div>
-        <div class="combo-base-decoration" aria-hidden="true"></div>
-        <div class="combo-base-layers commission-base-decorations" aria-hidden="true"></div>
         <div class="combo-main">
           <div class="combo-title-row">
-            <div class="combo-title-copy"><h3></h3></div>
-            <div class="combo-classification">
-              <div class="combo-summary">
-                <div class="combo-tags"></div>
-                <strong class="combo-grade"></strong>
-              </div>
-              <a class="combo-video-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
-                <i data-lucide="video" aria-hidden="true"></i>
-              </a>
-              <div class="combo-link-icons">
-                <div class="combo-decoration" aria-hidden="true"></div>
-              </div>
+            <div>
+              <h3></h3>
+              <p class="characters"></p>
             </div>
-            <p class="combo-card-meta"></p>
+            <div class="combo-classification">
+              <div class="combo-tags"></div>
+              <strong class="combo-grade"></strong>
+              <div class="combo-link-icons">
+                <a class="combo-video-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
+                  <i data-lucide="video" aria-hidden="true"></i>
+                </a>
+                <span class="combo-download-icon" aria-hidden="true"><i data-lucide="download"></i></span>
+              </div>
+              <strong class="combo-download-count"></strong>
+            </div>
           </div>
+          <dl class="combo-meta">
+            <div><dt data-i18n="meta.rounds">轮次</dt><dd class="rounds"></dd></div>
+            <div><dt data-i18n="meta.duration">轴长</dt><dd class="duration"></dd></div>
+            <div><dt data-i18n="meta.loopSwitches">循环轴切人</dt><dd class="steps"></dd></div>
+            <div><dt data-i18n="meta.updated">更新</dt><dd class="updated"></dd></div>
+            <div><dt data-i18n="vote.rating">评价</dt><dd class="votes"></dd></div>
+          </dl>
         </div>
         <div class="combo-actions">
+          <div class="card-characters"></div>
           <div class="card-submitter">
             <span data-i18n="meta.uploader">上传者</span>
             <span class="submitter-line"><strong class="submitter-name"></strong><span class="submitter-avatar"></span><em class="submitter-badge" hidden>UP</em></span>
             <small class="submitter-email"></small>
           </div>
-          <a class="combo-video-action" href="#" target="_blank" rel="noopener noreferrer" hidden>
-            <i data-lucide="video" aria-hidden="true"></i><span data-i18n="detail.demo">演示链接</span>
-          </a>
           <button class="detail-button" type="button">
-            <i data-lucide="download" aria-hidden="true"></i>
-            <strong class="detail-download-badge"></strong>
+            <i data-lucide="panel-right-open" aria-hidden="true"></i>
+            <span data-i18n="card.details">详情</span>
           </button>
         </div>
       </article>
@@ -248,22 +252,21 @@
 
     <template id="commissionTemplate">
       <article class="commission-card">
-        <div class="commission-base-decorations" aria-hidden="true"></div>
-        <div class="commission-hover-summary" aria-hidden="true">
-          <strong class="commission-hover-grade"></strong>
-          <div class="commission-hover-interest"><span class="commission-want-icon"></span><strong class="commission-interest-count"></strong></div>
-        </div>
         <div class="commission-card-main">
           <div class="commission-card-content">
             <div class="commission-card-copy">
-              <div class="commission-title-row"><h3></h3></div>
+              <h3></h3>
               <div class="commission-characters"></div>
               <p class="commission-excerpt"></p>
+            </div>
+            <div class="commission-rank">
+              <strong class="commission-grade"></strong>
+              <div class="commission-interest-stat"><span class="commission-want-icon" aria-hidden="true" data-i18n="commission.wantBadge">想要</span><strong class="commission-interest-count"></strong></div>
             </div>
           </div>
         </div>
         <div class="commission-card-side">
-          <div class="commission-owner"><span class="commission-owner-avatar profile-avatar"></span><div><strong></strong><small></small></div><em hidden>UP</em><strong class="commission-grade"></strong><div class="commission-interest-stat"><span class="commission-want-icon" aria-hidden="true" data-i18n="commission.wantBadge">想要</span><strong class="commission-interest-count"></strong></div></div>
+          <div class="commission-owner"><span class="commission-owner-avatar profile-avatar"></span><div><strong></strong><small></small></div><em hidden>UP</em></div>
           <time class="commission-updated"></time>
           <div class="commission-card-actions">
             <button class="commission-interest-button" type="button"><i data-lucide="plus" aria-hidden="true"></i><span data-i18n="commission.interest">我也想要</span></button>
@@ -282,18 +285,6 @@
         <form class="account-form" id="profileForm">
           <label><span data-i18n="profile.username">用户名</span><input id="profileUsernameInput" maxlength="40" autocomplete="nickname" required /></label>
           <label><span data-i18n="profile.email">邮箱</span><input id="profileEmailInput" type="email" maxlength="254" autocomplete="email" required /></label>
-          <section class="profile-account-session" aria-labelledby="accountSessionTitle">
-            <div class="profile-account-head">
-              <span class="profile-account-icon"><i data-lucide="shield-check" aria-hidden="true"></i></span>
-              <div><span id="accountSessionTitle" data-i18n="account.title">邮箱账号</span><strong id="accountStatus" data-i18n="account.signedOut">尚未登录</strong><small id="accountStatusDetail" data-i18n="account.hint">验证码登录后可同步账号权限。</small></div>
-              <button id="accountLogoutBtn" type="button" hidden data-i18n="account.logout">退出登录</button>
-            </div>
-            <div class="profile-account-login" id="accountLoginControls">
-              <button id="sendAccountCodeBtn" type="button" data-i18n="account.sendCode">发送验证码</button>
-              <input id="accountCodeInput" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" data-i18n-placeholder="account.codePlaceholder" placeholder="6 位验证码" />
-              <button class="primary-button" id="verifyAccountBtn" type="button" data-i18n="account.login">登录</button>
-            </div>
-          </section>
           <div class="profile-avatar-picker">
             <div class="profile-avatar-picker-head"><span data-i18n="profile.avatar">头像</span><strong id="profileAvatarChoice" data-i18n="profile.avatarNone">未选择</strong></div>
             <div class="profile-avatar-grid" id="profileAvatarGrid"></div>
@@ -326,7 +317,6 @@
             <div class="axis-preview-head">
               <div><h3 id="uploadAxisTitle" data-i18n="upload.preview">连段预览</h3><p id="uploadAxisSummary" data-i18n="upload.previewEmpty">导入后会在这里预览连段图</p></div>
               <div class="axis-preview-options">
-                <label class="axis-merge-toggle"><input data-axis-merge-same-move type="checkbox" /><span data-i18n="axis.mergeSameMove">同招式合并</span></label>
                 <label class="axis-zoom-control" for="uploadAxisZoom"><i data-lucide="zoom-in" aria-hidden="true"></i><input id="uploadAxisZoom" data-axis-zoom type="range" min="80" max="180" step="10" value="100" /><output id="uploadAxisZoomValue" data-axis-zoom-value for="uploadAxisZoom">100%</output></label>
                 <div class="axis-icon-set" role="group" aria-label="招式图标样式" data-i18n-aria-label="axis.iconStyle">
                   <button class="active" type="button" data-icon-set="english" aria-pressed="true" data-i18n="axis.letters">字母</button>
@@ -404,7 +394,6 @@
               <div class="axis-preview-head">
                 <div><h3 id="commissionAxisTitle" data-i18n="axis.title">连段图</h3><p id="commissionAxisSummary" data-i18n="axis.loading">正在读取连段数据</p></div>
                 <div class="axis-preview-options">
-                  <label class="axis-merge-toggle"><input data-axis-merge-same-move type="checkbox" /><span data-i18n="axis.mergeSameMove">同招式合并</span></label>
                   <label class="axis-zoom-control" for="commissionAxisZoom"><i data-lucide="zoom-in" aria-hidden="true"></i><input id="commissionAxisZoom" data-axis-zoom type="range" min="80" max="180" step="10" value="100" /><output data-axis-zoom-value for="commissionAxisZoom">100%</output></label>
                   <div class="axis-icon-set" role="group" aria-label="招式图标样式" data-i18n-aria-label="axis.iconStyle"><button class="active" type="button" data-icon-set="english" aria-pressed="true" data-i18n="axis.letters">字母</button><button type="button" data-icon-set="tide" aria-pressed="false" data-i18n="axis.tide">潮声</button><button type="button" data-icon-set="xbox" aria-pressed="false">Xbox</button><button type="button" data-icon-set="playstation" aria-pressed="false">PS</button></div>
                   <button class="axis-keymap-import" type="button" data-axis-keymap-import><i data-lucide="keyboard" aria-hidden="true"></i><span data-i18n="axis.importKeys">导入按键设置</span></button>
@@ -495,7 +484,6 @@
                 <p id="axisPreviewSummary" data-i18n="axis.loading">正在读取连段数据</p>
               </div>
               <div class="axis-preview-options">
-                <label class="axis-merge-toggle"><input data-axis-merge-same-move type="checkbox" /><span data-i18n="axis.mergeSameMove">同招式合并</span></label>
                 <label class="axis-zoom-control" for="axisZoom">
                   <i data-lucide="zoom-in" aria-hidden="true"></i>
                   <input id="axisZoom" data-axis-zoom type="range" min="80" max="180" step="10" value="100" />
@@ -583,7 +571,7 @@
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
     <script src="assets/input-icons.js?v=20260801-1"></script>
     <script>window.WWComboInputIcons = WWComboInputIcons;</script>
-    <script src="i18n.js?v=20260901-commission-layout-v27"></script>
-    <script src="app.js?v=20260901-commission-layout-v33"></script>
+    <script src="i18n.js?v=20260811-commission-comments"></script>
+    <script src="app.js?v=20260812-preflight-warning"></script>
   </body>
 </html>

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, randomInt, scryptSync, timingSafeEqual } from 'node:crypto';
 import { createReadStream, existsSync } from 'node:fs';
 import { chmod, readFile, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -23,6 +23,10 @@ const SESSION_SECONDS = 12 * 60 * 60;
 const LOGIN_WINDOW_MS = 60 * 1000;
 const MAX_LOGIN_FAILURES = 5;
 const VOTER_COOKIE_SECONDS = 2 * 365 * 24 * 60 * 60;
+const ACCOUNT_SESSION_SECONDS = 30 * 24 * 60 * 60;
+const ACCOUNT_CODE_TTL_MS = 10 * 60 * 1000;
+const ACCOUNT_CODE_REQUEST_COOLDOWN_MS = 60 * 1000;
+const MAX_ACCOUNT_CODE_FAILURES = 5;
 const COMMISSION_AUTO_ADOPT_INTERVAL_MS = 10 * 60 * 1000;
 const PUBLIC_ROOT_FILES = new Set(['/index.html', '/app.js', '/i18n.js', '/styles.css', '/site.webmanifest', '/robots.txt', '/sitemap.xml', '/build-info.json']);
 const CONTENT_TYPES = new Map([
@@ -110,6 +114,8 @@ const commissionAutoAdoptionTimer = setInterval(() => {
 commissionAutoAdoptionTimer.unref?.();
 
 const loginAttempts = new Map();
+const accountLoginChallenges = new Map();
+const accountCodeRequestTimes = new Map();
 const updateState = {
   status: 'idle',
   startedAt: 0,
@@ -549,6 +555,14 @@ async function handleAdminApi(req, res, pathname) {
     return;
   }
 
+  if (req.method === 'PUT' && pathname === '/api/server/community/wiki-admins') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    const body = await readJsonBody(req);
+    sendJson(res, 200, { ok: true, emails: await community.setWikiAdminEmails(body.emails) });
+    return;
+  }
+
   if (req.method === 'PUT' && pathname === '/api/server/community/review-settings') {
     const session = requireSession(req, res, true);
     if (!session) return;
@@ -647,6 +661,81 @@ async function handleAdminApi(req, res, pathname) {
   sendJson(res, 404, { error: 'Not found' });
 }
 
+function normalizeAccountEmail(value) {
+  const email = String(value || '').trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+$/.test(email) && email.length <= 254 ? email : '';
+}
+
+function secureRequest(req) {
+  return Boolean(req.socket.encrypted) || (TRUST_PROXY && req.headers['x-forwarded-proto'] === 'https');
+}
+
+function accountSessionCookie(req, token, maxAge) {
+  return `wwcombo_account=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secureRequest(req) ? '; Secure' : ''}`;
+}
+
+function createAccountSession(email) {
+  const expiresAt = Math.floor(Date.now() / 1000) + ACCOUNT_SESSION_SECONDS;
+  const payload = Buffer.from(JSON.stringify({ version: 1, email, expiresAt, nonce: randomBytes(18).toString('base64url') }), 'utf8').toString('base64url');
+  return { email, expiresAt, token: `${payload}.${signature(`account.${payload}`)}` };
+}
+
+function readAccountSessionToken(value) {
+  const token = String(value || '').trim();
+  const [payload, suppliedSignature, ...extra] = token.split('.');
+  if (!payload || !suppliedSignature || extra.length) return null;
+  const expectedSignature = signature(`account.${payload}`);
+  const supplied = Buffer.from(suppliedSignature);
+  const expected = Buffer.from(expectedSignature);
+  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    const email = normalizeAccountEmail(parsed?.email);
+    const expiresAt = Number(parsed?.expiresAt);
+    if (parsed?.version !== 1 || !email || !Number.isFinite(expiresAt) || expiresAt <= Math.floor(Date.now() / 1000)) return null;
+    return { email, expiresAt, token };
+  } catch {
+    return null;
+  }
+}
+
+function readAccountSession(req) {
+  const authorization = String(req.headers.authorization || '');
+  const bearer = /^Bearer\s+(.+)$/i.exec(authorization)?.[1] || '';
+  const headerToken = Array.isArray(req.headers['x-wwcombo-account'])
+    ? req.headers['x-wwcombo-account'][0]
+    : req.headers['x-wwcombo-account'];
+  return readAccountSessionToken(bearer || headerToken || cookieMap(req).get('wwcombo_account') || '');
+}
+
+function accountSessionCorsHeaders() {
+  return {
+    'access-control-allow-origin': '*',
+    'access-control-allow-methods': 'GET, OPTIONS',
+    'access-control-allow-headers': 'authorization, x-wwcombo-account, x-wwcombo-account-client'
+  };
+}
+
+function accountCodeDigest(email, code) {
+  return signature(`account-code.${email}.${code}`);
+}
+
+function matchingDigest(left, right) {
+  const supplied = Buffer.from(String(left || ''));
+  const expected = Buffer.from(String(right || ''));
+  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+}
+
+function pruneAccountLoginState() {
+  const now = Date.now();
+  for (const [email, challenge] of accountLoginChallenges) {
+    if (Number(challenge?.expiresAt || 0) <= now) accountLoginChallenges.delete(email);
+  }
+  for (const [key, requestedAt] of accountCodeRequestTimes) {
+    if (Number(requestedAt || 0) + ACCOUNT_CODE_REQUEST_COOLDOWN_MS <= now) accountCodeRequestTimes.delete(key);
+  }
+}
+
 const serverStartedAt = Date.now();
 const submissionAttempts = new Map();
 const feedbackAttempts = new Map();
@@ -716,6 +805,80 @@ async function publicIndex(voterId = '') {
 }
 
 async function handleCommunityApi(req, res, pathname) {
+  if (req.method === 'OPTIONS' && pathname === '/api/community/account/session') {
+    res.writeHead(204, accountSessionCorsHeaders());
+    res.end();
+    return;
+  }
+  if (req.method === 'POST' && pathname === '/api/community/account/code') {
+    pruneAccountLoginState();
+    const body = await readJsonBody(req, 4 * 1024);
+    const email = normalizeAccountEmail(body.email);
+    if (!email) return sendJson(res, 400, { error: '邮箱格式不正确。' });
+    const address = clientAddress(req);
+    const emailKey = `email:${email}`;
+    const addressKey = `address:${address}`;
+    const now = Date.now();
+    const retryAt = Math.max(Number(accountCodeRequestTimes.get(emailKey) || 0), Number(accountCodeRequestTimes.get(addressKey) || 0)) + ACCOUNT_CODE_REQUEST_COOLDOWN_MS;
+    if (retryAt > now) return sendJson(res, 429, { error: '验证码发送过于频繁，请稍后再试。', retryAfterSeconds: Math.ceil((retryAt - now) / 1000) });
+    accountCodeRequestTimes.set(emailKey, now);
+    accountCodeRequestTimes.set(addressKey, now);
+    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    accountLoginChallenges.set(email, {
+      digest: accountCodeDigest(email, code),
+      expiresAt: now + ACCOUNT_CODE_TTL_MS,
+      failures: 0
+    });
+    try {
+      await community.sendAccountLoginCode(email, code, Math.round(ACCOUNT_CODE_TTL_MS / 60_000));
+    } catch (error) {
+      accountLoginChallenges.delete(email);
+      accountCodeRequestTimes.delete(emailKey);
+      accountCodeRequestTimes.delete(addressKey);
+      throw error;
+    }
+    sendJson(res, 200, { ok: true, expiresInSeconds: Math.round(ACCOUNT_CODE_TTL_MS / 1000) });
+    return;
+  }
+  if (req.method === 'POST' && pathname === '/api/community/account/verify') {
+    pruneAccountLoginState();
+    const body = await readJsonBody(req, 4 * 1024);
+    const email = normalizeAccountEmail(body.email);
+    const code = String(body.code || '').trim();
+    if (!email || !/^\d{6}$/.test(code)) return sendJson(res, 400, { error: '请填写有效的邮箱和 6 位验证码。' });
+    const challenge = accountLoginChallenges.get(email);
+    if (!challenge || challenge.expiresAt <= Date.now()) {
+      accountLoginChallenges.delete(email);
+      return sendJson(res, 400, { error: '验证码已失效，请重新发送。' });
+    }
+    if (!matchingDigest(accountCodeDigest(email, code), challenge.digest)) {
+      challenge.failures += 1;
+      if (challenge.failures >= MAX_ACCOUNT_CODE_FAILURES) accountLoginChallenges.delete(email);
+      return sendJson(res, 401, { error: challenge.failures >= MAX_ACCOUNT_CODE_FAILURES ? '验证码尝试次数过多，请重新发送。' : '验证码不正确。' });
+    }
+    accountLoginChallenges.delete(email);
+    const account = createAccountSession(email);
+    const roles = await community.accountRoles(email);
+    sendJson(res, 200, {
+      ok: true,
+      token: account.token,
+      session: { authenticated: true, email: account.email, roles, expiresAt: account.expiresAt }
+    }, { 'set-cookie': accountSessionCookie(req, account.token, ACCOUNT_SESSION_SECONDS) });
+    return;
+  }
+  if (req.method === 'GET' && pathname === '/api/community/account/session') {
+    const account = readAccountSession(req);
+    const session = account
+      ? { authenticated: true, email: account.email, roles: await community.accountRoles(account.email), expiresAt: account.expiresAt }
+      : { authenticated: false, email: '', roles: [] };
+    const clientRequestedToken = String(req.headers['x-wwcombo-account-client'] || '') === '1';
+    sendJson(res, 200, { session, ...(account && clientRequestedToken ? { token: account.token } : {}) }, accountSessionCorsHeaders());
+    return;
+  }
+  if (req.method === 'POST' && pathname === '/api/community/account/logout') {
+    sendJson(res, 200, { ok: true }, { 'set-cookie': accountSessionCookie(req, '', 0) });
+    return;
+  }
   if (req.method === 'POST' && pathname === '/api/community/preflight') {
     try {
       const preflight = community.preflight(await readJsonBody(req, 1400 * 1024));
