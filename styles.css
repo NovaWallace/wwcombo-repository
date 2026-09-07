@@ -82,6 +82,11 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .sponsor-body a { color: #70c8ec; font-weight: 850; text-decoration: underline; text-underline-offset: 3px; }
 .sponsor-body a:hover { color: #b4e8fa; }
 .sponsor-thanks { padding-left: 12px; border-left: 3px solid var(--gold); }
+.sponsor-codes-toggle { min-height: 38px; display: flex; align-items: center; gap: 9px; padding: 0 12px; border: 1px solid var(--line); background: var(--surface-raised); color: var(--muted-strong); cursor: pointer; font-size: 12px; font-weight: 850; text-align: left; }
+.sponsor-codes-toggle:hover, .sponsor-codes-toggle:focus-visible { border-color: var(--gold); color: var(--gold); outline: 0; }
+.sponsor-codes-toggle > svg:first-child { width: 17px; height: 17px; color: var(--gold); }
+.sponsor-codes-toggle-chevron { width: 16px; height: 16px; margin-left: auto; color: var(--muted); transition: transform .16s ease; }
+.sponsor-codes-toggle.is-expanded .sponsor-codes-toggle-chevron { transform: rotate(180deg); }
 .sponsor-codes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 2px; }
 .sponsor-code { min-width: 0; display: grid; justify-items: center; gap: 9px; margin: 0; padding: 14px; border: 1px solid var(--line); background: var(--surface-raised); }
 .sponsor-code figcaption { color: var(--muted-strong); font-size: 12px; font-weight: 850; }
@@ -629,6 +634,8 @@ html[data-theme='day'] .sponsor-note { border-color: #b8872e; background: #fff8e
 html[data-theme='day'] .sponsor-note svg { color: #9b722c; }
 html[data-theme='day'] .sponsor-body a { color: #16769a; }
 html[data-theme='day'] .sponsor-body a:hover { color: #0d526c; }
+html[data-theme='day'] .sponsor-codes-toggle { border-color: #cdd9dc; background: #fff; color: #40565d; }
+html[data-theme='day'] .sponsor-codes-toggle:hover, html[data-theme='day'] .sponsor-codes-toggle:focus-visible { border-color: #9b722c; color: #805b1e; background: #fffaf0; }
 html[data-theme='day'] .sponsor-code { border-color: #cdd9dc; background: #fff; }
 html[data-theme='day'] .sponsor-code figcaption { color: #40565d; }
 html[data-theme='day'] .sponsor-list-section { border-color: #cdd9dc; }

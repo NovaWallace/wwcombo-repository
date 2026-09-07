@@ -51,7 +51,7 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260907-wiki-entry-v1" />
+    <link rel="stylesheet" href="styles.css?v=20260907-sponsor-collapse-v1" />
   </head>
   <body>
     <header class="site-header">
@@ -366,7 +366,12 @@
           <p class="sponsor-thanks"><span data-i18n="sponsor.thanksBefore">感谢 </span><a href="http://www.fb520.site" target="_blank" rel="noopener noreferrer">菲比bot（www.fb520.site）</a><span data-i18n="sponsor.thanksAfter"> 对本项目的支持和赞助。有游戏机器人、AI 群友等需求，欢迎看看免费的菲比 bot。</span></p>
           <p data-i18n="sponsor.description">椰之城相关工具为完全免费公益性质。潮友们用得舒服、心情好，可以给没用的作者和他的 AI 大人喂口买 token。</p>
           <p class="sponsor-note"><i data-lucide="message-square-text" aria-hidden="true"></i><span data-i18n="sponsor.note">打赏时请备注您的社区昵称，方便我们献上感谢。</span></p>
-          <div class="sponsor-codes">
+          <button class="sponsor-codes-toggle" id="sponsorCodesToggle" type="button" aria-expanded="false" aria-controls="sponsorCodes">
+            <i data-lucide="qr-code" aria-hidden="true"></i>
+            <span data-i18n="sponsor.codesExpand">展开收款码</span>
+            <i class="sponsor-codes-toggle-chevron" data-lucide="chevron-down" aria-hidden="true"></i>
+          </button>
+          <div class="sponsor-codes" id="sponsorCodes" hidden>
             <figure class="sponsor-code"><figcaption data-i18n="sponsor.wechat">微信支付</figcaption><img src="assets/sponsor-wechat.png" alt="微信支付收款码" data-i18n-alt="sponsor.wechatAlt" /></figure>
             <figure class="sponsor-code"><figcaption data-i18n="sponsor.alipay">支付宝</figcaption><img src="assets/sponsor-alipay.png" alt="支付宝收款码" data-i18n-alt="sponsor.alipayAlt" /></figure>
           </div>
@@ -620,7 +625,7 @@
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
     <script src="assets/input-icons.js?v=20260801-1"></script>
     <script>window.WWComboInputIcons = WWComboInputIcons;</script>
-    <script src="i18n.js?v=20260907-wiki-entry-v1"></script>
-    <script src="app.js?v=20260907-wiki-entry-v1"></script>
+    <script src="i18n.js?v=20260907-sponsor-collapse-v1"></script>
+    <script src="app.js?v=20260907-sponsor-collapse-v1"></script>
   </body>
 </html>

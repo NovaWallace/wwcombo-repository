@@ -3,6 +3,7 @@
   const LANGUAGES = ['zh-CN', 'en-US', 'ja-JP', 'ko-KR'];
   const catalogs = {
     'zh-CN': {
+      'sponsor.codesExpand': '展开收款码', 'sponsor.codesCollapse': '收起收款码',
       'meta.description': '椰之城是 WWCombo 的鸣潮连段社区，可按标题、角色和标签检索、预览与下载连段轴，也可在委托广场征集配队流程。',
       'brand.home': '椰之城首页',
       'wiki.entry': '角色 Wiki', 'wiki.developing': '开发中',
@@ -51,6 +52,7 @@
       'tag.冒烟': '冒烟', 'tag.进阶': '进阶', 'tag.标准': '标准', 'tag.基础': '基础', 'tag.轮椅': '轮椅', 'tag.错轮': '错轮', 'tag.全局': '全局'
     },
     'en-US': {
+      'sponsor.codesExpand': 'Show payment codes', 'sponsor.codesCollapse': 'Hide payment codes',
       'meta.description': 'Coconut City is the WWCombo community for finding, previewing, and downloading Wuthering Waves rotations by title, character, and tag.',
       'brand.home': 'Coconut City home',
       'wiki.entry': 'Character Wiki', 'wiki.developing': 'In development',
@@ -99,6 +101,7 @@
       'tag.冒烟': 'Extreme', 'tag.进阶': 'Advanced', 'tag.标准': 'Standard', 'tag.基础': 'Basic', 'tag.轮椅': 'Easy', 'tag.错轮': 'Desynced', 'tag.全局': 'Global'
     },
     'ja-JP': {
+      'sponsor.codesExpand': '支払いコードを表示', 'sponsor.codesCollapse': '支払いコードを閉じる',
       'meta.description': '椰之城は、タイトル・キャラクター・タグからローテーションを検索・プレビュー・ダウンロードできるWWComboの鳴潮コンボコミュニティです。',
       'brand.home': '椰之城ホーム',
       'wiki.entry': 'キャラクター Wiki', 'wiki.developing': '開発中',
@@ -147,6 +150,7 @@
       'tag.冒烟': '最高難度', 'tag.进阶': '上級', 'tag.标准': '標準', 'tag.基础': '基本', 'tag.轮椅': '簡単', 'tag.错轮': 'ローテずれ', 'tag.全局': '全体'
     },
     'ko-KR': {
+      'sponsor.codesExpand': '결제 코드 보기', 'sponsor.codesCollapse': '결제 코드 접기',
       'meta.description': '椰之城은 제목, 캐릭터, 태그로 로테이션을 검색하고 미리 보며 다운로드할 수 있는 WWCombo 명조 콤보 커뮤니티입니다.',
       'brand.home': '椰之城 홈',
       'wiki.entry': '캐릭터 Wiki', 'wiki.developing': '개발 중',

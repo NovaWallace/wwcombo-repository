@@ -341,7 +341,8 @@ const state = {
   accountLoadState: 'idle',
   sponsorItems: [],
   sponsorLoadState: 'idle',
-  sponsorExpanded: false
+  sponsorExpanded: false,
+  sponsorCodesExpanded: false
 };
 if (state.axisKeySettings?.preferences.inputMode === 'gamepad') state.axisIconSet = state.axisKeySettings.preferences.gamepadIconSet;
 
@@ -375,6 +376,8 @@ const els = {
   sponsorListStatus: document.getElementById('sponsorListStatus'),
   sponsorList: document.getElementById('sponsorList'),
   sponsorExpand: document.getElementById('sponsorExpandBtn'),
+  sponsorCodesToggle: document.getElementById('sponsorCodesToggle'),
+  sponsorCodes: document.getElementById('sponsorCodes'),
   clientDownloadVersion: document.getElementById('clientDownloadVersion'),
   profileButton: document.getElementById('profileButton'),
   profileAvatar: document.getElementById('profileAvatar'),
@@ -1006,10 +1009,21 @@ function closeUpload() {
 
 function openSponsor() {
   if (!els.sponsorBackdrop) return;
+  state.sponsorCodesExpanded = false;
+  renderSponsorCodesToggle();
   els.sponsorBackdrop.hidden = false;
   renderSponsorList();
   void loadSponsorList();
   syncModalBody();
+}
+
+function renderSponsorCodesToggle() {
+  if (!els.sponsorCodesToggle || !els.sponsorCodes) return;
+  const expanded = state.sponsorCodesExpanded === true;
+  els.sponsorCodes.hidden = !expanded;
+  els.sponsorCodesToggle.setAttribute('aria-expanded', String(expanded));
+  els.sponsorCodesToggle.querySelector('span').textContent = t(expanded ? 'sponsor.codesCollapse' : 'sponsor.codesExpand');
+  els.sponsorCodesToggle.classList.toggle('is-expanded', expanded);
 }
 
 function closeSponsor() {
@@ -3986,7 +4000,14 @@ els.wikiEntryButton?.addEventListener('click', () => { void showAppMessage(t('wi
 els.closeSponsor?.addEventListener('click', closeSponsor);
 els.sponsorBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.sponsorBackdrop) closeSponsor(); });
 els.sponsorExpand?.addEventListener('click', () => { state.sponsorExpanded = true; renderSponsorList(); });
-window.addEventListener('wwcombo-languagechange', renderSponsorList);
+els.sponsorCodesToggle?.addEventListener('click', () => {
+  state.sponsorCodesExpanded = !state.sponsorCodesExpanded;
+  renderSponsorCodesToggle();
+});
+window.addEventListener('wwcombo-languagechange', () => {
+  renderSponsorList();
+  renderSponsorCodesToggle();
+});
 els.closeUpload?.addEventListener('click', closeUpload);
 els.cancelUpload?.addEventListener('click', closeUpload);
 els.uploadBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.uploadBackdrop) closeUpload(); });
