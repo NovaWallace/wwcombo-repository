@@ -5,6 +5,7 @@
     'zh-CN': {
       'meta.description': '椰之城是 WWCombo 的鸣潮连段社区，可按标题、角色和标签检索、预览与下载连段轴，也可在委托广场征集配队流程。',
       'brand.home': '椰之城首页',
+      'wiki.entry': '角色 Wiki', 'wiki.developing': '开发中',
       'language.label': '语言', 'language.switch': '切换语言',
       'motion.enable': '开启动态背景', 'motion.disable': '关闭动态背景',
       'theme.day': '切换到白天模式', 'theme.night': '切换到夜间模式',
@@ -52,6 +53,7 @@
     'en-US': {
       'meta.description': 'Coconut City is the WWCombo community for finding, previewing, and downloading Wuthering Waves rotations by title, character, and tag.',
       'brand.home': 'Coconut City home',
+      'wiki.entry': 'Character Wiki', 'wiki.developing': 'In development',
       'language.label': 'Language', 'language.switch': 'Change language',
       'motion.enable': 'Enable animated background', 'motion.disable': 'Disable animated background',
       'theme.day': 'Switch to light mode', 'theme.night': 'Switch to dark mode',
@@ -99,6 +101,7 @@
     'ja-JP': {
       'meta.description': '椰之城は、タイトル・キャラクター・タグからローテーションを検索・プレビュー・ダウンロードできるWWComboの鳴潮コンボコミュニティです。',
       'brand.home': '椰之城ホーム',
+      'wiki.entry': 'キャラクター Wiki', 'wiki.developing': '開発中',
       'language.label': '言語', 'language.switch': '言語を変更',
       'motion.enable': '動く背景を有効化', 'motion.disable': '動く背景を無効化',
       'theme.day': 'ライトモードに切り替え', 'theme.night': 'ダークモードに切り替え',
@@ -146,6 +149,7 @@
     'ko-KR': {
       'meta.description': '椰之城은 제목, 캐릭터, 태그로 로테이션을 검색하고 미리 보며 다운로드할 수 있는 WWCombo 명조 콤보 커뮤니티입니다.',
       'brand.home': '椰之城 홈',
+      'wiki.entry': '캐릭터 Wiki', 'wiki.developing': '개발 중',
       'language.label': '언어', 'language.switch': '언어 변경',
       'motion.enable': '움직이는 배경 켜기', 'motion.disable': '움직이는 배경 끄기',
       'theme.day': '라이트 모드로 전환', 'theme.night': '다크 모드로 전환',

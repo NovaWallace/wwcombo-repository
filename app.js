@@ -364,6 +364,7 @@ const els = {
   themeToggle: document.getElementById('themeToggle'),
   submissionButton: document.getElementById('submissionButton'),
   submissionButtonLabel: document.getElementById('submissionButtonLabel'),
+  wikiEntryButton: document.getElementById('wikiEntryButton'),
   clientDownloadButton: document.getElementById('clientDownloadButton'),
   clientDownloadBackdrop: document.getElementById('clientDownloadBackdrop'),
   closeClientDownload: document.getElementById('closeClientDownloadBtn'),
@@ -3981,6 +3982,7 @@ els.submissionButton?.addEventListener('click', () => {
   else openUpload();
 });
 els.sponsorButton?.addEventListener('click', openSponsor);
+els.wikiEntryButton?.addEventListener('click', () => { void showAppMessage(t('wiki.developing')); });
 els.closeSponsor?.addEventListener('click', closeSponsor);
 els.sponsorBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.sponsorBackdrop) closeSponsor(); });
 els.sponsorExpand?.addEventListener('click', () => { state.sponsorExpanded = true; renderSponsorList(); });

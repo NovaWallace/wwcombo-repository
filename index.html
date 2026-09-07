@@ -51,11 +51,12 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260907-sponsor-v1" />
+    <link rel="stylesheet" href="styles.css?v=20260907-wiki-entry-v1" />
   </head>
   <body>
     <header class="site-header">
       <div class="header-inner">
+        <div class="brand-cluster">
         <a class="brand" href="./" aria-label="椰之城首页" data-i18n-aria-label="brand.home">
           <img class="brand-icon" src="assets/logo.png" alt="" />
           <span>
@@ -63,10 +64,15 @@
             <small>WWCOMBO REPOSITORY</small>
           </span>
         </a>
+        <button class="wiki-nav-button" id="wikiEntryButton" type="button" data-i18n-title="wiki.entry" data-i18n-aria-label="wiki.entry" title="角色 Wiki" aria-label="角色 Wiki">
+          <i data-lucide="book-open" aria-hidden="true"></i>
+          <span data-i18n="wiki.entry">角色 Wiki</span>
+        </button>
         <button class="sponsor-button" id="sponsorButton" type="button" data-i18n-title="sponsor.button" data-i18n-aria-label="sponsor.button" title="投喂作者" aria-label="投喂作者">
           <img src="assets/commission-want.png" alt="" aria-hidden="true" />
           <span data-i18n="sponsor.button">投喂作者</span>
         </button>
+        </div>
         <div class="header-actions">
           <label class="language-control" title="切换语言" data-i18n-title="language.switch">
             <i data-lucide="languages" aria-hidden="true"></i>
@@ -614,7 +620,7 @@
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
     <script src="assets/input-icons.js?v=20260801-1"></script>
     <script>window.WWComboInputIcons = WWComboInputIcons;</script>
-    <script src="i18n.js?v=20260907-sponsor-v1"></script>
-    <script src="app.js?v=20260907-sponsor-v1"></script>
+    <script src="i18n.js?v=20260907-wiki-entry-v1"></script>
+    <script src="app.js?v=20260907-wiki-entry-v1"></script>
   </body>
 </html>
