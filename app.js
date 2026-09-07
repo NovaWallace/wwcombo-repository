@@ -338,7 +338,10 @@ const state = {
   appReleaseState: 'idle',
   accountToken: savedAccountToken(),
   accountSession: { authenticated: false, email: '', roles: [] },
-  accountLoadState: 'idle'
+  accountLoadState: 'idle',
+  sponsorItems: [],
+  sponsorLoadState: 'idle',
+  sponsorExpanded: false
 };
 if (state.axisKeySettings?.preferences.inputMode === 'gamepad') state.axisIconSet = state.axisKeySettings.preferences.gamepadIconSet;
 
@@ -365,6 +368,12 @@ const els = {
   clientDownloadBackdrop: document.getElementById('clientDownloadBackdrop'),
   closeClientDownload: document.getElementById('closeClientDownloadBtn'),
   clientDownloadList: document.getElementById('clientDownloadList'),
+  sponsorButton: document.getElementById('sponsorButton'),
+  sponsorBackdrop: document.getElementById('sponsorBackdrop'),
+  closeSponsor: document.getElementById('closeSponsorBtn'),
+  sponsorListStatus: document.getElementById('sponsorListStatus'),
+  sponsorList: document.getElementById('sponsorList'),
+  sponsorExpand: document.getElementById('sponsorExpandBtn'),
   clientDownloadVersion: document.getElementById('clientDownloadVersion'),
   profileButton: document.getElementById('profileButton'),
   profileAvatar: document.getElementById('profileAvatar'),
@@ -992,6 +1001,88 @@ function closeUpload() {
   els.commissionDetailBackdrop.inert = false;
   els.commissionDetailBackdrop.removeAttribute('aria-hidden');
   syncModalBody();
+}
+
+function openSponsor() {
+  if (!els.sponsorBackdrop) return;
+  els.sponsorBackdrop.hidden = false;
+  renderSponsorList();
+  void loadSponsorList();
+  syncModalBody();
+}
+
+function closeSponsor() {
+  if (!els.sponsorBackdrop) return;
+  els.sponsorBackdrop.hidden = true;
+  syncModalBody();
+}
+
+function renderSponsorList() {
+  if (!els.sponsorList || !els.sponsorListStatus || !els.sponsorExpand) return;
+  const items = Array.isArray(state.sponsorItems) ? state.sponsorItems : [];
+  els.sponsorList.replaceChildren();
+  els.sponsorExpand.hidden = true;
+  if (state.sponsorLoadState === 'loading' || state.sponsorLoadState === 'idle') {
+    els.sponsorListStatus.textContent = t('sponsor.loading');
+    return;
+  }
+  if (state.sponsorLoadState === 'error') {
+    els.sponsorListStatus.textContent = t('sponsor.failed');
+    return;
+  }
+  if (!items.length) {
+    els.sponsorListStatus.textContent = t('sponsor.empty');
+    return;
+  }
+  els.sponsorListStatus.textContent = '';
+  const visibleItems = state.sponsorExpanded ? items : items.slice(0, 3);
+  for (const item of visibleItems) {
+    const row = document.createElement('article');
+    row.className = 'sponsor-item';
+    const copy = document.createElement('div');
+    copy.className = 'sponsor-item-copy';
+    const name = document.createElement('strong');
+    name.textContent = item.name || t('sponsor.anonymous');
+    const id = document.createElement('small');
+    id.textContent = `${t('sponsor.id')}: ${item.id || '-'}`;
+    copy.append(name, id);
+    row.appendChild(copy);
+    if (item.amount) {
+      const amount = document.createElement('span');
+      amount.className = 'sponsor-item-amount';
+      amount.textContent = `¥${item.amount}`;
+      row.appendChild(amount);
+    }
+    els.sponsorList.appendChild(row);
+  }
+  if (items.length > 3 && !state.sponsorExpanded) {
+    els.sponsorExpand.hidden = false;
+    els.sponsorExpand.textContent = t('sponsor.expand', { count: items.length });
+  }
+}
+
+async function loadSponsorList() {
+  if (!els.sponsorList || state.sponsorLoadState === 'loading' || state.sponsorLoadState === 'ready') return;
+  state.sponsorLoadState = 'loading';
+  renderSponsorList();
+  try {
+    const response = await fetch('/api/community/sponsors', { cache: 'no-store' });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+    state.sponsorItems = Array.isArray(body.sponsors) ? body.sponsors : [];
+    state.sponsorLoadState = 'ready';
+  } catch {
+    try {
+      const response = await fetch('assets/sponsors-fallback.json', { cache: 'no-store' });
+      const items = await response.json();
+      if (!response.ok || !Array.isArray(items)) throw new Error('fallback unavailable');
+      state.sponsorItems = items;
+      state.sponsorLoadState = 'ready';
+    } catch {
+      state.sponsorLoadState = 'error';
+    }
+  }
+  renderSponsorList();
 }
 
 function uploadedIndexChart(pack, fileName = '') {
@@ -1848,6 +1939,7 @@ function renderFilters() {
 
 function updateSubmissionButton() {
   const commissionView = state.view === 'commissions';
+  if (els.sponsorButton) els.sponsorButton.hidden = false;
   const label = t(commissionView ? 'commission.create' : 'submission.button');
   els.submissionButtonLabel.textContent = label;
   els.submissionButton.title = label;
@@ -3807,6 +3899,7 @@ document.addEventListener('keydown', (event) => {
   else if (!els.clientDownloadBackdrop.hidden) closeClientDownload();
   else if (!els.commentsBackdrop.hidden) closeComments();
   else if (!els.uploadBackdrop.hidden) closeUpload();
+  else if (!els.sponsorBackdrop.hidden) closeSponsor();
   else if (!els.profileBackdrop.hidden) closeProfile();
   else if (!els.detailBackdrop.hidden) closeDetails();
   else if (!els.commissionDetailBackdrop.hidden) closeCommissionDetail();
@@ -3887,6 +3980,11 @@ els.submissionButton?.addEventListener('click', () => {
   if (state.view === 'commissions') openCommissionCreate();
   else openUpload();
 });
+els.sponsorButton?.addEventListener('click', openSponsor);
+els.closeSponsor?.addEventListener('click', closeSponsor);
+els.sponsorBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.sponsorBackdrop) closeSponsor(); });
+els.sponsorExpand?.addEventListener('click', () => { state.sponsorExpanded = true; renderSponsorList(); });
+window.addEventListener('wwcombo-languagechange', renderSponsorList);
 els.closeUpload?.addEventListener('click', closeUpload);
 els.cancelUpload?.addEventListener('click', closeUpload);
 els.uploadBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.uploadBackdrop) closeUpload(); });

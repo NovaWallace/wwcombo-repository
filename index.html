@@ -51,7 +51,7 @@
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260901-commission-layout-v45" />
+    <link rel="stylesheet" href="styles.css?v=20260907-sponsor-v1" />
   </head>
   <body>
     <header class="site-header">
@@ -63,6 +63,10 @@
             <small>WWCOMBO REPOSITORY</small>
           </span>
         </a>
+        <button class="sponsor-button" id="sponsorButton" type="button" data-i18n-title="sponsor.button" data-i18n-aria-label="sponsor.button" title="投喂作者" aria-label="投喂作者">
+          <img src="assets/commission-want.png" alt="" aria-hidden="true" />
+          <span data-i18n="sponsor.button">投喂作者</span>
+        </button>
         <div class="header-actions">
           <label class="language-control" title="切换语言" data-i18n-title="language.switch">
             <i data-lucide="languages" aria-hidden="true"></i>
@@ -343,6 +347,33 @@
       </section>
     </div>
 
+    <div class="modal-backdrop sponsor-backdrop" id="sponsorBackdrop" hidden>
+      <section class="sponsor-dialog" role="dialog" aria-modal="true" aria-labelledby="sponsorTitle">
+        <header class="modal-header sponsor-header">
+          <div>
+            <p class="eyebrow" data-i18n="sponsor.eyebrow">SUPPORT</p>
+            <h2 id="sponsorTitle" data-i18n="sponsor.title">投喂作者</h2>
+          </div>
+          <button class="icon-button" id="closeSponsorBtn" type="button" data-i18n-title="common.close" data-i18n-aria-label="common.close" title="关闭" aria-label="关闭"><i data-lucide="x" aria-hidden="true"></i></button>
+        </header>
+        <div class="sponsor-body">
+          <p class="sponsor-thanks"><span data-i18n="sponsor.thanksBefore">感谢 </span><a href="http://www.fb520.site" target="_blank" rel="noopener noreferrer">菲比bot（www.fb520.site）</a><span data-i18n="sponsor.thanksAfter"> 对本项目的支持和赞助。有游戏机器人、AI 群友等需求，欢迎看看免费的菲比 bot。</span></p>
+          <p data-i18n="sponsor.description">椰之城相关工具为完全免费公益性质。潮友们用得舒服、心情好，可以给没用的作者和他的 AI 大人喂口买 token。</p>
+          <p class="sponsor-note"><i data-lucide="message-square-text" aria-hidden="true"></i><span data-i18n="sponsor.note">打赏时请备注您的社区昵称，方便我们献上感谢。</span></p>
+          <div class="sponsor-codes">
+            <figure class="sponsor-code"><figcaption data-i18n="sponsor.wechat">微信支付</figcaption><img src="assets/sponsor-wechat.png" alt="微信支付收款码" data-i18n-alt="sponsor.wechatAlt" /></figure>
+            <figure class="sponsor-code"><figcaption data-i18n="sponsor.alipay">支付宝</figcaption><img src="assets/sponsor-alipay.png" alt="支付宝收款码" data-i18n-alt="sponsor.alipayAlt" /></figure>
+          </div>
+          <section class="sponsor-list-section" aria-labelledby="sponsorListTitle">
+            <header class="sponsor-list-heading"><div><h3 id="sponsorListTitle" data-i18n="sponsor.sponsors">赞助者</h3><p data-i18n="sponsor.sponsorsHint">感谢每一份支持</p></div><i data-lucide="heart-handshake" aria-hidden="true"></i></header>
+            <p class="sponsor-list-status" id="sponsorListStatus" data-i18n="sponsor.loading">正在读取赞助名单...</p>
+            <div class="sponsor-list" id="sponsorList"></div>
+            <button class="sponsor-expand" id="sponsorExpandBtn" type="button" hidden data-i18n="sponsor.expand">展开全部</button>
+          </section>
+        </div>
+      </section>
+    </div>
+
     <div class="modal-backdrop" id="commissionCreateBackdrop" hidden>
       <section class="commission-create-dialog" role="dialog" aria-modal="true" aria-labelledby="commissionCreateTitle">
         <header class="modal-header">
@@ -583,7 +614,7 @@
     <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
     <script src="assets/input-icons.js?v=20260801-1"></script>
     <script>window.WWComboInputIcons = WWComboInputIcons;</script>
-    <script src="i18n.js?v=20260901-commission-layout-v27"></script>
-    <script src="app.js?v=20260901-commission-layout-v33"></script>
+    <script src="i18n.js?v=20260907-sponsor-v1"></script>
+    <script src="app.js?v=20260907-sponsor-v1"></script>
   </body>
 </html>

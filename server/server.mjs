@@ -28,6 +28,8 @@ const ACCOUNT_CODE_TTL_MS = 10 * 60 * 1000;
 const ACCOUNT_CODE_REQUEST_COOLDOWN_MS = 60 * 1000;
 const MAX_ACCOUNT_CODE_FAILURES = 5;
 const COMMISSION_AUTO_ADOPT_INTERVAL_MS = 10 * 60 * 1000;
+const SPONSOR_SOURCE_URL = 'https://zzz.fb520.site/api/sponsors';
+const SPONSOR_CACHE_MS = 5 * 60 * 1000;
 const PUBLIC_ROOT_FILES = new Set(['/index.html', '/app.js', '/i18n.js', '/styles.css', '/site.webmanifest', '/robots.txt', '/sitemap.xml', '/build-info.json']);
 const CONTENT_TYPES = new Map([
   ['.html', 'text/html; charset=utf-8'],
@@ -124,6 +126,22 @@ const updateState = {
   error: ''
 };
 let updateRunning = false;
+let sponsorCache = { expiresAt: 0, sponsors: [] };
+
+async function publicSponsors() {
+  if (sponsorCache.expiresAt > Date.now()) return sponsorCache.sponsors;
+  const response = await fetch(SPONSOR_SOURCE_URL, { signal: AbortSignal.timeout(6000) });
+  if (!response.ok) throw new Error(`赞助名单源返回 HTTP ${response.status}`);
+  const source = await response.json();
+  if (!Array.isArray(source)) throw new Error('赞助名单源格式不正确');
+  const sponsors = source.slice(0, 200).map((item) => ({
+    id: String(item?.id || '').trim().slice(0, 80),
+    name: String(item?.name || '').trim().slice(0, 80),
+    amount: String(item?.amount || '').trim().match(/^\d+(?:\.\d{1,2})?$/)?.[0] || ''
+  })).filter((item) => item.id || item.name);
+  sponsorCache = { expiresAt: Date.now() + SPONSOR_CACHE_MS, sponsors };
+  return sponsors;
+}
 
 function sendJson(res, statusCode, body, headers = {}) {
   const data = Buffer.from(`${JSON.stringify(body)}\n`, 'utf8');
@@ -877,6 +895,14 @@ async function handleCommunityApi(req, res, pathname) {
   }
   if (req.method === 'POST' && pathname === '/api/community/account/logout') {
     sendJson(res, 200, { ok: true }, { 'set-cookie': accountSessionCookie(req, '', 0) });
+    return;
+  }
+  if ((req.method === 'GET' || req.method === 'HEAD') && pathname === '/api/community/sponsors') {
+    try {
+      sendJson(res, 200, { sponsors: await publicSponsors() }, { 'cache-control': 'public, max-age=300' });
+    } catch (error) {
+      sendJson(res, 502, { error: error.message || '赞助名单暂时无法读取。' });
+    }
     return;
   }
   if (req.method === 'POST' && pathname === '/api/community/preflight') {
