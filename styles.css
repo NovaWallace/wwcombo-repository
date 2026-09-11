@@ -2130,12 +2130,13 @@ html[data-theme='day'] body.wiki-route .community-wiki-graph-frame {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--wiki-element) 75%, #fff) transparent;
   overscroll-behavior-inline: contain;
+  contain: layout paint;
 }
 .community-wiki-showcase-side-left .community-wiki-showcase-track { justify-content: flex-start; }
 .community-wiki-showcase-track::-webkit-scrollbar { height: 4px; }
 .community-wiki-showcase-track::-webkit-scrollbar-track { background: transparent; }
 .community-wiki-showcase-track::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--wiki-element) 75%, #fff); }
-.community-wiki-showcase-track .community-wiki-character-card { width: 88px; height: 102px; min-width: 88px; min-height: 102px; border-radius: 2px; scroll-snap-align: start; box-shadow: 3px 3px 0 color-mix(in srgb, var(--wiki-rarity) 76%, #101319); }
+.community-wiki-showcase-track .community-wiki-character-card { width: 88px; height: 102px; min-width: 88px; min-height: 102px; border-radius: 2px; scroll-snap-align: start; box-shadow: 3px 3px 0 color-mix(in srgb, var(--wiki-rarity) 76%, #101319); contain: layout paint; }
 .community-wiki-showcase-track .community-wiki-card-art { border-radius: 1px; }
 .community-wiki-showcase-track .community-wiki-card-name { padding: 6px 5px 6px 30px; font-size: 10px; }
 .community-wiki-showcase-track .community-wiki-card-weapon { width: 23px; height: 23px; bottom: 4px; left: 4px; }
@@ -2158,6 +2159,8 @@ html[data-theme='day'] body.wiki-route .community-wiki-graph-frame {
   color: #fff;
   cursor: pointer;
   box-shadow: 0 28px 70px rgba(0,0,0,.48), 5px 5px 0 color-mix(in srgb, var(--wiki-element) 55%, #151921);
+  contain: layout paint;
+  transform: translate3d(0, 0, 0);
 }
 .community-wiki-showcase-main-card::before {
   content: '';
@@ -2170,6 +2173,7 @@ html[data-theme='day'] body.wiki-route .community-wiki-graph-frame {
   filter: brightness(1.08) contrast(1.02);
   opacity: .7;
   will-change: opacity;
+  transform: translate3d(0, 0, 0);
   transition: opacity .28s ease;
 }
 .community-wiki-showcase-main-card::after {
@@ -2178,12 +2182,12 @@ html[data-theme='day'] body.wiki-route .community-wiki-graph-frame {
 .community-wiki-showcase-main-card:hover,
 .community-wiki-showcase-main-card:focus-visible { border-color: color-mix(in srgb, var(--wiki-element) 80%, #fff); outline: 0; }
 .community-wiki-showcase-main-art { position: relative; min-height: 0; display: grid; place-items: end center; overflow: hidden; }
-.community-wiki-showcase-main-portrait { width: 116%; height: 108%; max-width: none; display: block; object-fit: contain; object-position: center bottom; filter: drop-shadow(0 18px 18px rgba(0,0,0,.36)); transition: opacity .26s ease, transform .32s cubic-bezier(.22,.72,.24,1); }
+.community-wiki-showcase-main-portrait { width: 116%; height: 108%; max-width: none; display: block; object-fit: contain; object-position: center bottom; filter: drop-shadow(0 18px 18px rgba(0,0,0,.36)); transform: translate3d(0, 0, 0); will-change: opacity, transform; transition: opacity .26s ease, transform .32s cubic-bezier(.22,.72,.24,1); }
 .community-wiki-showcase-main-portrait.is-wiki-portrait-switching { opacity: .82; transform: translate3d(0, -8px, 0) scale(1.01); will-change: opacity, transform; backface-visibility: hidden; }
 .community-wiki-showcase-main-portrait.is-fallback { display: none; }
 .community-wiki-showcase-main-fallback { position: absolute; inset: 0; display: none; place-items: center; color: var(--wiki-element); font-size: 100px; font-weight: 900; }
 .community-wiki-showcase-main-portrait.is-fallback + .community-wiki-showcase-main-fallback { display: grid; }
-.community-wiki-showcase-main-info { position: relative; z-index: 2; display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; gap: 12px; padding: 15px 24px 18px; border-top: 1px solid rgba(255,255,255,.13); background: rgba(7,10,15,.8); text-align: left; transition: opacity .28s ease, transform .34s cubic-bezier(.22,.72,.24,1); }
+.community-wiki-showcase-main-info { position: relative; z-index: 2; display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; gap: 12px; padding: 15px 24px 18px; border-top: 1px solid rgba(255,255,255,.13); background: rgba(7,10,15,.8); text-align: left; will-change: opacity, transform; transition: opacity .28s ease, transform .34s cubic-bezier(.22,.72,.24,1); }
 .community-wiki-showcase-emblem { width: 72px; height: 72px; display: block; object-fit: contain; filter: drop-shadow(0 0 9px color-mix(in srgb, var(--wiki-element) 68%, transparent)); }
 .community-wiki-showcase-main-info > span { min-width: 0; display: grid; gap: 5px; }
 .community-wiki-showcase-main-info strong { overflow: hidden; font-size: 28px; line-height: 1; text-overflow: ellipsis; white-space: nowrap; }

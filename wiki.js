@@ -344,10 +344,11 @@
   };
   const elementBackgroundFor = (element) => wikiElementBackgrounds[String(element || '').trim()] || '';
   const wikiVisualPreload = new Map();
-  const preloadWikiImage = (source) => {
+  const preloadWikiImage = (source, options = {}) => {
     const url = String(source || '').trim();
     if (!url) return Promise.resolve(false);
     if (wikiVisualPreload.has(url)) return wikiVisualPreload.get(url);
+    const shouldDecode = options.decode === true;
     const promise = new Promise((resolve) => {
       const image = new Image();
       let settled = false;
@@ -360,7 +361,9 @@
       const timeout = setTimeout(() => finish(false), 12000);
       image.decoding = 'async';
       image.onload = async () => {
-        try { await image.decode?.(); } catch (_) { /* The browser may already have decoded it. */ }
+        if (shouldDecode) {
+          try { await image.decode?.(); } catch (_) { /* The browser may already have decoded it. */ }
+        }
         finish(true);
       };
       image.onerror = () => finish(false);
@@ -377,17 +380,29 @@
     Object.values(tideIcons).forEach((source) => sources.push(source));
     return [...new Set(sources.filter(Boolean))];
   };
-  const preloadCharacterVisuals = (entry) => Promise.all(visualSourcesFor(entry).map(preloadWikiImage));
+  const preloadCharacterVisuals = (entry, options = {}) => Promise.all(visualSourcesFor(entry).map((source) => preloadWikiImage(source, options)));
   const preloadWikiVisuals = (characters, priorityName = '赞妮') => {
     const entries = Array.isArray(characters) ? characters : [];
     const priority = entries.find((entry) => characterName(entry) === priorityName);
     const rest = entries.filter((entry) => characterName(entry) !== priorityName);
-    const first = priority ? preloadCharacterVisuals(priority) : Promise.resolve([]);
-    return first.then(() => {
-      const start = () => Promise.all(rest.map((entry) => preloadCharacterVisuals(entry)));
-      if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(start, { timeout: 1200 });
-      else window.setTimeout(start, 0);
-    });
+    const sources = [...new Set(rest.flatMap((entry) => visualSourcesFor(entry)))];
+    const start = () => {
+      const warmPriority = priority ? preloadCharacterVisuals(priority, { decode: true }) : Promise.resolve([]);
+      void warmPriority.finally(() => {
+        let index = 0;
+        const pump = () => {
+          const batch = sources.slice(index, index + 2);
+          index += batch.length;
+          if (!batch.length) return;
+          void Promise.all(batch.map((source) => preloadWikiImage(source))).finally(() => {
+            if (index < sources.length) window.setTimeout(pump, 90);
+          });
+        };
+        window.setTimeout(pump, 180);
+      });
+    };
+    if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(start, { timeout: 1800 });
+    else window.setTimeout(start, 120);
   };
   const localizedValues = {
     'en-US': { 冷凝: 'Glacio', 热熔: 'Fusion', 导电: 'Electro', 气动: 'Aero', 衍射: 'Spectro', 湮灭: 'Havoc', 迅刀: 'Sword', 长刃: 'Broadblade', 佩枪: 'Pistols', 臂铠: 'Gauntlets', 音感仪: 'Rectifier' },
@@ -10935,28 +10950,43 @@
   }
 
   let characterLoadSequence = 0;
+  let supportRenderFrame = 0;
+  const scheduleHomeRender = (sequence) => {
+    if (sequence !== characterLoadSequence || state.selected || supportRenderFrame) return;
+    supportRenderFrame = requestAnimationFrame(() => {
+      supportRenderFrame = 0;
+      if (sequence === characterLoadSequence && !state.selected) renderHome();
+    });
+  };
   async function hydrateCharacterSupportData(sequence) {
     const readJson = async (url, options = {}) => {
       const response = await fetchJsonWithTimeout(url, options);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.json();
     };
-    const [iconResult, tideResult, lockResult, announcementResult] = await Promise.allSettled([
-      readJson(ICON_MANIFEST_URL, { cache: 'force-cache' }),
-      readJson(TIDE_ICON_MANIFEST_URL, { cache: 'force-cache' }),
-      readJson('/api/community/wiki-locks', { cache: 'no-store' }),
-      readJson('/api/community/wiki-announcement', { cache: 'no-store' })
-    ]);
+    const tasks = [
+      [readJson(ICON_MANIFEST_URL, { cache: 'force-cache' }), (value) => { state.icons = iconMap(value); }],
+      [readJson(TIDE_ICON_MANIFEST_URL, { cache: 'force-cache' }), (value) => { state.tideIcons = tideIconMap(value); }],
+      [readJson('/api/community/wiki-locks', { cache: 'no-store' }), (value) => { applyWikiLocks(value); }],
+      [readJson('/api/community/wiki-announcement', { cache: 'no-store' }), (value) => { state.announcement = value; }]
+    ];
+    const applyTask = async ([task, apply]) => {
+      try {
+        const value = await task;
+        if (sequence !== characterLoadSequence) return;
+        apply(value);
+        scheduleHomeRender(sequence);
+      } catch (error) {
+        console.warn('[wiki] support data unavailable', error);
+      }
+    };
+    window.setTimeout(() => {
+      if (sequence === characterLoadSequence) void preloadWikiVisuals(state.characters, '赞妮');
+    }, 900);
+    await Promise.all(tasks.map(applyTask));
     if (sequence !== characterLoadSequence) return;
-    let shouldRender = false;
-    if (iconResult.status === 'fulfilled') { state.icons = iconMap(iconResult.value); shouldRender = true; }
-    if (tideResult.status === 'fulfilled') { state.tideIcons = tideIconMap(tideResult.value); shouldRender = true; }
-    if (lockResult.status === 'fulfilled') { applyWikiLocks(lockResult.value); shouldRender = true; }
-    if (announcementResult.status === 'fulfilled') { state.announcement = announcementResult.value; shouldRender = true; }
-    if (shouldRender && sequence === characterLoadSequence) renderHome();
     await loadCharacterBasePresets();
     if (sequence !== characterLoadSequence) return;
-    renderHome();
     void preloadWikiVisuals(state.characters, '赞妮');
   }
 
