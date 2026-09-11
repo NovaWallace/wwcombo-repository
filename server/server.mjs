@@ -28,7 +28,7 @@ const ACCOUNT_CODE_TTL_MS = 10 * 60 * 1000;
 const ACCOUNT_CODE_REQUEST_COOLDOWN_MS = 60 * 1000;
 const MAX_ACCOUNT_CODE_FAILURES = 5;
 const COMMISSION_AUTO_ADOPT_INTERVAL_MS = 10 * 60 * 1000;
-const SPONSOR_SOURCE_URL = 'https://zzz.fb520.site/api/sponsors';
+const SPONSOR_DATA_FILE = 'assets/sponsors-fallback.json';
 const SPONSOR_CACHE_MS = 5 * 60 * 1000;
 const PUBLIC_ROOT_FILES = new Set(['/index.html', '/app.js', '/i18n.js', '/styles.css', '/site.webmanifest', '/robots.txt', '/sitemap.xml', '/build-info.json']);
 const CONTENT_TYPES = new Map([
@@ -130,9 +130,7 @@ let sponsorCache = { expiresAt: 0, sponsors: [] };
 
 async function publicSponsors() {
   if (sponsorCache.expiresAt > Date.now()) return sponsorCache.sponsors;
-  const response = await fetch(SPONSOR_SOURCE_URL, { signal: AbortSignal.timeout(6000) });
-  if (!response.ok) throw new Error(`赞助名单源返回 HTTP ${response.status}`);
-  const source = await response.json();
+  const source = JSON.parse(await readFile(path.join(PUBLIC_ROOT, SPONSOR_DATA_FILE), 'utf8'));
   if (!Array.isArray(source)) throw new Error('赞助名单源格式不正确');
   const sponsors = source.slice(0, 200).map((item) => ({
     id: String(item?.id || '').trim().slice(0, 80),
