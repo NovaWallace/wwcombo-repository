@@ -30,7 +30,7 @@ const MAX_ACCOUNT_CODE_FAILURES = 5;
 const COMMISSION_AUTO_ADOPT_INTERVAL_MS = 10 * 60 * 1000;
 const SPONSOR_DATA_FILE = 'assets/sponsors-fallback.json';
 const SPONSOR_CACHE_MS = 5 * 60 * 1000;
-const PUBLIC_ROOT_FILES = new Set(['/index.html', '/app.js', '/i18n.js', '/styles.css', '/site.webmanifest', '/robots.txt', '/sitemap.xml', '/build-info.json']);
+const PUBLIC_ROOT_FILES = new Set(['/index.html', '/app.js', '/i18n.js', '/styles.css', '/wiki.js', '/site.webmanifest', '/robots.txt', '/sitemap.xml', '/build-info.json']);
 const CONTENT_TYPES = new Map([
   ['.html', 'text/html; charset=utf-8'],
   ['.css', 'text/css; charset=utf-8'],
@@ -523,6 +523,93 @@ async function handleAdminApi(req, res, pathname) {
     return;
   }
 
+  if (req.method === 'GET' && pathname === '/api/server/community/wiki-feedback') {
+    const session = requireSession(req, res);
+    if (!session) return;
+    sendJson(res, 200, { items: await community.adminWikiFeedback() });
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/api/server/community/wiki-locks') {
+    const session = requireSession(req, res);
+    if (!session) return;
+    sendJson(res, 200, { locks: await community.wikiLocks() });
+    return;
+  }
+
+  if (req.method === 'PUT' && pathname === '/api/server/community/wiki-locks') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    const body = await readJsonBody(req, 8 * 1024);
+    sendJson(res, 200, { ok: true, lock: await community.setWikiLock(body.character, body.locked === true) });
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/api/server/community/wiki-permissions') {
+    const session = requireSession(req, res);
+    if (!session) return;
+    sendJson(res, 200, { permissions: await community.wikiPermissions() });
+    return;
+  }
+
+  if (req.method === 'PUT' && pathname === '/api/server/community/wiki-permissions') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    const body = await readJsonBody(req, 8 * 1024);
+    sendJson(res, 200, { ok: true, permission: await community.setWikiCharacterPermission(body.character, body.email, body.granted === true) });
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/api/server/community/wiki-access-requests') {
+    const session = requireSession(req, res);
+    if (!session) return;
+    sendJson(res, 200, { requests: await community.wikiAccessRequests() });
+    return;
+  }
+
+  const wikiAccessRequestAction = /^\/api\/server\/community\/wiki-access-requests\/([^/]+)\/(approve|revoke)$/.exec(pathname);
+  if (req.method === 'POST' && wikiAccessRequestAction) {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    const requestId = decodeURIComponent(wikiAccessRequestAction[1]);
+    const requests = await community.wikiAccessRequests();
+    const request = requests.find((item) => item.id === requestId);
+    if (!request) return sendJson(res, 404, { error: '编辑权限申请不存在。' });
+    sendJson(res, 200, { ok: true, permission: await community.setWikiCharacterPermission(request.character, request.email, wikiAccessRequestAction[2] === 'approve') });
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/api/server/community/wiki-announcement') {
+    const session = requireSession(req, res);
+    if (!session) return;
+    sendJson(res, 200, { announcement: await community.wikiAnnouncement() });
+    return;
+  }
+
+  if (req.method === 'PUT' && pathname === '/api/server/community/wiki-announcement') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    const body = await readJsonBody(req, 16 * 1024);
+    sendJson(res, 200, { ok: true, announcement: await community.saveWikiAnnouncement(body) });
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/api/server/community/wiki-edit-log') {
+    const session = requireSession(req, res);
+    if (!session) return;
+    const query = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`).searchParams;
+    sendJson(res, 200, { items: await community.wikiEditLog(query.get('character') || '', Number(query.get('limit') || 200)) });
+    return;
+  }
+
+  const wikiFeedbackAction = /^\/api\/server\/community\/wiki-feedback\/([^/]+)\/resolve$/.exec(pathname);
+  if (req.method === 'POST' && wikiFeedbackAction) {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    sendJson(res, 200, { ok: true, ...(await community.resolveWikiFeedback(decodeURIComponent(wikiFeedbackAction[1]))) });
+    return;
+  }
+
   const adminCommissionPackage = /^\/api\/server\/community\/commissions\/([^/]+)\/responses\/([^/]+)\/package$/.exec(pathname);
   if (req.method === 'GET' && adminCommissionPackage) {
     const session = requireSession(req, res);
@@ -755,6 +842,7 @@ function pruneAccountLoginState() {
 const serverStartedAt = Date.now();
 const submissionAttempts = new Map();
 const feedbackAttempts = new Map();
+const wikiFeedbackAttempts = new Map();
 const commentAttempts = new Map();
 
 function acceptSubmissionFrom(address) {
@@ -903,6 +991,45 @@ async function handleCommunityApi(req, res, pathname) {
     }
     return;
   }
+  if (req.method === 'GET' && pathname === '/api/community/wiki-locks') {
+    sendJson(res, 200, { locks: await community.wikiPublicLocks() }, { 'cache-control': 'no-store' });
+    return;
+  }
+  if (req.method === 'GET' && pathname === '/api/community/wiki-announcement') {
+    sendJson(res, 200, await community.wikiAnnouncement(), { 'cache-control': 'no-store' });
+    return;
+  }
+  const wikiAccessPath = /^\/api\/community\/wiki\/([^/]+)\/access-request$/.exec(pathname);
+  if (req.method === 'POST' && wikiAccessPath) {
+    const account = readAccountSession(req);
+    if (!account) {
+      sendJson(res, 401, { error: '请先登录邮箱账号，再申请该角色的编辑权限。' });
+      return;
+    }
+    const body = await readJsonBody(req, 8 * 1024);
+    try {
+      sendJson(res, 200, await community.requestWikiAccess(decodeURIComponent(wikiAccessPath[1]), account.email, body.message || ''), { 'cache-control': 'no-store' });
+    } catch (error) {
+      sendJson(res, Number(error.statusCode || 400), { error: error.message || String(error) });
+    }
+    return;
+  }
+  const wikiPath = /^\/api\/community\/wiki\/([^/]+)$/.exec(pathname);
+  if (req.method === 'GET' && wikiPath) {
+    const account = readAccountSession(req);
+    sendJson(res, 200, await community.wikiPublicState(wikiPath[1], account?.email || ''), { 'cache-control': 'no-store' });
+    return;
+  }
+  if (req.method === 'PUT' && wikiPath) {
+    const account = readAccountSession(req);
+    if (!account) {
+      sendJson(res, 401, { error: '请先登录邮箱账号后再编辑 Wiki。' });
+      return;
+    }
+    const body = await readJsonBody(req, 2200 * 1024);
+    sendJson(res, 200, { ok: true, ...(await community.saveWikiModel(wikiPath[1], body.formId, body.model, account.email)) }, { 'cache-control': 'no-store' });
+    return;
+  }
   if (req.method === 'POST' && pathname === '/api/community/preflight') {
     try {
       const preflight = community.preflight(await readJsonBody(req, 1400 * 1024));
@@ -1044,6 +1171,17 @@ async function handleCommunityApi(req, res, pathname) {
     }
     return;
   }
+  if (req.method === 'POST' && pathname === '/api/community/wiki-feedback') {
+    if (!acceptWikiFeedbackFrom(clientAddress(req))) return sendJson(res, 429, { error: '反馈发送过于频繁，请稍后再试。' });
+    const body = await readJsonBody(req, 12 * 1024);
+    const account = readAccountSession(req);
+    try {
+      sendJson(res, 201, await community.submitWikiFeedback(body, { accountEmail: account?.email || '' }));
+    } catch (error) {
+      sendJson(res, Number(error.statusCode || 400), { error: error.message || String(error) });
+    }
+    return;
+  }
   const match = /^\/api\/community\/download\/([^/]+)$/.exec(pathname);
   if ((req.method === 'GET' || req.method === 'HEAD') && match) {
     const comboId = decodeURIComponent(match[1]);
@@ -1156,7 +1294,7 @@ const server = createServer(async (req, res) => {
       await serveFile(req, res, PUBLIC_ROOT, 'index.html', {
         cacheControl: 'no-cache',
         headers: {
-          link: `<${PUBLIC_URL}/>; rel="canonical"`,
+          'link': `<${PUBLIC_URL}/>; rel="canonical"`,
           'x-robots-tag': 'index, follow, max-image-preview:large'
         }
       });
@@ -1187,7 +1325,8 @@ const server = createServer(async (req, res) => {
     console.error(error);
     if (!res.headersSent) {
       const apiRequest = pathname?.startsWith('/api/');
-      sendJson(res, apiRequest ? 400 : 500, { error: apiRequest ? (error.message || String(error)) : '服务器内部错误。' });
+      const statusCode = Number(error.statusCode);
+      sendJson(res, apiRequest && Number.isInteger(statusCode) && statusCode >= 400 && statusCode <= 599 ? statusCode : apiRequest ? 400 : 500, { error: apiRequest ? (error.message || String(error)) : '服务器内部错误。' });
     }
     else res.destroy();
   }
@@ -1211,4 +1350,13 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
     await traffic.flush().catch(() => {});
     process.exit(0);
   }));
+}
+
+function acceptWikiFeedbackFrom(address) {
+  const now = Date.now();
+  const attempts = (wikiFeedbackAttempts.get(address) || []).filter((time) => now - time < 10 * 60 * 1000);
+  if (attempts.length >= 10) return false;
+  attempts.push(now);
+  wikiFeedbackAttempts.set(address, attempts);
+  return true;
 }

@@ -10,6 +10,19 @@ const MAX_DURATION_MS = 10 * 60 * 1000;
 const MAX_COMMISSION_RESPONSES = 50;
 const MAX_COMMENTS_PER_COMBO = 200;
 const MAX_COMMENT_BODY = 1000;
+const MAX_WIKI_FEEDBACK_TITLE = 120;
+const MAX_WIKI_FEEDBACK_BODY = 4000;
+const MAX_WIKI_FEEDBACK_ITEMS = 1000;
+const MAX_WIKI_NODES = 1000;
+const MAX_WIKI_EDGES = 3000;
+const MAX_WIKI_MODEL_BYTES = 2 * 1024 * 1024;
+const MAX_WIKI_RESONANCE_CHANGES_PER_NODE = 80;
+const MAX_WIKI_INPUT_ROUTES_PER_NODE = 8;
+const MAX_WIKI_INPUT_ROUTE_SOURCES = 30;
+const MAX_WIKI_EDIT_LOG_ITEMS = 2000;
+const MAX_WIKI_ANNOUNCEMENT_TITLE = 120;
+const MAX_WIKI_ANNOUNCEMENT_BODY = 8000;
+const MAX_WIKI_ACCESS_REQUESTS = 2000;
 const COMMISSION_AUTO_ADOPT_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 const COMMISSION_TAGS = ['轮椅', '基础', '标准', '进阶', '冒烟', '错轮'];
 const ACCOUNT_ROLE_NAMES = new Set(['wiki-admin']);
@@ -294,6 +307,154 @@ function normalizeComment(value, fallbackId = '') {
   };
 }
 
+function wikiText(value, maxLength = 1000) {
+  return String(value || '').trim().slice(0, maxLength);
+}
+
+function wikiTextList(value, maxItems = 30, maxLength = 1000) {
+  const values = [];
+  const visit = (item) => {
+    if (Array.isArray(item)) return item.forEach(visit);
+    const text = wikiText(item, maxLength);
+    if (text && !values.includes(text)) values.push(text);
+  };
+  visit(value);
+  return values.slice(0, maxItems);
+}
+
+function normalizeWikiResonanceChanges(value) {
+  const seen = new Set();
+  return (Array.isArray(value) ? value : []).slice(0, MAX_WIKI_RESONANCE_CHANGES_PER_NODE).flatMap((rawChange) => {
+    const change = record(rawChange);
+    const level = Number(change.level);
+    const text = wikiText(change.text, 500);
+    if (!text || !Number.isInteger(level) || level < 1 || level > 6) return [];
+    const key = `${level}\u001f${text.toLocaleLowerCase()}`;
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [{
+      level,
+      text,
+      kind: ['replacement', 'mechanism', 'modifier'].includes(change.kind) ? change.kind : 'modifier',
+      sourceChain: wikiText(change.sourceChain, 160)
+    }];
+  });
+}
+
+function normalizeWikiInputRoutes(value, nodeIds) {
+  const seen = new Set();
+  return (Array.isArray(value) ? value : []).slice(0, MAX_WIKI_INPUT_ROUTES_PER_NODE).flatMap((rawRoute) => {
+    const route = record(rawRoute);
+    const input = wikiText(route.input, 180);
+    const key = input.toLocaleLowerCase();
+    if (!input || seen.has(key)) return [];
+    seen.add(key);
+    const fromIds = [...new Set((Array.isArray(route.fromIds) ? route.fromIds : []).map((id) => wikiText(id, 160)).filter((id) => nodeIds.has(id)))].slice(0, MAX_WIKI_INPUT_ROUTE_SOURCES);
+    const condition = wikiText(route.condition, 4000);
+    return [condition ? { input, condition, fromIds } : { input, fromIds }];
+  });
+}
+
+function isUnsafeWikiKey(value) {
+  return ['__proto__', 'constructor', 'prototype'].includes(String(value || '').toLowerCase());
+}
+
+function normalizeWikiModel(value) {
+  const source = record(value);
+  if (!Array.isArray(source.nodes) || source.nodes.length < 1 || source.nodes.length > MAX_WIKI_NODES) throw new Error('Wiki 节点数量不正确。');
+  if (!Array.isArray(source.edges) || source.edges.length > MAX_WIKI_EDGES) throw new Error('Wiki 关系数量不正确。');
+  const nodes = source.nodes.map((rawNode) => {
+    const node = record(rawNode);
+    const id = wikiText(node.id, 160);
+    const title = wikiText(node.title, 200);
+    if (!id || isUnsafeWikiKey(id) || !title || !/^[\w:.-]+$/u.test(id)) throw new Error('Wiki 节点格式不正确。');
+    const inputRoutes = normalizeWikiInputRoutes(node.inputRoutes, new Set(source.nodes.map((entry) => wikiText(record(entry).id, 160))));
+    const category = ['normal', 'heavy', 'skill', 'liberation', 'other', 'buff'].includes(node.category) ? node.category : 'other';
+    return {
+      id,
+      title,
+      category,
+      tone: wikiText(node.tone, 40),
+      input: category === 'buff' ? [] : wikiTextList(node.input),
+      inputCondition: category === 'buff' ? '' : wikiText(node.inputCondition, 12000),
+      inputRoutes: category === 'buff' ? [] : inputRoutes,
+      airborneTag: ['only', 'available', 'ascend'].includes(node.airborneTag) ? node.airborneTag : '',
+      airborneTagManual: node.airborneTagManual === true,
+      prerequisites: wikiTextList(node.prerequisites),
+      effects: wikiTextList(node.effects),
+      notes: wikiTextList(node.notes),
+      summary: wikiText(node.summary, 2000),
+      raw: wikiText(node.raw, 12000),
+      sourceContext: wikiText(node.sourceContext, 12000),
+      rawIndexes: (Array.isArray(node.rawIndexes) ? node.rawIndexes : []).map((item) => Number(item)).filter(Number.isInteger).slice(0, 50),
+      iconAction: wikiText(node.iconAction, 80),
+      categoryManual: node.categoryManual === true,
+      categoryResolved: node.categoryResolved === true,
+      inputResolved: node.inputResolved === true,
+      modeId: wikiText(node.modeId, 40),
+      formId: wikiText(node.formId, 40),
+      formManual: node.formManual === true,
+      sourceTitle: wikiText(node.sourceTitle, 200),
+      sourceType: wikiText(node.sourceType, 80),
+      sourceSkillIndex: Number.isInteger(Number(node.sourceSkillIndex)) ? Number(node.sourceSkillIndex) : undefined,
+      sourceChainIndex: Number.isInteger(Number(node.sourceChainIndex)) ? Number(node.sourceChainIndex) : undefined,
+      resonance: node.resonance === true,
+      resonanceLevel: Number.isInteger(Number(node.resonanceLevel)) ? Math.max(0, Math.min(6, Number(node.resonanceLevel))) : 0,
+      resonanceChanges: normalizeWikiResonanceChanges(node.resonanceChanges),
+      auxiliary: node.auxiliary === true
+    };
+  });
+  const ids = new Set();
+  for (const node of nodes) {
+    if (ids.has(node.id)) throw new Error('Wiki 节点 ID 重复。');
+    ids.add(node.id);
+  }
+  const edges = source.edges.map((rawEdge) => {
+    const edge = record(rawEdge);
+    const from = wikiText(edge.from, 160);
+    const to = wikiText(edge.to, 160);
+    if (!ids.has(from) || !ids.has(to) || from === to) throw new Error('Wiki 关系格式不正确。');
+    return { from, to, kind: wikiText(edge.kind, 40) || 'derivation' };
+  }).filter((edge, index, list) => list.findIndex((item) => item.from === edge.from && item.to === edge.to) === index);
+  const positions = {};
+  if (source.positions && typeof source.positions === 'object' && !Array.isArray(source.positions)) {
+    for (const [id, rawPosition] of Object.entries(source.positions)) {
+      if (!ids.has(id) || !rawPosition || typeof rawPosition !== 'object') continue;
+      const x = Number(rawPosition.x), y = Number(rawPosition.y);
+      if (Number.isFinite(x) && Number.isFinite(y) && Math.abs(x) < 100000 && Math.abs(y) < 100000) positions[id] = { x, y };
+    }
+  }
+  const seriesGroups = [];
+  if (Array.isArray(source.seriesGroups)) {
+    for (const rawGroup of source.seriesGroups.slice(0, 300)) {
+      const group = record(rawGroup);
+      const nodeIds = [...new Set((Array.isArray(group.nodeIds) ? group.nodeIds : []).map((id) => wikiText(id, 160)).filter((id) => ids.has(id)))].slice(0, 100);
+      if (nodeIds.length < 1) continue;
+      const first = nodes.find((node) => node.id === nodeIds[0]);
+      if (!first) continue;
+      if (group.disabled !== true && (nodeIds.length < 2 || first.category === 'buff' || nodeIds.some((id) => {
+        const node = nodes.find((entry) => entry.id === id);
+        return !node || node.category === 'buff' || node.category !== first.category || (node.modeId || '') !== (first.modeId || '') || (node.formId || '') !== (first.formId || '') || Number(node.resonanceLevel || 0) !== Number(first.resonanceLevel || 0);
+      }))) continue;
+      const groupId = wikiText(group.id, 160) || `series-${seriesGroups.length + 1}`;
+      if (isUnsafeWikiKey(groupId) || !/^[\w:.-]+$/u.test(groupId)) continue;
+      seriesGroups.push({ id: groupId, name: wikiText(group.name, 200) || first.title, nodeIds, ...(group.disabled === true ? { disabled: true } : {}) });
+    }
+  }
+  // Keep the shared-form migration version intact. Capping this at the old
+  // value (20) made every save look stale to the client and repeatedly
+  // reintroduced the pre-shared-form graph.
+  const model = {
+    version: Math.max(2, Math.min(50, Number(source.version) || 2)),
+    character: wikiText(source.character, 80),
+    formId: wikiText(source.formId, 40),
+    sharedCanvas: source.sharedCanvas === true,
+    nodes, edges, positions, seriesGroups
+  };
+  if (Buffer.byteLength(JSON.stringify(model), 'utf8') > MAX_WIKI_MODEL_BYTES) throw new Error('Wiki 数据过大。');
+  return model;
+}
+
 export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const root = path.join(runtimeRoot, 'community');
   const pendingRoot = path.join(root, 'pending');
@@ -310,6 +471,13 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const reviewSettingsFile = path.join(root, 'review-settings.json');
   const hiddenFile = path.join(root, 'hidden.json');
   const commissionsFile = path.join(root, 'commissions.json');
+  const wikiFeedbackFile = path.join(root, 'wiki-feedback.json');
+  const wikiModelsFile = path.join(root, 'wiki-models.json');
+  const wikiEditLogFile = path.join(root, 'wiki-edit-log.json');
+  const wikiLocksFile = path.join(root, 'wiki-locks.json');
+  const wikiPermissionsFile = path.join(root, 'wiki-permissions.json');
+  const wikiAccessRequestsFile = path.join(root, 'wiki-access-requests.json');
+  const wikiAnnouncementFile = path.join(root, 'wiki-announcement.json');
   const commissionResponsesRoot = path.join(root, 'commission-responses');
   const commentsRoot = path.join(root, 'comments');
   const commentCountsFile = path.join(root, 'comment-counts.json');
@@ -448,6 +616,278 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     });
     await transport.sendMail({ from: settings.from || settings.user, to: recipient, subject, text });
     return '';
+  }
+
+  async function submitWikiFeedback(body, metadata = {}) {
+    const source = record(body);
+    const title = String(source.title || '').trim().slice(0, MAX_WIKI_FEEDBACK_TITLE);
+    const message = String(source.message || '').trim().slice(0, MAX_WIKI_FEEDBACK_BODY);
+    const username = String(source.username || '').trim().slice(0, 40);
+    const email = normalizeEmail(source.email);
+    if (title.length < 2) throw new Error('问题标题至少需要 2 个字符。');
+    if (message.length < 5) throw new Error('问题描述至少需要 5 个字符。');
+    if (!username) throw new Error('请填写用户名。');
+    if (!email) throw new Error('请填写有效邮箱。');
+    const page = String(source.page || '').trim().slice(0, 160);
+    const character = String(source.character || '').trim().slice(0, 80);
+    const accountEmail = normalizeEmail(metadata.accountEmail);
+    const item = {
+      id: `wiki-feedback-${randomUUID()}`,
+      title,
+      message,
+      page,
+      character,
+      username,
+      email,
+      accountEmail,
+      accountVerified: Boolean(accountEmail),
+      status: 'open',
+      createdAt: Date.now(),
+      notificationStatus: 'pending'
+    };
+    const stored = record(await readJson(wikiFeedbackFile, { version: 1, items: [] }));
+    const items = Array.isArray(stored.items) ? stored.items.slice(-MAX_WIKI_FEEDBACK_ITEMS + 1) : [];
+    items.push(item);
+    await writeJson(wikiFeedbackFile, { version: 1, items });
+
+    let notificationError = '';
+    try {
+      const settings = await smtpSettings();
+      if (!normalizeEmail(settings.to)) notificationError = '维护邮箱尚未配置。';
+      else notificationError = await sendCommunityMail(
+        settings.to,
+        `[椰之城] Wiki 问题反馈：${title}`,
+        `Wiki 问题反馈\n\n标题：${title}\n页面：${page || 'Wiki'}\n角色：${character || '未指定'}\n提交者：${username}\n邮箱：${email}\n${accountEmail ? '账号已验证：是\n' : ''}\n${message}\n\n反馈编号：${item.id}`
+      );
+    } catch (error) {
+      notificationError = error.message || String(error);
+    }
+    item.notificationStatus = notificationError ? 'failed' : 'sent';
+    if (notificationError) item.notificationError = notificationError;
+    else item.notifiedAt = Date.now();
+    items[items.length - 1] = item;
+    await writeJson(wikiFeedbackFile, { version: 1, items });
+    return { ok: true, id: item.id, status: item.status, notification: notificationError ? 'queued' : 'sent' };
+  }
+
+  async function adminWikiFeedback() {
+    const stored = record(await readJson(wikiFeedbackFile, { version: 1, items: [] }));
+    return (Array.isArray(stored.items) ? stored.items : []).slice(-MAX_WIKI_FEEDBACK_ITEMS).reverse();
+  }
+
+  async function wikiPublicState(character, viewerEmail = '') {
+    const name = canonicalCharacterName(character);
+    if (!name || name.length > 80 || isUnsafeWikiKey(name)) throw new Error('角色名无效。');
+    const [stored, locks, permissions, requests, editLog] = await Promise.all([
+      readJson(wikiModelsFile, { version: 1, characters: {} }),
+      readJson(wikiLocksFile, { version: 1, characters: {} }),
+      readJson(wikiPermissionsFile, { version: 1, characters: {} }),
+      readJson(wikiAccessRequestsFile, { version: 1, items: [] }),
+      readJson(wikiEditLogFile, { version: 1, items: [] })
+    ]);
+    const item = record(record(stored).characters?.[name]);
+    const lock = record(record(locks).characters?.[name]);
+    const email = normalizeEmail(viewerEmail);
+    const permission = record(record(permissions).characters?.[name]);
+    const granted = Boolean(email && Array.isArray(permission.emails) && permission.emails.map(normalizeEmail).includes(email));
+    const pending = Boolean(email && Array.isArray(requests.items) && requests.items.some((item) => item?.character === name && normalizeEmail(item.email) === email && item.status === 'pending'));
+    const characterEdits = (Array.isArray(editLog.items) ? editLog.items : [])
+      .filter((entry) => canonicalCharacterName(entry?.character) === name)
+      .sort((left, right) => Number(right?.savedAt || 0) - Number(left?.savedAt || 0));
+    const allParticipants = [...new Set(characterEdits.map((entry) => publicEmail(entry?.editorEmail) || '维护端'))];
+    const participants = allParticipants.slice(0, 200);
+    return {
+      character: name,
+      models: record(item.forms),
+      updatedAt: Number(item.updatedAt || 0) || 0,
+      updatedBy: publicEmail(item.updatedBy),
+      editActivity: { totalEdits: characterEdits.length, participantCount: allParticipants.length, recentEditors: allParticipants.slice(0, 2), participants },
+      lock: lock.locked === true ? { locked: true, lockedAt: Number(lock.lockedAt || 0) || 0 } : { locked: false },
+      editable: Boolean(email && (lock.locked !== true || granted)),
+      access: { granted, pending }
+    };
+  }
+
+  async function wikiPublicLocks() {
+    return (await wikiLocks()).map(({ character, locked, lockedAt }) => ({ character, locked, lockedAt }));
+  }
+
+  async function requestWikiAccess(character, email, message = '') {
+    const name = canonicalCharacterName(character);
+    const accountEmail = normalizeEmail(email);
+    if (!name || name.length > 80 || isUnsafeWikiKey(name) || !accountEmail) throw new Error('编辑权限申请参数不正确。');
+    const publicState = await wikiPublicState(name, accountEmail);
+    if (!publicState.lock.locked || publicState.access.granted) return { granted: true, pending: false };
+    const stored = record(await readJson(wikiAccessRequestsFile, { version: 1, items: [] }));
+    const items = Array.isArray(stored.items) ? stored.items : [];
+    const existing = items.find((item) => item?.character === name && normalizeEmail(item.email) === accountEmail && item.status === 'pending');
+    if (existing) return { granted: false, pending: true, id: existing.id };
+    const item = { id: `wiki-access-${randomUUID()}`, character: name, email: accountEmail, message: wikiText(message, 2000), status: 'pending', createdAt: Date.now() };
+    items.push(item);
+    await writeJson(wikiAccessRequestsFile, { version: 1, items: items.slice(-MAX_WIKI_ACCESS_REQUESTS) });
+    return { granted: false, pending: true, id: item.id };
+  }
+
+  async function wikiAccessRequests() {
+    const stored = record(await readJson(wikiAccessRequestsFile, { version: 1, items: [] }));
+    return (Array.isArray(stored.items) ? stored.items : []).slice(-MAX_WIKI_ACCESS_REQUESTS).reverse().map((item) => ({
+      ...item,
+      email: normalizeEmail(item.email) || '邮箱未知'
+    }));
+  }
+
+  async function wikiPermissions() {
+    const stored = record(await readJson(wikiPermissionsFile, { version: 1, characters: {} }));
+    return Object.entries(record(stored.characters)).flatMap(([character, value]) => [{
+      character,
+      emails: [...new Set((Array.isArray(value?.emails) ? value.emails : []).map(normalizeEmail).filter(Boolean))].sort(),
+      updatedAt: Number(value?.updatedAt || 0) || 0
+    }]).sort((left, right) => left.character.localeCompare(right.character, 'zh-CN'));
+  }
+
+  async function setWikiCharacterPermission(character, email, granted) {
+    const name = canonicalCharacterName(character);
+    const accountEmail = normalizeEmail(email);
+    if (!name || name.length > 80 || isUnsafeWikiKey(name) || !accountEmail) throw new Error('角色编辑权限参数不正确。');
+    const stored = record(await readJson(wikiPermissionsFile, { version: 1, characters: {} }));
+    stored.version = 1;
+    stored.characters = record(stored.characters);
+    const item = record(stored.characters[name]);
+    const emails = new Set((Array.isArray(item.emails) ? item.emails : []).map(normalizeEmail).filter(Boolean));
+    if (granted === true) emails.add(accountEmail); else emails.delete(accountEmail);
+    if (emails.size) stored.characters[name] = { emails: [...emails].sort(), updatedAt: Date.now() };
+    else delete stored.characters[name];
+    await writeJson(wikiPermissionsFile, stored);
+    const requestState = record(await readJson(wikiAccessRequestsFile, { version: 1, items: [] }));
+    const requests = Array.isArray(requestState.items) ? requestState.items : [];
+    for (const request of requests) {
+      if (request.character !== name || normalizeEmail(request.email) !== accountEmail) continue;
+      request.status = granted === true ? 'approved' : 'revoked';
+      request.resolvedAt = Date.now();
+    }
+    await writeJson(wikiAccessRequestsFile, { version: 1, items: requests.slice(-MAX_WIKI_ACCESS_REQUESTS) });
+    return { character: name, email: accountEmail, granted: granted === true };
+  }
+
+  async function wikiAnnouncement() {
+    const stored = record(await readJson(wikiAnnouncementFile, { version: 1 }));
+    return { title: wikiText(stored.title, MAX_WIKI_ANNOUNCEMENT_TITLE) || '数据库更新', body: wikiText(stored.body, MAX_WIKI_ANNOUNCEMENT_BODY), updatedAt: Number(stored.updatedAt || 0) || 0 };
+  }
+
+  async function saveWikiAnnouncement(value) {
+    const source = record(value);
+    const title = wikiText(source.title, MAX_WIKI_ANNOUNCEMENT_TITLE);
+    const body = wikiText(source.body, MAX_WIKI_ANNOUNCEMENT_BODY);
+    if (!title || !body) throw new Error('公告标题和内容不能为空。');
+    const announcement = { version: 1, title, body, updatedAt: Date.now() };
+    await writeJson(wikiAnnouncementFile, announcement);
+    return announcement;
+  }
+
+  async function saveWikiModel(character, formId, model, editorEmail) {
+    const name = canonicalCharacterName(character);
+    const form = wikiText(formId, 40);
+    const email = normalizeEmail(editorEmail);
+    if (!name || name.length > 80 || isUnsafeWikiKey(name) || !/^[a-z0-9_-]+$/i.test(form) || isUnsafeWikiKey(form) || !email) throw new Error('Wiki 保存参数不正确。');
+    const cleanModel = normalizeWikiModel(model);
+    if (cleanModel.character && canonicalCharacterName(cleanModel.character) !== name) throw new Error('Wiki 角色与保存目标不一致。');
+    cleanModel.character = name;
+    const [locks, permissions] = await Promise.all([
+      readJson(wikiLocksFile, { version: 1, characters: {} }),
+      readJson(wikiPermissionsFile, { version: 1, characters: {} })
+    ]);
+    const lock = record(locks).characters?.[name];
+    const permission = record(record(permissions).characters?.[name]);
+    const granted = Array.isArray(permission.emails) && permission.emails.map(normalizeEmail).includes(email);
+    if (lock?.locked === true && !granted) {
+      const error = new Error('该角色 Wiki 已被维护端锁定，暂时不能修改。');
+      error.statusCode = 423;
+      throw error;
+    }
+    const stored = record(await readJson(wikiModelsFile, { version: 1, characters: {} }));
+    stored.version = 1;
+    stored.characters = record(stored.characters);
+    const previous = record(stored.characters[name]);
+    previous.forms = record(previous.forms);
+    previous.forms[form] = cleanModel;
+    previous.updatedAt = Date.now();
+    previous.updatedBy = email;
+    stored.characters[name] = previous;
+    await writeJson(wikiModelsFile, stored);
+
+    const logState = record(await readJson(wikiEditLogFile, { version: 1, items: [] }));
+    const items = Array.isArray(logState.items) ? logState.items.slice(-(MAX_WIKI_EDIT_LOG_ITEMS - 1)) : [];
+    items.push({
+      id: `wiki-edit-${randomUUID()}`,
+      character: name,
+      form,
+      editorEmail: email,
+      savedAt: Date.now(),
+      action: 'save',
+      nodeCount: cleanModel.nodes.length,
+      modelVersion: cleanModel.version
+    });
+    await writeJson(wikiEditLogFile, { version: 1, items });
+    const characterEdits = items
+      .filter((entry) => canonicalCharacterName(entry?.character) === name)
+      .sort((left, right) => Number(right?.savedAt || 0) - Number(left?.savedAt || 0));
+    const allParticipants = [...new Set(characterEdits.map((entry) => publicEmail(entry?.editorEmail) || '维护端'))];
+    return {
+      model: cleanModel,
+      savedAt: previous.updatedAt,
+      savedBy: publicEmail(email),
+      editActivity: {
+        totalEdits: characterEdits.length,
+        participantCount: allParticipants.length,
+        recentEditors: allParticipants.slice(0, 2),
+        participants: allParticipants.slice(0, 200)
+      }
+    };
+  }
+
+  async function wikiLocks() {
+    const stored = record(await readJson(wikiLocksFile, { version: 1, characters: {} }));
+    return Object.entries(record(stored.characters)).map(([character, value]) => ({
+      character,
+      locked: value?.locked === true,
+      lockedAt: Number(value?.lockedAt || 0) || 0,
+      lockedBy: publicEmail(value?.lockedBy) || '维护端'
+    })).sort((left, right) => left.character.localeCompare(right.character, 'zh-CN'));
+  }
+
+  async function setWikiLock(character, locked, lockedBy = 'maintenance-admin') {
+    const name = canonicalCharacterName(character);
+    if (!name || name.length > 80 || isUnsafeWikiKey(name)) throw new Error('角色名无效。');
+    const stored = record(await readJson(wikiLocksFile, { version: 1, characters: {} }));
+    stored.version = 1;
+    stored.characters = record(stored.characters);
+    if (locked === true) stored.characters[name] = { locked: true, lockedAt: Date.now(), lockedBy: normalizeEmail(lockedBy) || 'maintenance-admin' };
+    else delete stored.characters[name];
+    await writeJson(wikiLocksFile, stored);
+    return (await wikiLocks()).find((item) => item.character === name) || { character: name, locked: false };
+  }
+
+  async function wikiEditLog(character = '', limit = 200) {
+    const name = canonicalCharacterName(character);
+    const stored = record(await readJson(wikiEditLogFile, { version: 1, items: [] }));
+    return (Array.isArray(stored.items) ? stored.items : [])
+      .filter((item) => !name || item?.character === name)
+      .slice(-Math.max(1, Math.min(500, Number(limit) || 200)))
+      .reverse()
+      .map((item) => ({ ...item, editorEmail: normalizeEmail(item.editorEmail) || '邮箱未知' }));
+  }
+
+  async function resolveWikiFeedback(id) {
+    const target = String(id || '').trim();
+    if (!target || target.length > 160) throw new Error('反馈编号无效。');
+    const stored = record(await readJson(wikiFeedbackFile, { version: 1, items: [] }));
+    const items = Array.isArray(stored.items) ? stored.items : [];
+    const item = items.find((entry) => entry?.id === target);
+    if (!item) throw new Error('反馈不存在。');
+    item.status = 'resolved';
+    item.resolvedAt = Date.now();
+    await writeJson(wikiFeedbackFile, { version: 1, items });
+    return { item };
   }
 
   async function sendAccountLoginCode(email, code, expiresMinutes = 10) {
@@ -1152,11 +1592,37 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       version: 1,
       updatedAt: Math.max(0, ...state.commissions.map((item) => Number(item.updatedAt || item.createdAt || 0))),
       commissions: state.commissions.map((item) => ({
-        id: String(item.id || ''), title: String(item.title || '未命名委托'), description: String(item.description || ''), characters: characterNames(item.characters), tag: commissionTag(item.tag),
+        id: String(item.id || ''),
+        title: String(item.title || '未命名委托'),
+        description: String(item.description || ''),
+        characters: characterNames(item.characters),
+        tag: commissionTag(item.tag),
         owner: { username: String(item.owner?.username || '未命名用户'), email: normalizeEmail(item.owner?.email), avatar: String(item.owner?.avatar || '') },
-        status: item.status === 'completed' ? 'completed' : 'open', createdAt: Number(item.createdAt || 0), updatedAt: Number(item.updatedAt || item.createdAt || 0), completedAt: Number(item.completedAt || 0), acceptedResponseId: String(item.acceptedResponseId || ''), publishedComboId: String(item.publishedComboId || ''), interestCount: Object.keys(record(item.interests)).length + 1, responseCount: Array.isArray(item.responses) ? item.responses.length : 0,
+        status: item.status === 'completed' ? 'completed' : 'open',
+        createdAt: Number(item.createdAt || 0),
+        updatedAt: Number(item.updatedAt || item.createdAt || 0),
+        completedAt: Number(item.completedAt || 0),
+        acceptedResponseId: String(item.acceptedResponseId || ''),
+        publishedComboId: String(item.publishedComboId || ''),
+        interestCount: Object.keys(record(item.interests)).length + 1,
+        responseCount: Array.isArray(item.responses) ? item.responses.length : 0,
         responses: (Array.isArray(item.responses) ? item.responses : []).map((response) => ({
-          id: String(response.id || ''), title: String(response.preview?.title || response.fileName || '未命名连段'), fileName: String(response.fileName || ''), username: String(response.username || '未命名用户'), email: normalizeEmail(response.email), avatar: String(response.avatar || ''), characters: characterNames(response.preview?.characters), tags: Array.isArray(response.preview?.tags) ? response.preview.tags : [], rounds: Math.max(1, Number(response.preview?.rounds || 1)), durationMs: Math.max(0, Number(response.preview?.durationMs || 0)), stepCount: Math.max(0, Number(response.preview?.stepCount || 0)), submittedAt: Number(response.submittedAt || 0), status: response.status === 'accepted' ? 'accepted' : 'submitted', preflight: response.preflight || { lowRisk: false, issues: ['尚未完成预审核'] }, moderationSubmissionId: String(response.moderationSubmissionId || ''), moderationStatus: String(response.moderationStatus || '')
+          id: String(response.id || ''),
+          title: String(response.preview?.title || response.fileName || '未命名连段'),
+          fileName: String(response.fileName || ''),
+          username: String(response.username || '未命名用户'),
+          email: normalizeEmail(response.email),
+          avatar: String(response.avatar || ''),
+          characters: characterNames(response.preview?.characters),
+          tags: Array.isArray(response.preview?.tags) ? response.preview.tags : [],
+          rounds: Math.max(1, Number(response.preview?.rounds || 1)),
+          durationMs: Math.max(0, Number(response.preview?.durationMs || 0)),
+          stepCount: Math.max(0, Number(response.preview?.stepCount || 0)),
+          submittedAt: Number(response.submittedAt || 0),
+          status: response.status === 'accepted' ? 'accepted' : 'submitted',
+          preflight: response.preflight || { lowRisk: false, issues: ['尚未完成预审核'] },
+          moderationSubmissionId: String(response.moderationSubmissionId || ''),
+          moderationStatus: String(response.moderationStatus || '')
         }))
       })).sort((left, right) => Number(left.status === 'completed') - Number(right.status === 'completed') || right.updatedAt - left.updatedAt)
     };
@@ -1251,11 +1717,11 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   }
 
   async function status() {
-    const [queue, published, withdrawals, emails, wikiAdmins, smtp, moderation, downloads, hidden, commissions] = await Promise.all([
+    const [queue, published, withdrawals, emails, wikiAdmins, smtp, moderation, downloads, hidden, commissions, wikiFeedback, locks, editLog, permissions, accessRequests, announcement] = await Promise.all([
       readJson(queueFile, { pending: [], history: [] }),
       readJson(publishedFile, { charts: [] }),
       readJson(withdrawalsFile, { pending: [], history: [] }),
-      whitelist(), wikiAdminEmails(), smtpSettings(), reviewSettings(), readJson(downloadsFile, {}), hiddenIds(), commissionState()
+      whitelist(), wikiAdminEmails(), smtpSettings(), reviewSettings(), readJson(downloadsFile, {}), hiddenIds(), commissionState(), adminWikiFeedback(), wikiLocks(), wikiEditLog('', 200), wikiPermissions(), wikiAccessRequests(), wikiAnnouncement()
     ]);
     return {
       submissions: { pending: queue.pending || [], history: (queue.history || []).slice(-30).reverse() },
@@ -1277,6 +1743,18 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
         open: commissions.commissions.filter((item) => item.status !== 'completed').length,
         completed: commissions.commissions.filter((item) => item.status === 'completed').length,
         responses: commissions.commissions.reduce((count, item) => count + (Array.isArray(item.responses) ? item.responses.length : 0), 0)
+      },
+      wikiFeedback: {
+        total: wikiFeedback.length,
+        open: wikiFeedback.filter((item) => item.status !== 'resolved').length,
+        items: wikiFeedback
+      },
+      wiki: {
+        locks,
+        edits: editLog,
+        permissions,
+        accessRequests,
+        announcement
       }
     };
   }
@@ -1307,6 +1785,21 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     commentCounts,
     castVote,
     sendComboFeedback: (...args) => serializeMutation(() => sendComboFeedback(...args)),
+    submitWikiFeedback: (...args) => serializeMutation(() => submitWikiFeedback(...args)),
+    adminWikiFeedback,
+    resolveWikiFeedback: (...args) => serializeMutation(() => resolveWikiFeedback(...args)),
+    wikiPublicState,
+    wikiPublicLocks,
+    saveWikiModel: (...args) => serializeMutation(() => saveWikiModel(...args)),
+    wikiLocks,
+    setWikiLock: (...args) => serializeMutation(() => setWikiLock(...args)),
+    wikiEditLog,
+    requestWikiAccess: (...args) => serializeMutation(() => requestWikiAccess(...args)),
+    wikiAccessRequests,
+    wikiPermissions,
+    setWikiCharacterPermission: (...args) => serializeMutation(() => setWikiCharacterPermission(...args)),
+    wikiAnnouncement,
+    saveWikiAnnouncement: (...args) => serializeMutation(() => saveWikiAnnouncement(...args)),
     publicCommissions,
     adminCommissions,
     createCommission: (...args) => serializeMutation(() => createCommission(...args)),

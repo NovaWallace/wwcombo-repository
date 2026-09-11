@@ -365,19 +365,10 @@ const els = {
   themeToggle: document.getElementById('themeToggle'),
   submissionButton: document.getElementById('submissionButton'),
   submissionButtonLabel: document.getElementById('submissionButtonLabel'),
-  wikiEntryButton: document.getElementById('wikiEntryButton'),
   clientDownloadButton: document.getElementById('clientDownloadButton'),
   clientDownloadBackdrop: document.getElementById('clientDownloadBackdrop'),
   closeClientDownload: document.getElementById('closeClientDownloadBtn'),
   clientDownloadList: document.getElementById('clientDownloadList'),
-  sponsorButton: document.getElementById('sponsorButton'),
-  sponsorBackdrop: document.getElementById('sponsorBackdrop'),
-  closeSponsor: document.getElementById('closeSponsorBtn'),
-  sponsorListStatus: document.getElementById('sponsorListStatus'),
-  sponsorList: document.getElementById('sponsorList'),
-  sponsorExpand: document.getElementById('sponsorExpandBtn'),
-  sponsorCodesToggle: document.getElementById('sponsorCodesToggle'),
-  sponsorCodes: document.getElementById('sponsorCodes'),
   clientDownloadVersion: document.getElementById('clientDownloadVersion'),
   profileButton: document.getElementById('profileButton'),
   profileAvatar: document.getElementById('profileAvatar'),
@@ -421,6 +412,25 @@ const els = {
   uploadTitle: document.getElementById('uploadTitle'),
   uploadHint: document.getElementById('uploadHint'),
   confirmUploadLabel: document.getElementById('confirmUploadLabel'),
+  wikiFeedbackBackdrop: document.getElementById('wikiFeedbackBackdrop'),
+  wikiFeedbackForm: document.getElementById('wikiFeedbackForm'),
+  closeWikiFeedback: document.getElementById('closeWikiFeedbackBtn'),
+  cancelWikiFeedback: document.getElementById('cancelWikiFeedbackBtn'),
+  wikiFeedbackContext: document.getElementById('wikiFeedbackContext'),
+  wikiFeedbackTitle: document.getElementById('wikiFeedbackTitleInput'),
+  wikiFeedbackMessage: document.getElementById('wikiFeedbackMessageInput'),
+  wikiFeedbackUsername: document.getElementById('wikiFeedbackUsernameInput'),
+  wikiFeedbackEmail: document.getElementById('wikiFeedbackEmailInput'), wikiFeedbackAccessRequestRow: document.getElementById('wikiFeedbackAccessRequestRow'), wikiFeedbackAccessRequest: document.getElementById('wikiFeedbackAccessRequestInput'),
+  wikiFeedbackStatus: document.getElementById('wikiFeedbackMessage'),
+  submitWikiFeedback: document.getElementById('submitWikiFeedbackBtn'),
+  sponsorButton: document.getElementById('wikiSponsorButton'),
+  sponsorBackdrop: document.getElementById('sponsorBackdrop'),
+  closeSponsor: document.getElementById('closeSponsorBtn'),
+  sponsorListStatus: document.getElementById('sponsorListStatus'),
+  sponsorList: document.getElementById('sponsorList'),
+  sponsorExpand: document.getElementById('sponsorExpandBtn'),
+  sponsorCodesToggle: document.getElementById('sponsorCodesToggle'),
+  sponsorCodes: document.getElementById('sponsorCodes'),
   form: document.getElementById('searchForm'),
   title: document.getElementById('titleInput'),
   clearTitle: document.getElementById('clearSearchBtn'),
@@ -764,7 +774,7 @@ function renderProfileAvatarNode(target, name, fallbackText = profileInitial()) 
 }
 
 function accountSessionHeaders() {
-  return state.accountToken ? { authorization: `Bearer ${state.accountToken}`, 'x-wwcombo-account-client': '1' } : { 'x-wwcombo-account-client': '1' };
+  return {};
 }
 
 function postAccountSessionToParent() {
@@ -784,6 +794,13 @@ function postAccountSessionToParent() {
 
 function renderAccountSession() {
   if (!els.accountSession || !els.accountStatus || !els.accountStatusDetail) return;
+  window.wwcomboCommunityAccountSession = {
+    authenticated: Boolean(state.accountSession.authenticated && state.accountSession.email),
+    email: String(state.accountSession.email || ''),
+    roles: Array.isArray(state.accountSession.roles) ? [...state.accountSession.roles] : [],
+    expiresAt: Number(state.accountSession.expiresAt || 0) || 0
+  };
+  window.dispatchEvent(new CustomEvent('wwcombo-account-session', { detail: window.wwcomboCommunityAccountSession }));
   const authenticated = Boolean(state.accountSession.authenticated && state.accountSession.email);
   els.accountSession.classList.toggle('authenticated', authenticated);
   els.accountSession.classList.toggle('error', state.accountLoadState === 'error');
@@ -941,7 +958,6 @@ function openProfile() {
   els.profileUsernameInput.value = state.profile.username;
   els.profileEmailInput.value = state.profile.email;
   renderProfileAvatarGrid();
-  renderAccountSession();
   els.profileFeedback.textContent = '';
   els.profileFeedback.className = 'form-feedback';
   els.profileBackdrop.hidden = false;
@@ -1004,6 +1020,40 @@ function closeUpload() {
   els.uploadBackdrop.hidden = true;
   els.commissionDetailBackdrop.inert = false;
   els.commissionDetailBackdrop.removeAttribute('aria-hidden');
+  syncModalBody();
+}
+
+let wikiFeedbackCharacter = '';
+
+function wikiFeedbackContext() {
+  const value = wikiFeedbackCharacter || new URLSearchParams(location.search).get('wiki')?.trim();
+  return value && value !== 'home' ? `Wiki / ${value}` : 'Wiki 首页';
+}
+
+function openWikiFeedback(options = {}) {
+  if (!els.wikiFeedbackBackdrop) return;
+  wikiFeedbackCharacter = String(options.character || '').trim();
+  renderProfile();
+  els.wikiFeedbackContext.textContent = wikiFeedbackContext();
+  els.wikiFeedbackTitle.value = '';
+  els.wikiFeedbackMessage.value = '';
+  els.wikiFeedbackUsername.value = state.profile.username || '';
+  els.wikiFeedbackEmail.value = state.profile.email || '';
+  const canRequestAccess = Boolean(options.requestAccess && wikiFeedbackCharacter && state.accountSession.authenticated);
+  if (els.wikiFeedbackAccessRequestRow) els.wikiFeedbackAccessRequestRow.hidden = !canRequestAccess;
+  if (els.wikiFeedbackAccessRequest) els.wikiFeedbackAccessRequest.checked = canRequestAccess;
+  els.wikiFeedbackStatus.textContent = '';
+  els.wikiFeedbackStatus.className = 'form-feedback';
+  els.submitWikiFeedback.disabled = false;
+  els.wikiFeedbackBackdrop.hidden = false;
+  syncModalBody();
+  requestAnimationFrame(() => els.wikiFeedbackTitle.focus());
+}
+
+function closeWikiFeedback() {
+  if (!els.wikiFeedbackBackdrop) return;
+  els.wikiFeedbackBackdrop.hidden = true;
+  wikiFeedbackCharacter = '';
   syncModalBody();
 }
 
@@ -1098,6 +1148,58 @@ async function loadSponsorList() {
     }
   }
   renderSponsorList();
+}
+
+async function submitWikiFeedback(event) {
+  event.preventDefault();
+  const title = els.wikiFeedbackTitle.value.trim();
+  const message = els.wikiFeedbackMessage.value.trim();
+  const username = els.wikiFeedbackUsername.value.trim();
+  const email = els.wikiFeedbackEmail.value.trim().toLowerCase();
+  if (title.length < 2 || message.length < 5 || !username || !/^[^\s@]+@[^\s@]+$/.test(email)) {
+    els.wikiFeedbackStatus.textContent = t('feedback.wikiInvalid');
+    return;
+  }
+  els.submitWikiFeedback.disabled = true;
+  els.wikiFeedbackStatus.textContent = t('feedback.wikiSending');
+  els.wikiFeedbackStatus.className = 'form-feedback';
+  try {
+    const response = await fetch('/api/community/wiki-feedback', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'content-type': 'application/json', ...accountSessionHeaders() },
+      body: JSON.stringify({
+        title, message, username, email, page: wikiFeedbackContext(),
+        character: wikiFeedbackCharacter || new URLSearchParams(location.search).get('wiki')?.trim() || '',
+        accountEmail: state.accountSession.authenticated ? state.accountSession.email : ''
+      })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+    state.profile = { ...state.profile, username, email };
+    try { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.profile)); } catch {}
+    renderProfile();
+    let accessMessage = '';
+    if (els.wikiFeedbackAccessRequest?.checked && wikiFeedbackCharacter) {
+      try {
+        const accessResponse = await fetch(`/api/community/wiki/${encodeURIComponent(wikiFeedbackCharacter)}/access-request`, {
+          method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', ...accountSessionHeaders() },
+          body: JSON.stringify({ message: `${title}\n${message}` })
+        });
+        const accessBody = await accessResponse.json().catch(() => ({}));
+        if (!accessResponse.ok) throw new Error(accessBody.error || `HTTP ${accessResponse.status}`);
+        accessMessage = accessBody.granted ? t('feedback.wikiAccessGranted') : t('feedback.wikiAccessPending');
+      } catch (error) {
+        accessMessage = t('feedback.wikiAccessFailed', { error: error.message });
+      }
+    }
+    els.wikiFeedbackStatus.textContent = `${t('feedback.wikiSuccess')}${accessMessage ? ` ${accessMessage}` : ''}`;
+    els.wikiFeedbackStatus.className = 'form-feedback success';
+    setTimeout(closeWikiFeedback, 900);
+  } catch (error) {
+    els.wikiFeedbackStatus.textContent = t('feedback.wikiFailed', { error: error.message });
+    els.wikiFeedbackStatus.className = 'form-feedback';
+    els.submitWikiFeedback.disabled = false;
+  }
 }
 
 function uploadedIndexChart(pack, fileName = '') {
@@ -1953,14 +2055,15 @@ function renderFilters() {
 }
 
 function updateSubmissionButton() {
-  const commissionView = state.view === 'commissions';
+  const wikiView = document.body.classList.contains('wiki-route');
   if (els.sponsorButton) els.sponsorButton.hidden = false;
-  const label = t(commissionView ? 'commission.create' : 'submission.button');
+  const commissionView = state.view === 'commissions';
+  const label = t(wikiView ? 'feedback.wikiButton' : commissionView ? 'commission.create' : 'submission.button');
   els.submissionButtonLabel.textContent = label;
   els.submissionButton.title = label;
   els.submissionButton.setAttribute('aria-label', label);
   const icon = els.submissionButton.querySelector('[data-lucide]');
-  if (icon) icon.setAttribute('data-lucide', commissionView ? 'plus' : 'upload');
+  if (icon) icon.setAttribute('data-lucide', wikiView ? 'message-square-warning' : commissionView ? 'plus' : 'upload');
   window.lucide?.createIcons();
 }
 
@@ -3915,6 +4018,7 @@ document.addEventListener('keydown', (event) => {
   else if (!els.commentsBackdrop.hidden) closeComments();
   else if (!els.uploadBackdrop.hidden) closeUpload();
   else if (!els.sponsorBackdrop.hidden) closeSponsor();
+  else if (!els.wikiFeedbackBackdrop.hidden) closeWikiFeedback();
   else if (!els.profileBackdrop.hidden) closeProfile();
   else if (!els.detailBackdrop.hidden) closeDetails();
   else if (!els.commissionDetailBackdrop.hidden) closeCommissionDetail();
@@ -3992,22 +4096,11 @@ els.profileAvatarGrid?.addEventListener('click', (event) => {
   renderProfileAvatarGrid();
 });
 els.submissionButton?.addEventListener('click', () => {
-  if (state.view === 'commissions') openCommissionCreate();
+  if (document.body.classList.contains('wiki-route')) openWikiFeedback();
+  else if (state.view === 'commissions') openCommissionCreate();
   else openUpload();
 });
-els.sponsorButton?.addEventListener('click', openSponsor);
-els.wikiEntryButton?.addEventListener('click', () => { void showAppMessage(t('wiki.developing')); });
-els.closeSponsor?.addEventListener('click', closeSponsor);
-els.sponsorBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.sponsorBackdrop) closeSponsor(); });
-els.sponsorExpand?.addEventListener('click', () => { state.sponsorExpanded = true; renderSponsorList(); });
-els.sponsorCodesToggle?.addEventListener('click', () => {
-  state.sponsorCodesExpanded = !state.sponsorCodesExpanded;
-  renderSponsorCodesToggle();
-});
-window.addEventListener('wwcombo-languagechange', () => {
-  renderSponsorList();
-  renderSponsorCodesToggle();
-});
+window.addEventListener('wwcombo-wiki-route-change', updateSubmissionButton);
 els.closeUpload?.addEventListener('click', closeUpload);
 els.cancelUpload?.addEventListener('click', closeUpload);
 els.uploadBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.uploadBackdrop) closeUpload(); });
@@ -4025,6 +4118,17 @@ els.comboFile?.addEventListener('change', () => {
   void previewUploadFile();
 });
 els.uploadForm?.addEventListener('submit', submitCombo);
+els.closeWikiFeedback?.addEventListener('click', closeWikiFeedback);
+els.cancelWikiFeedback?.addEventListener('click', closeWikiFeedback);
+els.wikiFeedbackForm?.addEventListener('submit', submitWikiFeedback);
+els.wikiFeedbackBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.wikiFeedbackBackdrop) closeWikiFeedback(); });
+window.addEventListener('wwcombo-open-wiki-feedback', (event) => openWikiFeedback(event.detail || {}));
+els.sponsorButton?.addEventListener('click', openSponsor);
+els.closeSponsor?.addEventListener('click', closeSponsor);
+els.sponsorBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.sponsorBackdrop) closeSponsor(); });
+els.sponsorExpand?.addEventListener('click', () => { state.sponsorExpanded = true; renderSponsorList(); });
+els.sponsorCodesToggle?.addEventListener('click', () => { state.sponsorCodesExpanded = !state.sponsorCodesExpanded; renderSponsorCodesToggle(); });
+window.addEventListener('wwcombo-languagechange', () => { renderSponsorList(); renderSponsorCodesToggle(); });
 
 if (isEmbeddedClient) {
   i18n.setLanguage(params.get('lang'), false);
@@ -4035,8 +4139,6 @@ updateThemeControl();
 updateMotionControl();
 updateEmbeddedClientControls(false);
 renderProfile();
-renderAccountSession();
-void loadAccountSession();
 renderAxisKeymapButtons();
 syncAxisMergeSameMoveControls();
 els.languageSelect.value = i18n.language;
