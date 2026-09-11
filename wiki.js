@@ -9,8 +9,21 @@
   const EMBLEM_ROOT = './assets/wiki-character-emblems-bright/';
   const PORTRAIT_ASSET_VERSION = '20260905-halfbody1';
   const ELEMENT_ICON_ROOT = './assets/wiki-element-icons/';
+  const ACCOUNT_TOKEN_STORAGE_KEY = 'wwcombo-community-account-token-v1';
   const WIKI_ROOT = document.getElementById('communityWikiPage');
   if (!WIKI_ROOT) return;
+
+  function wikiAuthHeaders(headers = {}) {
+    let token = '';
+    try { token = String(localStorage.getItem(ACCOUNT_TOKEN_STORAGE_KEY) || '').trim(); } catch {}
+    return token
+      ? { ...headers, authorization: `Bearer ${token}`, 'x-wwcombo-account-client': '1' }
+      : { ...headers, 'x-wwcombo-account-client': '1' };
+  }
+
+  function finishWikiBoot() {
+    document.documentElement.classList.remove('wiki-booting');
+  }
 
   const FALLBACK_CHARACTERS = [
     { name: '赞妮', star: 5, element: '衍射', weaponType: '臂铠' },
@@ -7634,7 +7647,6 @@
 
   function renderShell(content, detail = false) {
     WIKI_ROOT.innerHTML = `<div class="community-wiki-inner${detail ? ' is-detail' : ''}">${content}</div>`;
-    let showcaseSwitchSequence = 0;
     WIKI_ROOT.querySelectorAll('[data-wiki-action]').forEach((element) => element.addEventListener('click', () => handleAction(element.dataset.wikiAction || '', element.dataset.name || '')));
     WIKI_ROOT.querySelectorAll('[data-wiki-search]').forEach((element) => element.addEventListener('input', () => { state.query = element.value; renderHome(); }));
     WIKI_ROOT.querySelectorAll('[data-wiki-element]').forEach((element) => element.addEventListener('click', () => { state.element = element.dataset.wikiElement || '全部'; renderHome(); }));
@@ -7694,9 +7706,6 @@
       const previewStage = showcaseStage;
       const entry = state.characters.find((item) => item.name === name);
       if (!portrait || !name) return;
-      const previousShowcaseName = showcaseCard?.dataset.name || '';
-      const shouldAnimateShowcase = Boolean(showcaseCard && entry && previousShowcaseName && previousShowcaseName !== entry.name);
-      const characterSwitchSequence = shouldAnimateShowcase ? ++showcaseSwitchSequence : showcaseSwitchSequence;
       const nextPortraitSource = portraitFor(name);
       state.hoveredCharacter = name;
       previewStage?.classList.add('is-character-previewing');
@@ -7706,28 +7715,10 @@
         portrait.removeAttribute('data-load-failed');
         portrait.src = nextPortraitSource;
         portrait.alt = name;
-        if (shouldAnimateShowcase) {
-          // Swap the source before starting the transition. Waiting for the
-          // preload promise here makes the old portrait animate first.
-          portrait.classList.remove('is-wiki-portrait-switching');
-          window.requestAnimationFrame(() => {
-            if (characterSwitchSequence === showcaseSwitchSequence && state.hoveredCharacter === name) portrait.classList.add('is-wiki-portrait-switching');
-          });
-          window.setTimeout(() => {
-            if (characterSwitchSequence === showcaseSwitchSequence && state.hoveredCharacter === name) portrait.classList.remove('is-wiki-portrait-switching');
-          }, 560);
-        }
       };
-      if (shouldAnimateShowcase) {
-        applyPortraitSource();
-        void preloadWikiImage(nextPortraitSource);
-      } else {
-        applyPortraitSource();
-      }
+      applyPortraitSource();
       if (fallback) fallback.textContent = name.slice(0, 1);
       if (showcaseCard && entry) {
-        const previousName = showcaseCard.dataset.name || '';
-        const shouldAnimateCharacterSwitch = Boolean(previousName && previousName !== entry.name);
         showcaseCard.className = `community-wiki-showcase-main-card ${Number(entry.star) >= 5 ? 'rarity-5' : 'rarity-4'}`;
         showcaseCard.dataset.name = entry.name;
         showcaseCard.dataset.wikiPreviewName = entry.name;
@@ -7746,13 +7737,6 @@
           metaNode.innerHTML = showcaseMetaMarkup(entry);
           metaNode.setAttribute('aria-label', showcaseMetaLabel(entry));
           metaNode.title = showcaseMetaLabel(entry);
-        }
-        if (shouldAnimateCharacterSwitch) {
-          showcaseCard.classList.add('is-character-switching');
-          window.setTimeout(() => {
-            if (characterSwitchSequence !== showcaseSwitchSequence || showcaseCard.dataset.name !== entry.name) return;
-            showcaseCard.classList.remove('is-character-switching');
-          }, 560);
         }
       }
       if (entry) {
@@ -8142,7 +8126,7 @@
 
   async function loadWikiState(name) {
     try {
-      const response = await fetch(`/api/community/wiki/${encodeURIComponent(name)}`, { cache: 'no-store', credentials: 'include' });
+      const response = await fetch(`/api/community/wiki/${encodeURIComponent(name)}`, { cache: 'no-store', credentials: 'include', headers: wikiAuthHeaders() });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       applyWikiState(name, await response.json());
     } catch (error) {
@@ -8160,7 +8144,7 @@
     state.wikiSaveStatus = 'saving';
     try {
       const response = await fetch(`/api/community/wiki/${encodeURIComponent(name)}`, {
-        method: 'PUT', credentials: 'include', headers: { 'content-type': 'application/json' },
+        method: 'PUT', credentials: 'include', headers: wikiAuthHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ formId, model })
       });
       const data = await response.json().catch(() => ({}));
@@ -11007,11 +10991,13 @@
       if (!state.characters.length) throw new Error('empty-character-list');
       state.error = ''; state.loading = false;
       renderHome();
+      finishWikiBoot();
       void hydrateCharacterSupportData(sequence).catch((error) => console.warn('[wiki] support data unavailable', error));
     } catch (error) {
       if (sequence !== characterLoadSequence) return;
       state.characters = FALLBACK_CHARACTERS; state.error = String(error?.message || error); state.loading = false;
       renderHome();
+      finishWikiBoot();
     }
   }
 
@@ -11024,7 +11010,7 @@
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       state.info.set(name, await response.json());
       try {
-        const wikiResponse = await fetch(`/api/community/wiki/${encodeURIComponent(name)}`, { cache: 'no-store', credentials: 'include' });
+        const wikiResponse = await fetch(`/api/community/wiki/${encodeURIComponent(name)}`, { cache: 'no-store', credentials: 'include', headers: wikiAuthHeaders() });
         if (wikiResponse.ok) applyWikiState(name, await wikiResponse.json());
       } catch (error) {
         state.wikiState.set(name, { lock: { locked: false }, error: String(error?.message || error) });

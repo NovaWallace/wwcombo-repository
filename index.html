@@ -42,18 +42,31 @@
     <script>
       try {
         document.documentElement.dataset.theme = localStorage.getItem('wwcombo-theme') === 'day' ? 'day' : 'night';
+        if (new URLSearchParams(location.search).has('wiki')) document.documentElement.classList.add('wiki-booting');
       } catch {
         document.documentElement.dataset.theme = 'night';
+        if (new URLSearchParams(location.search).has('wiki')) document.documentElement.classList.add('wiki-booting');
       }
     </script>
     <link rel="icon" type="image/png" href="assets/logo.png" />
     <link rel="apple-touch-icon" href="assets/logo.png" />
     <link rel="manifest" href="site.webmanifest" />
     <link rel="preconnect" href="https://unpkg.com" />
-    <link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />
-    <link rel="stylesheet" href="styles.css?v=20260911-wiki-runtime-fix-v1" />
+    <script>
+      if (!new URLSearchParams(location.search).has('wiki')) {
+        document.write('<link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />');
+      }
+    </script>
+    <link rel="stylesheet" href="styles.css?v=20260911-wiki-boot-auth-v2" />
   </head>
   <body>
+    <div class="wiki-boot-screen" role="status" aria-live="polite" aria-label="加载中">
+      <div class="wiki-boot-screen-inner">
+        <img class="wiki-boot-screen-gif wiki-boot-screen-gif-day" src="assets/wiki-loading-day.gif" alt="" />
+        <img class="wiki-boot-screen-gif wiki-boot-screen-gif-night" src="assets/wiki-loading-night.gif" alt="" />
+        <span>加载中</span>
+      </div>
+    </div>
     <header class="site-header">
       <div class="header-inner">
         <div class="brand-cluster">
@@ -633,11 +646,15 @@
     <input id="axisKeymapInput" class="sr-only" type="file" accept=".json,.wwkeys.json,application/json" />
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-    <script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"></script>
+    <script>
+      if (!new URLSearchParams(location.search).has('wiki')) {
+        document.write('<script src="assets/vendor/spine-player-4.1.23/spine-player.min.js"><\\/script>');
+      }
+    </script>
     <script src="assets/input-icons.js?v=20260801-1"></script>
     <script>window.WWComboInputIcons = WWComboInputIcons;</script>
     <script src="i18n.js?v=20260905-sponsor-note-v2"></script>
-    <script src="app.js?v=20260911-wiki-runtime-fix-v1"></script>
-    <script src="wiki.js?v=20260911-wiki-runtime-fix-v1"></script>
+    <script src="app.js?v=20260911-wiki-boot-auth-v2"></script>
+    <script src="wiki.js?v=20260911-wiki-boot-auth-v2"></script>
   </body>
 </html>

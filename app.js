@@ -551,6 +551,7 @@ const els = {
 
 const collator = new Intl.Collator('zh-CN-u-co-pinyin', { sensitivity: 'base', numeric: true });
 const params = new URLSearchParams(location.search);
+const isWikiRoute = params.has('wiki');
 const isFilePreview = location.protocol === 'file:';
 const isEmbeddedClient = params.get('client') === '1' && window.parent !== window;
 const requestedSource = params.get('source') || '';
@@ -4145,7 +4146,9 @@ renderAxisKeymapButtons();
 syncAxisMergeSameMoveControls();
 els.languageSelect.value = i18n.language;
 window.lucide?.createIcons();
-initHeroSpine();
-loadIndex();
-void loadCommissions();
-void loadAppRelease();
+if (!isWikiRoute) {
+  initHeroSpine();
+  loadIndex();
+  void loadCommissions();
+  void loadAppRelease();
+}
