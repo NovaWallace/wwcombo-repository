@@ -7707,14 +7707,20 @@
         portrait.src = nextPortraitSource;
         portrait.alt = name;
         if (shouldAnimateShowcase) {
+          // Swap the source before starting the transition. Waiting for the
+          // preload promise here makes the old portrait animate first.
+          portrait.classList.remove('is-wiki-portrait-switching');
+          window.requestAnimationFrame(() => {
+            if (characterSwitchSequence === showcaseSwitchSequence && state.hoveredCharacter === name) portrait.classList.add('is-wiki-portrait-switching');
+          });
           window.setTimeout(() => {
             if (characterSwitchSequence === showcaseSwitchSequence && state.hoveredCharacter === name) portrait.classList.remove('is-wiki-portrait-switching');
           }, 560);
         }
       };
       if (shouldAnimateShowcase) {
-        portrait.classList.add('is-wiki-portrait-switching');
-        void preloadWikiImage(nextPortraitSource).then(applyPortraitSource);
+        applyPortraitSource();
+        void preloadWikiImage(nextPortraitSource);
       } else {
         applyPortraitSource();
       }
@@ -8102,7 +8108,7 @@
     // The community preview may use the fallback Vite port when the main
     // development server is already occupied. Both local ports are previews,
     // so they should expose the same editor surface for verification.
-    return ['localhost', '127.0.0.1'].includes(String(location.hostname || '').toLowerCase()) && [4174, 4175].includes(Number(location.port || 80));
+    return ['localhost', '127.0.0.1'].includes(String(location.hostname || '').toLowerCase()) && [4174, 4175, 4176, 4177, 4178, 4179].includes(Number(location.port || 80));
   }
 
   function isWikiAccountAuthenticated() {
@@ -11063,7 +11069,6 @@
       await loadCharacters();
       if (state.selected) await loadDetail(state.selected);
     };
-    void initial();
     window.addEventListener('popstate', () => {
       const next = new URLSearchParams(location.search).get('wiki')?.trim() || 'home';
       state.selected = next === 'home' ? '' : next;
@@ -11082,6 +11087,9 @@
         });
       }
     });
+    // Register the session listener before starting the first data load so a
+    // fast account response cannot race past the Wiki permission refresh.
+    void initial();
   }
 
   if (new URLSearchParams(location.search).has('wiki')) activate();

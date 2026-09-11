@@ -26,6 +26,16 @@ const MAX_WIKI_ACCESS_REQUESTS = 2000;
 const COMMISSION_AUTO_ADOPT_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 const COMMISSION_TAGS = ['轮椅', '基础', '标准', '进阶', '冒烟', '错轮'];
 const ACCOUNT_ROLE_NAMES = new Set(['wiki-admin']);
+const WIKI_AUTHOR_EMAIL = 'hls040630@foxmail.com';
+const WIKI_AUTHOR_NAME = '灵狱Nova';
+const WIKI_AUTHOR_CHARACTERS = [
+  '散华', '白芷', '凌阳', '折枝', '釉瑚', '珂莱塔', '绯雪', '洛瑟菈', '穗穗', '炽霞',
+  '安可', '莫特斐', '长离', '布兰特', '露帕', '嘉贝莉娜', '莫宁', '爱弥斯', '达妮娅', '景燃',
+  '卡卡罗', '吟霖', '渊武', '今汐', '相里要', '奥古斯塔', '卜灵', '丽贝卡', '漂泊者·导电', '心',
+  '锁暝', '秧秧', '秋水', '忌炎', '鉴心', '漂泊者·气动', '夏空', '卡提希娅', '尤诺', '仇远',
+  '西格莉卡', '清宵', '漂泊者·衍射', '维里奈', '灯灯', '守岸人', '菲比', '赞妮', '千咲', '琳奈',
+  '陆·赫斯', '露西', '桃祈', '丹瑾', '椿', '漂泊者·湮灭', '洛可可', '坎特蕾拉', '弗洛洛', '秧秧·玄翎'
+];
 const ICON_TRIGGERS = [
   '长按共鸣解放', '长按普攻', '长按技能', '长按声骸', '长按解放', '长按闪避', '长按跳跃',
   '共鸣解放', '终结技', '普攻', '重击', '技能', '声骸', '解放', '闪避', '跳跃', '工具', '变奏', '延奏', '处决', '前走',
@@ -497,6 +507,34 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       mkdir(commissionResponsesRoot, { recursive: true }),
       mkdir(commentsRoot, { recursive: true })
     ]);
+    await ensureWikiAuthorEditLog();
+  }
+
+  async function ensureWikiAuthorEditLog() {
+    const stored = record(await readJson(wikiEditLogFile, { version: 1, items: [] }));
+    const items = Array.isArray(stored.items) ? stored.items : [];
+    const existing = new Set(items
+      .filter((item) => normalizeEmail(item?.editorEmail) === WIKI_AUTHOR_EMAIL && item?.action === 'author-baseline')
+      .map((item) => canonicalCharacterName(item?.character)));
+    let changed = false;
+    for (const character of WIKI_AUTHOR_CHARACTERS) {
+      const name = canonicalCharacterName(character);
+      if (existing.has(name)) continue;
+      items.push({
+        id: `wiki-author-${safeName(name)}-${randomUUID()}`,
+        character: name,
+        form: 'author',
+        editorEmail: WIKI_AUTHOR_EMAIL,
+        editorName: WIKI_AUTHOR_NAME,
+        savedAt: 1,
+        action: 'author-baseline',
+        nodeCount: 0,
+        modelVersion: 0
+      });
+      existing.add(name);
+      changed = true;
+    }
+    if (changed) await writeJson(wikiEditLogFile, { version: 1, items: items.slice(-MAX_WIKI_EDIT_LOG_ITEMS) });
   }
 
   function commentsFile(comboId) {
@@ -694,7 +732,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const characterEdits = (Array.isArray(editLog.items) ? editLog.items : [])
       .filter((entry) => canonicalCharacterName(entry?.character) === name)
       .sort((left, right) => Number(right?.savedAt || 0) - Number(left?.savedAt || 0));
-    const allParticipants = [...new Set(characterEdits.map((entry) => publicEmail(entry?.editorEmail) || '维护端'))];
+    const participantName = (entry) => String(entry?.editorName || '').trim() || publicEmail(entry?.editorEmail) || '维护端';
+    const allParticipants = [...new Set(characterEdits.map(participantName))];
     const participants = allParticipants.slice(0, 200);
     return {
       character: name,
@@ -831,7 +870,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const characterEdits = items
       .filter((entry) => canonicalCharacterName(entry?.character) === name)
       .sort((left, right) => Number(right?.savedAt || 0) - Number(left?.savedAt || 0));
-    const allParticipants = [...new Set(characterEdits.map((entry) => publicEmail(entry?.editorEmail) || '维护端'))];
+    const allParticipants = [...new Set(characterEdits.map((entry) => String(entry?.editorName || '').trim() || publicEmail(entry?.editorEmail) || '维护端'))];
     return {
       model: cleanModel,
       savedAt: previous.updatedAt,
