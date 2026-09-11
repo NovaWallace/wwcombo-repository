@@ -187,6 +187,15 @@
     const fallbackUrl = `${APP_RELEASE_FALLBACK_ORIGIN}${PROJECT_ASSET_MANIFEST_PATH}`;
     return [...new Set([localUrl, fallbackUrl])];
   };
+  async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 12000) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
   async function loadCharacterBasePresets() {
     state.characterBasePresets = new Map();
     for (const manifestUrl of projectAssetManifestUrls()) {
@@ -10925,37 +10934,49 @@
     window.lucide?.createIcons();
   }
 
+  let characterLoadSequence = 0;
+  async function hydrateCharacterSupportData(sequence) {
+    const readJson = async (url, options = {}) => {
+      const response = await fetchJsonWithTimeout(url, options);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    };
+    const [iconResult, tideResult, lockResult, announcementResult] = await Promise.allSettled([
+      readJson(ICON_MANIFEST_URL, { cache: 'force-cache' }),
+      readJson(TIDE_ICON_MANIFEST_URL, { cache: 'force-cache' }),
+      readJson('/api/community/wiki-locks', { cache: 'no-store' }),
+      readJson('/api/community/wiki-announcement', { cache: 'no-store' })
+    ]);
+    if (sequence !== characterLoadSequence) return;
+    let shouldRender = false;
+    if (iconResult.status === 'fulfilled') { state.icons = iconMap(iconResult.value); shouldRender = true; }
+    if (tideResult.status === 'fulfilled') { state.tideIcons = tideIconMap(tideResult.value); shouldRender = true; }
+    if (lockResult.status === 'fulfilled') { applyWikiLocks(lockResult.value); shouldRender = true; }
+    if (announcementResult.status === 'fulfilled') { state.announcement = announcementResult.value; shouldRender = true; }
+    if (shouldRender && sequence === characterLoadSequence) renderHome();
+    await loadCharacterBasePresets();
+    if (sequence !== characterLoadSequence) return;
+    renderHome();
+    void preloadWikiVisuals(state.characters, '赞妮');
+  }
+
   async function loadCharacters() {
+    const sequence = ++characterLoadSequence;
     state.loading = true;
     renderHome();
     try {
-      const [characterResponse, iconResponse, tideResponse] = await Promise.all([fetch(CHARACTER_LIST_URL, { cache: 'no-store' }), fetch(ICON_MANIFEST_URL, { cache: 'force-cache' }), fetch(TIDE_ICON_MANIFEST_URL, { cache: 'force-cache' })]);
+      const characterResponse = await fetchJsonWithTimeout(CHARACTER_LIST_URL, { cache: 'no-store' });
       if (!characterResponse.ok) throw new Error(`HTTP ${characterResponse.status}`);
       state.characters = normalizeCharacters(await characterResponse.json());
       if (!state.characters.length) throw new Error('empty-character-list');
-      if (iconResponse.ok) state.icons = iconMap(await iconResponse.json());
-      if (tideResponse.ok) state.tideIcons = tideIconMap(await tideResponse.json());
-      await loadCharacterBasePresets();
-      // Warm the default landing character first. The remaining portraits,
-      // avatars, nameplates, element backgrounds and tide icons are queued in
-      // idle time so moving between characters does not reveal a blank image.
-      await preloadCharacterVisuals(state.characters.find((entry) => entry.name === '赞妮') || FALLBACK_CHARACTERS[0]);
-      try {
-        const [lockResponse, announcementResponse] = await Promise.all([
-          fetch('/api/community/wiki-locks', { cache: 'no-store' }),
-          fetch('/api/community/wiki-announcement', { cache: 'no-store' })
-        ]);
-        if (lockResponse.ok) applyWikiLocks(await lockResponse.json());
-        if (announcementResponse.ok) state.announcement = await announcementResponse.json();
-      } catch (error) {
-        console.warn('[wiki] public maintenance data unavailable', error);
-      }
       state.error = ''; state.loading = false;
-      void preloadWikiVisuals(state.characters, '赞妮');
+      renderHome();
+      void hydrateCharacterSupportData(sequence).catch((error) => console.warn('[wiki] support data unavailable', error));
     } catch (error) {
+      if (sequence !== characterLoadSequence) return;
       state.characters = FALLBACK_CHARACTERS; state.error = String(error?.message || error); state.loading = false;
+      renderHome();
     }
-    renderHome();
   }
 
   async function loadDetail(name, force = false) {

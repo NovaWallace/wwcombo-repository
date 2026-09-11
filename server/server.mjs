@@ -31,6 +31,7 @@ const COMMISSION_AUTO_ADOPT_INTERVAL_MS = 10 * 60 * 1000;
 const SPONSOR_DATA_FILE = 'assets/sponsors-fallback.json';
 const SPONSOR_CACHE_MS = 5 * 60 * 1000;
 const PUBLIC_ROOT_FILES = new Set(['/index.html', '/app.js', '/i18n.js', '/styles.css', '/wiki.js', '/site.webmanifest', '/robots.txt', '/sitemap.xml', '/build-info.json']);
+const CHARACTER_API_ORIGIN = 'https://wuwa-hpyg-tool.200503.xyz';
 const CONTENT_TYPES = new Map([
   ['.html', 'text/html; charset=utf-8'],
   ['.css', 'text/css; charset=utf-8'],
@@ -764,6 +765,37 @@ async function handleAdminApi(req, res, pathname) {
   sendJson(res, 404, { error: 'Not found' });
 }
 
+async function proxyCharacterApi(req, res, url) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    sendJson(res, 405, { error: 'Method not allowed' }, { allow: 'GET, HEAD' });
+    return;
+  }
+  const upstreamPath = `${url.pathname.slice('/__api__'.length)}${url.search}`;
+  if (!/^\/api\/(?:v1|v2)\//.test(upstreamPath)) {
+    sendJson(res, 404, { error: 'Not found' });
+    return;
+  }
+  try {
+    const response = await fetch(`${CHARACTER_API_ORIGIN}${upstreamPath}`, {
+      method: req.method,
+      headers: { accept: String(req.headers.accept || 'application/json') },
+      signal: AbortSignal.timeout(15_000)
+    });
+    const body = req.method === 'HEAD' ? null : Buffer.from(await response.arrayBuffer());
+    const headers = {
+      'content-type': response.headers.get('content-type') || 'application/json; charset=utf-8',
+      'cache-control': 'no-store, no-cache, must-revalidate',
+      'access-control-allow-origin': '*'
+    };
+    if (body) headers['content-length'] = body.length;
+    res.writeHead(response.status, headers);
+    if (body) res.end(body); else res.end();
+  } catch (error) {
+    console.error(`[wwcombo] character API proxy failed: ${error.message || error}`);
+    sendJson(res, 502, { error: '角色资料 API 暂时无法访问。' });
+  }
+}
+
 function normalizeAccountEmail(value) {
   const email = String(value || '').trim().toLowerCase();
   return /^[^\s@]+@[^\s@]+$/.test(email) && email.length <= 254 ? email : '';
@@ -1218,6 +1250,10 @@ const server = createServer(async (req, res) => {
 
     if (pathname.startsWith('/api/server/')) {
       await handleAdminApi(req, res, pathname);
+      return;
+    }
+    if (pathname.startsWith('/__api__/')) {
+      await proxyCharacterApi(req, res, url);
       return;
     }
     if (pathname.startsWith('/api/community/')) {
