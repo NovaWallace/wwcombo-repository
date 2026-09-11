@@ -131,7 +131,8 @@ let sponsorCache = { expiresAt: 0, sponsors: [] };
 
 async function publicSponsors() {
   if (sponsorCache.expiresAt > Date.now()) return sponsorCache.sponsors;
-  const source = JSON.parse(await readFile(path.join(PUBLIC_ROOT, SPONSOR_DATA_FILE), 'utf8'));
+  const configured = await community.sponsorItems();
+  const source = configured || JSON.parse(await readFile(path.join(PUBLIC_ROOT, SPONSOR_DATA_FILE), 'utf8'));
   if (!Array.isArray(source)) throw new Error('赞助名单源格式不正确');
   const sponsors = source.slice(0, 200).map((item) => ({
     id: String(item?.id || '').trim().slice(0, 80),
@@ -387,6 +388,8 @@ async function publicStatus(session) {
   try {
     currentIndex = await publicIndex();
   } catch {}
+  const communityStatus = await community.status();
+  communityStatus.sponsors = await publicSponsors();
   return {
     authenticated: true,
     csrf: session.csrf,
@@ -394,7 +397,7 @@ async function publicStatus(session) {
     release: BUILD_INFO,
     update: { ...updateState, output: updateState.output.slice(-80) },
     traffic: traffic.summary(),
-    community: { ...(await community.status()), currentCharts: Array.isArray(currentIndex.charts) ? currentIndex.charts : [] }
+    community: { ...communityStatus, currentCharts: Array.isArray(currentIndex.charts) ? currentIndex.charts : [] }
   };
 }
 
@@ -592,6 +595,23 @@ async function handleAdminApi(req, res, pathname) {
     if (!session) return;
     const body = await readJsonBody(req, 16 * 1024);
     sendJson(res, 200, { ok: true, announcement: await community.saveWikiAnnouncement(body) });
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/api/server/community/sponsors') {
+    const session = requireSession(req, res);
+    if (!session) return;
+    sendJson(res, 200, { sponsors: await publicSponsors() });
+    return;
+  }
+
+  if (req.method === 'PUT' && pathname === '/api/server/community/sponsors') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    const body = await readJsonBody(req, 32 * 1024);
+    const sponsors = await community.saveSponsorItems(body.sponsors);
+    sponsorCache = { expiresAt: 0, sponsors: [] };
+    sendJson(res, 200, { ok: true, sponsors });
     return;
   }
 

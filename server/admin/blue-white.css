@@ -158,6 +158,13 @@ input:focus, textarea:focus, .release-fields textarea:focus {
 .axis-flow { border-color: #c4d5e6; background: #fff; }
 .file-field input { background: #f7faff; }
 
+.community-wiki-admin-panel, .wiki-admin-row, .wiki-admin-log-row, .wiki-admin-feedback-row,
+.wiki-announcement-admin, .wiki-sponsors-admin { border-color: var(--line); background: #fff; }
+.wiki-admin-row.is-locked { background: #eef7ff; }
+.wiki-admin-row strong, .wiki-admin-log-row strong { color: var(--text); }
+.wiki-admin-row span, .wiki-admin-log-row span, .wiki-admin-row small, .wiki-admin-log-row small { color: var(--muted); }
+.wiki-sponsors-heading p, .wiki-sponsor-rows:empty::before { color: var(--muted); }
+.wiki-sponsor-row input { border-color: var(--line); background: #f7faff; color: var(--text); }
 .admin-commission-card { border-color: #a9c5df; border-left-color: #c27a19; background: #fff; box-shadow: 5px 5px 0 #dceaf7; }
 .admin-commission-card.is-completed { border-left-color: #18866d; }
 .admin-commission-head span, .admin-commission-info p, .admin-response-copy span { color: var(--muted); }

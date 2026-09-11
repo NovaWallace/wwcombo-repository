@@ -8,8 +8,9 @@ const els = {
   autoApproveLowRisk: byId('autoApproveLowRisk'), autoApproveLowRiskStatus: byId('autoApproveLowRiskStatus'),
   chartManageCount: byId('chartManageCount'), chartManageList: byId('chartManageList'), chartSearch: byId('chartSearchInput'), chartCharacter: byId('chartCharacterSelect'), chartTag: byId('chartTagSelect'),
   commissionManageCount: byId('commissionManageCount'), commissionAdminList: byId('commissionAdminList'),
+  wikiFeedbackCount: byId('wikiFeedbackCount'), wikiFeedbackList: byId('wikiFeedbackList'), wikiLockForm: byId('wikiLockForm'), wikiLockCharacter: byId('wikiLockCharacter'), wikiLockValue: byId('wikiLockValue'), wikiLockMessage: byId('wikiLockMessage'), wikiLockList: byId('wikiLockList'), wikiEditLogList: byId('wikiEditLogList'), wikiAnnouncementForm: byId('wikiAnnouncementForm'), wikiAnnouncementTitle: byId('wikiAnnouncementTitle'), wikiAnnouncementBody: byId('wikiAnnouncementBody'), wikiAnnouncementMessage: byId('wikiAnnouncementMessage'), wikiSponsorsForm: byId('wikiSponsorsForm'), wikiSponsorRows: byId('wikiSponsorRows'), wikiSponsorsMessage: byId('wikiSponsorsMessage'), addWikiSponsor: byId('addWikiSponsorBtn'), wikiAccessRequestList: byId('wikiAccessRequestList'), wikiPermissionList: byId('wikiPermissionList'),
   submissionList: byId('submissionList'), withdrawalList: byId('withdrawalList'), whitelistForm: byId('whitelistForm'), whitelistEmail: byId('whitelistEmail'),
-  whitelistList: byId('whitelistList'), wikiAdminForm: byId('wikiAdminForm'), wikiAdminEmail: byId('wikiAdminEmail'), wikiAdminList: byId('wikiAdminList'), quickWhitelist: byId('quickWhitelistBtn'), smtpForm: byId('smtpForm'), smtpHost: byId('smtpHost'),
+  whitelistList: byId('whitelistList'), quickWhitelist: byId('quickWhitelistBtn'), smtpForm: byId('smtpForm'), smtpHost: byId('smtpHost'),
   smtpPort: byId('smtpPort'), smtpUser: byId('smtpUser'), smtpPass: byId('smtpPass'), smtpFrom: byId('smtpFrom'), smtpTo: byId('smtpTo'),
   smtpSecure: byId('smtpSecure'), smtpTest: byId('smtpTestBtn'), smtpResend: byId('smtpResendBtn'), smtpMessage: byId('smtpMessage'), reviewBackdrop: byId('reviewBackdrop'),
   reviewTitle: byId('reviewTitle'), reviewSubmitter: byId('reviewSubmitter'), reviewRisk: byId('reviewRisk'), reviewMeta: byId('reviewMeta'),
@@ -183,12 +184,6 @@ function renderManagedCharts(charts) {
   }) : [empty('没有找到对应连段。')]));
 }
 
-function adminAvatar(source, className='admin-user-avatar') { const image=document.createElement('img'); image.className=className; image.alt=''; image.src=source||'/assets/unknown-character.jpg'; image.addEventListener('error',()=>{image.src='/assets/unknown-character.jpg';image.classList.add('unknown-avatar');},{once:true}); return image; }
-function renderCommissionAdmin(loaded) { const commissions=Array.isArray(loaded?.commissions)?loaded.commissions:[]; state.commissions=loaded; els.commissionManageCount.textContent=commissions.length; els.commissionAdminList.replaceChildren(...(commissions.length?commissions.map((commission)=>{ const card=document.createElement('article');card.className=`admin-commission-card ${commission.status==='completed'?'is-completed':''}`; const head=document.createElement('header');head.className='admin-commission-head'; const title=document.createElement('div');const eyebrow=document.createElement('span');eyebrow.textContent=commission.status==='completed'?'已完成委托':'进行中委托';const h3=document.createElement('h3');h3.textContent=commission.title;const meta=document.createElement('p');meta.textContent=`${formatDate(commission.createdAt)} · ${commission.owner.username} · ${commission.owner.email||'邮箱未知'}`;title.append(eyebrow,h3,meta);const badge=document.createElement('strong');badge.className='commission-admin-tag';badge.textContent=commission.tag;head.append(title,badge);card.append(head); const info=document.createElement('div');info.className='admin-commission-info';const avatars=document.createElement('div');avatars.className='admin-commission-characters';for(const name of commission.characters||[])avatars.appendChild(avatar(name,'card-character-avatar'));const description=document.createElement('p');description.textContent=commission.description;const count=document.createElement('span');count.textContent=`想要 ${commission.interestCount} · 收到方案 ${commission.responseCount}`;info.append(avatars,description,count);card.append(info); const responses=document.createElement('div');responses.className='admin-commission-responses';if(!commission.responses?.length)responses.appendChild(empty('还没有用户上传方案。'));else for(const response of commission.responses){const row=document.createElement('article');row.className=`admin-commission-response ${response.status==='accepted'?'is-accepted':''}`;const copy=document.createElement('div');copy.className='admin-response-copy';const responseTitle=document.createElement('strong');responseTitle.textContent=response.title;const responseMeta=document.createElement('span');responseMeta.textContent=`${response.username} · ${response.email||'邮箱未知'} · ${formatDate(response.submittedAt)}`;const risk=document.createElement('small');risk.className=response.preflight?.lowRisk?'risk-low':'risk-high';risk.textContent=response.preflight?.lowRisk?'低风险':'高风险';copy.append(responseTitle,responseMeta,risk);const actions=document.createElement('div');actions.className='admin-response-actions';actions.append(button('查看流程图','quiet',()=>openCommissionResponse(commission,response)));if(response.status==='submitted'&&commission.status!=='completed')actions.append(button('转入审核','primary',()=>importCommissionResponse(commission,response)));else if(response.status==='accepted')actions.append(Object.assign(document.createElement('span'),{className:'admin-response-state',textContent:'已转入审核'}));row.append(adminAvatar(response.avatar),copy,actions);responses.appendChild(row);}card.append(responses);return card;}):[empty('当前没有委托记录。')])); }
-async function loadCommissions({quiet=false}={}) { try { const data=await api('/api/server/community/commissions');renderCommissionAdmin(data);return data; } catch(error) { if(!quiet) els.commissionAdminList.replaceChildren(Object.assign(document.createElement('p'),{className:'error-text',textContent:error.message})); throw error; } }
-async function importCommissionResponse(commission,response) { if(!await askConfirmation(`确认将「${response.title}」转入连段社区审核流程？委托会标记为已完成。`,{title:'转入连段审核',confirmText:'转入审核',danger:false}))return;try{await api(`/api/server/community/commissions/${encodeURIComponent(commission.id)}/responses/${encodeURIComponent(response.id)}/import`,{method:'POST'});closeReview();await Promise.all([loadStatus(),loadCommissions({quiet:true})]);}catch(error){els.commissionAdminList.prepend(Object.assign(document.createElement('p'),{className:'error-text',textContent:error.message}));}}
-function openCommissionResponse(commission,response){openCommissionResponseAsync(commission,response);}
-async function openCommissionResponseAsync(commission,response){state.commissionReview={commission,response};els.reviewApprove.textContent='转入连段审核';els.reviewReject.hidden=true;els.reviewBackdrop.hidden=false;document.body.classList.add('modal-open');renderAxisControls();els.reviewTitle.textContent=response.title||'委托上传方案';els.reviewSubmitter.textContent=`${response.username||'未命名'} · ${response.email||'邮箱未知'} · ${formatDate(response.submittedAt)}`;const preflight=response.preflight||{};els.reviewRisk.className=`risk-badge ${preflight.lowRisk?'low':'attention'}`;els.reviewRisk.textContent=preflight.lowRisk?'低风险':'高风险';els.reviewMeta.replaceChildren();for(const [key,value] of [['委托',commission.title],['角色',(response.characters||commission.characters||[]).join(' / ')||'未知'],['轮数',`${response.rounds||1} 轮`],['招式',`${response.stepCount||0} 个`],['时长',formatDuration(response.durationMs)]]){const row=document.createElement('div');row.innerHTML='<span></span><strong></strong>';row.querySelector('span').textContent=key;row.querySelector('strong').textContent=value;els.reviewMeta.appendChild(row);}els.reviewTags.replaceChildren(...(response.tags||[]).map((tag)=>Object.assign(document.createElement('span'),{textContent:tag})));els.reviewIssues.replaceChildren(...((preflight.issues||[]).length?(preflight.issues||[]).map((issue)=>Object.assign(document.createElement('p'),{textContent:issue})): [Object.assign(document.createElement('p'),{textContent:'未发现连续 6 次同招式、无法图标化的自定义文字，且时段信息完整。'})]));els.reviewApprove.onclick=()=>importCommissionResponse(commission,response);els.reviewAxisSummary.textContent='正在读取轴数据';els.axisPreview.innerHTML='<div class="axis-loading"><span></span><span></span><span></span></div>';try{const content=await api(`/api/server/community/commissions/${encodeURIComponent(commission.id)}/responses/${encodeURIComponent(response.id)}/package`);if(state.commissionReview?.response.id!==response.id)return;renderAxis(content,response,els.axisPreview,els.reviewAxisSummary);}catch(error){els.reviewAxisSummary.textContent='无法读取轴数据';els.axisPreview.innerHTML='';els.axisPreview.appendChild(Object.assign(document.createElement('p'),{className:'error-text',textContent:`连段图生成失败：${error.message}`}));}}
 function taskRow(title, meta, detail, actions=[]) { const row=document.createElement('article'); row.className='task-row'; const content=document.createElement('div'); const heading=document.createElement('strong'); heading.textContent=title; const metadata=document.createElement('span'); metadata.textContent=meta; const note=document.createElement('small'); note.textContent=detail; content.append(heading,metadata,note); const controls=document.createElement('div'); controls.className='row-actions'; controls.append(...actions); row.append(content,controls); return row; }
 function renderWithdrawals(items) { els.withdrawalCount.textContent=items.length; els.withdrawalList.replaceChildren(...(items.length ? items.map((item)=>taskRow(`连段 ${item.comboId}`,`${item.username || '未命名'} · ${item.email || '邮箱未知'} · ${formatDate(item.submittedAt)}`,'邮箱未能与所有权记录匹配，请人工确认。',[button('拒绝','quiet danger',()=>withdrawalAction(item.id,'reject')),button('批准撤回','primary',()=>withdrawalAction(item.id,'approve'))])) : [empty('当前没有需要人工处理的撤回申请。')])); }
 
@@ -205,16 +200,6 @@ function renderWhitelist(emails) {
   els.whitelistList.replaceChildren(...children);
 }
 async function saveWhitelist(emails) { await api('/api/server/community/whitelist',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({emails})}); await loadStatus(); }
-function renderWikiAdmins(emails) {
-  const children = emails.length ? emails.map((email) => {
-    const chip = document.createElement('span');
-    chip.className = 'email-chip';
-    chip.append(document.createTextNode(email), button('×', 'chip-remove', () => saveWikiAdmins(emails.filter((item) => item !== email))));
-    return chip;
-  }) : [empty('尚未授予任何邮箱 Wiki 管理员权限。')];
-  els.wikiAdminList.replaceChildren(...children);
-}
-async function saveWikiAdmins(emails) { await api('/api/server/community/wiki-admins',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({emails})}); await loadStatus(); }
 function renderSmtp(smtp) { if(document.activeElement?.closest('#smtpForm')) return; els.smtpHost.value=smtp.host||''; els.smtpPort.value=smtp.port||465; els.smtpUser.value=smtp.user||''; els.smtpPass.value=''; els.smtpPass.placeholder=smtp.hasPassword?'已保存，留空则不修改':'填写邮箱授权码'; els.smtpFrom.value=smtp.from||''; els.smtpTo.value=smtp.to||''; els.smtpSecure.checked=smtp.secure!==false; }
 function renderReviewSettings(settings={}) { const enabled=settings.autoApproveLowRisk===true; els.autoApproveLowRisk.checked=enabled; els.autoApproveLowRiskStatus.textContent=enabled?'已开启 · 新投稿自动发布':'关闭 · 低风险仍需审核'; els.autoApproveLowRisk.title=enabled?'低风险投稿将自动发布':'低风险投稿仍进入审核队列'; }
 
@@ -229,6 +214,212 @@ function renderTrafficBreakdown(target, entries, rowClass='') {
     row.append(label,track,value);return row;
   }));
 }
+
+function adminAvatar(source, className='admin-user-avatar') {
+  const image=document.createElement('img'); image.className=className; image.alt=''; image.src=source||'/assets/unknown-character.jpg';
+  image.addEventListener('error',()=>{image.src='/assets/unknown-character.jpg';image.classList.add('unknown-avatar');},{once:true});
+  return image;
+}
+
+function renderCommissionAdmin(loaded) {
+  const commissions=Array.isArray(loaded?.commissions)?loaded.commissions:[];
+  state.commissions=loaded;
+  els.commissionManageCount.textContent=commissions.length;
+  els.commissionAdminList.replaceChildren(...(commissions.length?commissions.map((commission)=>{
+    const card=document.createElement('article');card.className=`admin-commission-card ${commission.status==='completed'?'is-completed':''}`;
+    const head=document.createElement('header');head.className='admin-commission-head';
+    const title=document.createElement('div');const eyebrow=document.createElement('span');eyebrow.textContent=commission.status==='completed'?'已完成委托':'进行中委托';const h3=document.createElement('h3');h3.textContent=commission.title;const meta=document.createElement('p');meta.textContent=`${formatDate(commission.createdAt)} · ${commission.owner.username} · ${commission.owner.email||'邮箱未知'}`;title.append(eyebrow,h3,meta);
+    const badge=document.createElement('strong');badge.className='commission-admin-tag';badge.textContent=commission.tag;head.append(title,badge);card.append(head);
+    const info=document.createElement('div');info.className='admin-commission-info';
+    const avatars=document.createElement('div');avatars.className='admin-commission-characters';for(const name of commission.characters||[])avatars.appendChild(avatar(name,'card-character-avatar'));
+    const description=document.createElement('p');description.textContent=commission.description;const count=document.createElement('span');count.textContent=`想要 ${commission.interestCount} · 收到方案 ${commission.responseCount}`;info.append(avatars,description,count);card.append(info);
+    const responses=document.createElement('div');responses.className='admin-commission-responses';
+    if(!commission.responses?.length){responses.appendChild(empty('还没有用户上传方案。'));}
+    else for(const response of commission.responses){
+      const row=document.createElement('article');row.className=`admin-commission-response ${response.status==='accepted'?'is-accepted':''}`;
+      const copy=document.createElement('div');copy.className='admin-response-copy';const responseTitle=document.createElement('strong');responseTitle.textContent=response.title;const responseMeta=document.createElement('span');responseMeta.textContent=`${response.username} · ${response.email||'邮箱未知'} · ${formatDate(response.submittedAt)}`;const risk=document.createElement('small');risk.className=response.preflight?.lowRisk?'risk-low':'risk-high';risk.textContent=response.preflight?.lowRisk?'低风险':'高风险';copy.append(responseTitle,responseMeta,risk);
+      const actions=document.createElement('div');actions.className='admin-response-actions';actions.append(button('查看流程图','quiet',()=>openCommissionResponse(commission,response)));if(response.status==='submitted'&&commission.status!=='completed')actions.append(button('转入审核','primary',()=>importCommissionResponse(commission,response)));else if(response.status==='accepted')actions.append(Object.assign(document.createElement('span'),{className:'admin-response-state',textContent:'已转入审核'}));row.append(adminAvatar(response.avatar),copy,actions);responses.appendChild(row);
+    }
+    card.append(responses);return card;
+  }):[empty('当前没有委托记录。')]));
+}
+
+function renderWikiFeedback(items) {
+  const list = Array.isArray(items) ? items : [];
+  els.wikiFeedbackCount.textContent = list.filter((item) => item.status !== 'resolved').length;
+  els.wikiFeedbackList.replaceChildren(...(list.length ? list.map((item) => {
+    const card = document.createElement('article');
+    card.className = `wiki-feedback-row ${item.status === 'resolved' ? 'is-resolved' : ''}`;
+    const head = document.createElement('div'); head.className = 'wiki-feedback-row-head';
+    const title = document.createElement('h3'); title.textContent = item.title || '未命名反馈';
+    const status = document.createElement('span'); status.className = 'wiki-feedback-status'; status.textContent = item.status === 'resolved' ? '已处理' : '待处理';
+    head.append(title, status);
+    const meta = document.createElement('p'); meta.className = 'wiki-feedback-meta'; meta.textContent = `${item.username || '未署名'} · ${item.email || '邮箱未知'} · ${formatDate(item.createdAt)}`;
+    const context = document.createElement('p'); context.className = 'wiki-feedback-context'; context.textContent = `${item.page || 'Wiki'}${item.character && item.character !== 'home' ? ` · ${item.character}` : ''}`;
+    const body = document.createElement('p'); body.className = 'wiki-feedback-body'; body.textContent = item.message || '';
+    const footer = document.createElement('div'); footer.className = 'wiki-feedback-row-footer';
+    const notice = document.createElement('small'); notice.textContent = item.notificationStatus === 'sent' ? '维护邮件已发送' : `邮件未发送，已留在队列${item.notificationError ? `：${item.notificationError}` : ''}`;
+    footer.appendChild(notice);
+    if (item.status !== 'resolved') footer.appendChild(button('标记已处理', 'primary', async () => {
+      try { await api(`/api/server/community/wiki-feedback/${encodeURIComponent(item.id)}/resolve`, { method: 'POST' }); await loadStatus({ quiet: true }); }
+      catch (error) { alertInline(error.message); }
+    }));
+    card.append(head, meta, context, body, footer);
+    return card;
+  }) : [empty('当前没有 Wiki 问题反馈。')]));
+}
+
+function renderWikiManagement(wiki = {}) {
+  const locks = Array.isArray(wiki.locks) ? wiki.locks : [];
+  const edits = Array.isArray(wiki.edits) ? wiki.edits : [];
+  els.wikiLockList.replaceChildren(...(locks.length ? locks.map((item) => {
+    const row = document.createElement('article'); row.className = `wiki-admin-row ${item.locked ? 'is-locked' : ''}`;
+    const copy = document.createElement('div'); const title = document.createElement('strong'); title.textContent = item.character; const meta = document.createElement('small'); meta.textContent = item.locked ? `已锁定 · ${formatDate(item.lockedAt)} · ${item.lockedBy || '维护端'}` : '当前开放编辑'; copy.append(title, meta);
+    const action = button(item.locked ? '解锁' : '锁定', item.locked ? 'quiet' : 'primary', () => saveWikiLock(item.character, !item.locked)); row.append(copy, action); return row;
+  }) : [empty('还没有角色锁定记录。')]));
+  els.wikiEditLogList.replaceChildren(...(edits.length ? edits.map((item) => {
+    const row = document.createElement('article'); row.className = 'wiki-admin-log-row';
+    const title = document.createElement('strong'); title.textContent = item.character || '未知角色';
+    const meta = document.createElement('small'); meta.textContent = `${item.editorEmail || '邮箱未知'} · ${formatDate(item.savedAt)} · ${item.form || 'normal'} · ${Number(item.nodeCount || 0)} 个节点`;
+    row.append(title, meta); return row;
+  }) : [empty('还没有 Wiki 编辑记录。')]));
+  renderWikiAnnouncement(wiki.announcement || {});
+  renderWikiAccessRequests(wiki.accessRequests || []);
+  renderWikiPermissions(wiki.permissions || []);
+}
+
+function renderWikiAnnouncement(announcement = {}) {
+  if (!els.wikiAnnouncementTitle) return;
+  if (document.activeElement?.closest('#wikiAnnouncementForm')) return;
+  els.wikiAnnouncementTitle.value = announcement.title || '';
+  els.wikiAnnouncementBody.value = announcement.body || '';
+}
+
+function createWikiSponsorRow(item = {}) {
+  const row = document.createElement('div'); row.className = 'wiki-sponsor-row';
+  const id = document.createElement('input'); id.className = 'wiki-sponsor-id'; id.maxLength = 80; id.placeholder = '编号（可选）'; id.value = item.id || '';
+  const name = document.createElement('input'); name.className = 'wiki-sponsor-name'; name.maxLength = 80; name.placeholder = '赞助者昵称'; name.required = true; name.value = item.name || '';
+  const amount = document.createElement('input'); amount.className = 'wiki-sponsor-amount'; amount.maxLength = 20; amount.inputMode = 'decimal'; amount.placeholder = '金额（可选）'; amount.value = item.amount || '';
+  const remove = button('删除', 'quiet danger', () => row.remove()); remove.type = 'button';
+  row.append(id, name, amount, remove);
+  return row;
+}
+
+function renderWikiSponsors(items) {
+  if (!els.wikiSponsorRows) return;
+  const list = Array.isArray(items) ? items : [];
+  els.wikiSponsorRows.replaceChildren(...list.map(createWikiSponsorRow));
+}
+
+function readWikiSponsors() {
+  return [...(els.wikiSponsorRows?.querySelectorAll('.wiki-sponsor-row') || [])]
+    .map((row) => ({
+      id: row.querySelector('.wiki-sponsor-id')?.value.trim() || '',
+      name: row.querySelector('.wiki-sponsor-name')?.value.trim() || '',
+      amount: row.querySelector('.wiki-sponsor-amount')?.value.trim() || ''
+    }))
+    .filter((item) => item.name);
+}
+
+function renderWikiAccessRequests(items) {
+  if (!els.wikiAccessRequestList) return;
+  const requests = Array.isArray(items) ? items : [];
+  els.wikiAccessRequestList.replaceChildren(...(requests.length ? requests.map((item) => {
+    const row = document.createElement('article'); row.className = `wiki-admin-row ${item.status === 'pending' ? '' : 'is-resolved'}`;
+    const copy = document.createElement('div'); const title = document.createElement('strong'); title.textContent = `${item.character || '未知角色'} · ${item.email || '邮箱未知'}`; const meta = document.createElement('small'); meta.textContent = `${item.status === 'pending' ? '待处理' : item.status === 'approved' ? '已批准' : '已收回'} · ${formatDate(item.createdAt)}${item.message ? ` · ${item.message}` : ''}`; copy.append(title, meta);
+    const actions = document.createElement('div');
+    if (item.status === 'pending') { actions.append(button('批准', 'primary', () => resolveWikiAccess(item, true)), button('拒绝', 'quiet danger', () => resolveWikiAccess(item, false))); }
+    else if (item.status === 'approved') actions.append(button('收回', 'quiet danger', () => resolveWikiAccess(item, false)));
+    row.append(copy, actions); return row;
+  }) : [empty('当前没有编辑权限申请。')]));
+}
+
+function renderWikiPermissions(items) {
+  if (!els.wikiPermissionList) return;
+  const permissions = Array.isArray(items) ? items : [];
+  const rows = permissions.flatMap((item) => (item.emails || []).map((email) => {
+    const row = document.createElement('article'); row.className = 'wiki-admin-row';
+    const copy = document.createElement('div'); const title = document.createElement('strong'); title.textContent = `${item.character} · ${email}`; const meta = document.createElement('small'); meta.textContent = `更新于 ${formatDate(item.updatedAt)}`; copy.append(title, meta);
+    row.append(copy, button('收回', 'quiet danger', () => revokeWikiPermission(item.character, email))); return row;
+  }));
+  els.wikiPermissionList.replaceChildren(...(rows.length ? rows : [empty('当前没有单独授权账号。')]));
+}
+
+async function resolveWikiAccess(item, granted) {
+  try { await api(`/api/server/community/wiki-access-requests/${encodeURIComponent(item.id)}/${granted ? 'approve' : 'revoke'}`, { method: 'POST' }); await loadStatus({ quiet: true }); }
+  catch (error) { els.wikiLockMessage.textContent = `权限操作失败：${error.message}`; }
+}
+
+async function revokeWikiPermission(character, email) {
+  try { await api('/api/server/community/wiki-permissions', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ character, email, granted: false }) }); await loadStatus({ quiet: true }); }
+  catch (error) { els.wikiLockMessage.textContent = `收回权限失败：${error.message}`; }
+}
+
+async function saveWikiAnnouncement(event) {
+  event.preventDefault();
+  els.wikiAnnouncementMessage.textContent = '正在发布公告...';
+  try {
+    const data = await api('/api/server/community/wiki-announcement', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: els.wikiAnnouncementTitle.value, body: els.wikiAnnouncementBody.value }) });
+    renderWikiAnnouncement(data.announcement); els.wikiAnnouncementMessage.textContent = '公告已发布。';
+  } catch (error) { els.wikiAnnouncementMessage.textContent = `发布失败：${error.message}`; }
+}
+
+async function saveWikiSponsors(event) {
+  event.preventDefault();
+  els.wikiSponsorsMessage.textContent = '正在保存赞助名单...';
+  try {
+    const data = await api('/api/server/community/sponsors', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sponsors: readWikiSponsors() }) });
+    renderWikiSponsors(data.sponsors); els.wikiSponsorsMessage.textContent = '赞助名单已保存。';
+  } catch (error) { els.wikiSponsorsMessage.textContent = `保存失败：${error.message}`; }
+}
+
+async function saveWikiLock(character, locked) {
+  if (!character) return;
+  els.wikiLockMessage.textContent = locked ? '正在锁定角色...' : '正在解锁角色...';
+  try {
+    await api('/api/server/community/wiki-locks', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ character, locked }) });
+    els.wikiLockCharacter.value = '';
+    els.wikiLockMessage.textContent = locked ? '角色已锁定。' : '角色已解锁。';
+    await loadStatus({ quiet: true });
+  } catch (error) { els.wikiLockMessage.textContent = `操作失败：${error.message}`; }
+}
+
+async function loadWikiManagement({ quiet = false } = {}) {
+  try {
+    const [locks, edits, permissions, accessRequests, announcement] = await Promise.all([api('/api/server/community/wiki-locks'), api('/api/server/community/wiki-edit-log'), api('/api/server/community/wiki-permissions'), api('/api/server/community/wiki-access-requests'), api('/api/server/community/wiki-announcement')]);
+    const result = { locks: locks.locks, edits: edits.items, permissions: permissions.permissions, accessRequests: accessRequests.requests, announcement: announcement.announcement };
+    renderWikiManagement(result);
+    return result;
+  } catch (error) { if (!quiet) els.wikiLockMessage.textContent = error.message; throw error; }
+}
+
+async function loadWikiContent({ quiet = false } = {}) {
+  try {
+    const [announcement, sponsors] = await Promise.all([api('/api/server/community/wiki-announcement'), api('/api/server/community/sponsors')]);
+    renderWikiAnnouncement(announcement.announcement || {}); renderWikiSponsors(sponsors.sponsors || []); return { announcement, sponsors };
+  } catch (error) {
+    if (!quiet) { els.wikiAnnouncementMessage.textContent = error.message; els.wikiSponsorsMessage.textContent = error.message; }
+    throw error;
+  }
+}
+
+async function loadWikiFeedback({ quiet = false } = {}) {
+  try { const data = await api('/api/server/community/wiki-feedback'); renderWikiFeedback(data.items); return data; }
+  catch (error) { if (!quiet) els.wikiFeedbackList.replaceChildren(Object.assign(document.createElement('p'), { className: 'error-text', textContent: error.message })); throw error; }
+}
+
+async function loadCommissions({quiet=false}={}) {
+  try { const data=await api('/api/server/community/commissions');renderCommissionAdmin(data);return data; }
+  catch(error){ if(!quiet) els.commissionAdminList.replaceChildren(Object.assign(document.createElement('p'),{className:'error-text',textContent:error.message})); throw error; }
+}
+
+async function importCommissionResponse(commission,response) {
+  if(!await askConfirmation(`确认将「${response.title}」转入连段社区审核流程？委托会标记为已完成。`,{title:'转入连段审核',confirmText:'转入审核',danger:false}))return;
+  try { await api(`/api/server/community/commissions/${encodeURIComponent(commission.id)}/responses/${encodeURIComponent(response.id)}/import`,{method:'POST'});closeReview();await Promise.all([loadStatus(),loadCommissions({quiet:true})]); }
+  catch(error){alertInline(error.message);}
+}
+
+function alertInline(message){els.commissionAdminList.prepend(Object.assign(document.createElement('p'),{className:'error-text',textContent:message}));}
 
 function renderTraffic(traffic={}) {
   const today=traffic.today||{};const yesterday=traffic.yesterday||{};const week=traffic.last7Days||{};const month=traffic.last30Days||{};const peak=month.peakWindow||{};
@@ -278,7 +469,7 @@ function renderStatus(data) {
   els.statusDot.classList.toggle('busy',busy); els.statusDot.classList.toggle('error',failed); els.serviceStatus.textContent=busy?'正在更新仓库':failed?'上次更新失败':'服务运行中';
   els.releaseSummary.textContent=`${Number(data.release?.charts||0)} 个连段 · ${formatDate(data.release?.createdAt)}`; els.releaseId.textContent=data.release?.releaseId||'-'; els.releaseTime.textContent=formatDate(data.release?.createdAt); els.chartCount.textContent=`${Number(data.release?.charts||0)} 个`; els.listenAddress.textContent=`${data.server?.host||'-'}:${data.server?.port||'-'}`; els.mainCommit.textContent=short(data.release?.commits?.repository); els.data1Commit.textContent=short(data.release?.commits?.deta1); els.data2Commit.textContent=short(data.release?.commits?.deta2);
   els.update.disabled=busy; els.update.textContent=busy?'正在更新':'从 GitHub 更新并重启'; els.updateStatus.textContent=busy?'运行中':failed?'失败':update.status==='completed'?'已完成':'等待操作'; const output=[...(update.output||[])]; if(update.error) output.push('',`错误：${update.error}`); els.output.textContent=output.length?output.join('\n'):'尚未执行更新。';
-  const community=data.community||{}; renderSubmissions(community.submissions?.pending||[]); renderManagedCharts(community.currentCharts||[]); renderWithdrawals(community.withdrawals?.pending||[]); renderWhitelist(community.whitelist||[]); renderWikiAdmins(community.wikiAdmins||[]); renderSmtp(community.smtp||{}); renderReviewSettings(community.reviewSettings||{}); renderTraffic(data.traffic||{}); els.commissionManageCount.textContent=community.commissions?.total||0; const failedNotifications=Number(community.failedNotifications||0); els.smtpResend.textContent=failedNotifications?`补发失败邮件 (${failedNotifications})`:'补发失败邮件';
+  const community=data.community||{}; renderSubmissions(community.submissions?.pending||[]); renderManagedCharts(community.currentCharts||[]); renderWithdrawals(community.withdrawals?.pending||[]); renderWhitelist(community.whitelist||[]); renderSmtp(community.smtp||{}); renderReviewSettings(community.reviewSettings||{}); renderTraffic(data.traffic||{}); els.commissionManageCount.textContent=community.commissions?.total||0; renderWikiFeedback(community.wikiFeedback?.items||[]); renderWikiManagement(community.wiki||{}); renderWikiSponsors(community.sponsors||[]); const failedNotifications=Number(community.failedNotifications||0); els.smtpResend.textContent=failedNotifications?`补发失败邮件 (${failedNotifications})`:'补发失败邮件';
 }
 
 function showLogin(message='') { clearTimeout(state.pollTimer); els.dashboard.hidden=true; els.topActions.hidden=true; els.loginPanel.hidden=false; els.loginMessage.textContent=message; state.csrf=''; }
@@ -302,6 +493,8 @@ function renderActiveAdminAxes(){if(state.review?.content)renderAxis(state.revie
 function applyAxisScale(value){state.axisScale=Math.max(.8,Math.min(1.8,Number(value||125)/100));renderAxisControls();renderActiveAdminAxes();}
 
 async function openReview(id) { els.reviewBackdrop.hidden=false; document.body.classList.add('modal-open'); renderAxisControls();els.reviewTitle.textContent='正在读取投稿';els.reviewAxisSummary.textContent='正在读取轴数据';els.axisPreview.innerHTML='<div class="axis-loading"><span></span><span></span><span></span></div>';try{const data=await api(`/api/server/submissions/${encodeURIComponent(id)}/preview`);state.review={id,...data};const item=data.submission||{};const chart=chartOf(data.content);const preview=item.preview||{};const preflight=data.preflight||item.preflight||{};els.reviewTitle.textContent=preview.title||item.fileName||'未命名投稿';els.reviewSubmitter.textContent=`${item.username||'未命名'} · ${item.email||'邮箱未知'} · ${formatDate(item.submittedAt)}`;els.reviewRisk.className=`risk-badge ${preflight.lowRisk?'low':'attention'}`;els.reviewRisk.textContent=preflight.lowRisk?'低风险':'高风险';els.reviewMeta.replaceChildren();const meta=[['角色',(preview.characters||charactersOf(chart)).join(' / ')||'未知'],['轮数',`${preview.rounds||1} 轮`],['招式',`${preview.stepCount||chart.steps.length} 个`],['时长',formatDuration(preview.durationMs)]];for(const [key,value] of meta){const row=document.createElement('div');row.innerHTML='<span></span><strong></strong>';row.querySelector('span').textContent=key;row.querySelector('strong').textContent=value;els.reviewMeta.appendChild(row);}els.reviewTags.replaceChildren(...(preview.tags||[]).map((tag)=>{const node=document.createElement('span');node.textContent=tag;return node;}));els.reviewIssues.replaceChildren(...((preflight.issues||[]).length?(preflight.issues||[]).map((issue)=>{const p=document.createElement('p');p.textContent=issue;return p;}):[Object.assign(document.createElement('p'),{textContent:'未发现连续 6 次同招式、无法图标化的自定义文字，且时段信息完整。'})]));els.reviewApprove.onclick=()=>submissionAction(id,'approve');els.reviewReject.onclick=()=>submissionAction(id,'reject');renderAxis(data.content,preview,els.axisPreview,els.reviewAxisSummary);}catch(error){els.reviewAxisSummary.textContent='无法读取轴数据';els.axisPreview.innerHTML='';const p=document.createElement('p');p.className='error-text';p.textContent=error.message;els.axisPreview.appendChild(p);}}
+async function openCommissionResponse(commission,response){
+  state.commissionReview={commission,response};els.reviewApprove.textContent='转入连段审核';els.reviewReject.hidden=true;els.reviewBackdrop.hidden=false;document.body.classList.add('modal-open');renderAxisControls();els.reviewTitle.textContent=response.title||'委托上传方案';els.reviewSubmitter.textContent=`${response.username||'未命名'} · ${response.email||'邮箱未知'} · ${formatDate(response.submittedAt)}`;const preflight=response.preflight||{};els.reviewRisk.className=`risk-badge ${preflight.lowRisk?'low':'attention'}`;els.reviewRisk.textContent=preflight.lowRisk?'低风险':'高风险';els.reviewMeta.replaceChildren();for(const [key,value] of [['委托',commission.title],['角色',(response.characters||commission.characters||[]).join(' / ')||'未知'],['轮数',`${response.rounds||1} 轮`],['招式',`${response.stepCount||0} 个`],['时长',formatDuration(response.durationMs)]]){const row=document.createElement('div');row.innerHTML='<span></span><strong></strong>';row.querySelector('span').textContent=key;row.querySelector('strong').textContent=value;els.reviewMeta.appendChild(row);}els.reviewTags.replaceChildren(...(response.tags||[]).map((tag)=>Object.assign(document.createElement('span'),{textContent:tag})));els.reviewIssues.replaceChildren(...((preflight.issues||[]).length?(preflight.issues||[]).map((issue)=>Object.assign(document.createElement('p'),{textContent:issue})): [Object.assign(document.createElement('p'),{textContent:'未发现连续 6 次同招式、无法图标化的自定义文字，且时段信息完整。'})]));els.reviewApprove.onclick=()=>importCommissionResponse(commission,response);els.reviewAxisSummary.textContent='正在读取轴数据';els.axisPreview.innerHTML='<div class="axis-loading"><span></span><span></span><span></span></div>';try{const content=await api(`/api/server/community/commissions/${encodeURIComponent(commission.id)}/responses/${encodeURIComponent(response.id)}/package`);if(state.commissionReview?.response.id!==response.id)return;renderAxis(content,response,els.axisPreview,els.reviewAxisSummary);}catch(error){els.reviewAxisSummary.textContent='无法读取轴数据';els.axisPreview.innerHTML='';els.axisPreview.appendChild(Object.assign(document.createElement('p'),{className:'error-text',textContent:`连段图生成失败：${error.message}`}));}}
 function closeReview(){els.reviewBackdrop.hidden=true;state.review=null;state.commissionReview=null;els.reviewApprove.textContent='审核通过';els.reviewReject.hidden=false;if(els.uploadBackdrop.hidden&&els.manageDetailBackdrop.hidden)document.body.classList.remove('modal-open');}
 
 function detailMetaRow(label,value){const row=document.createElement('div');const dt=document.createElement('dt');dt.textContent=label;const dd=document.createElement('dd');dd.textContent=value;row.append(dt,dd);return row;}
@@ -400,13 +593,20 @@ function renderMobileRelease(release){els.mobileReleaseVersion.value=release.ver
 async function loadMobileRelease(){const release=await api('/api/server/mobile-release');renderMobileRelease(release);return release;}
 async function saveMobileRelease(event){event.preventDefault();els.mobileReleaseMessage.textContent='正在保存手机端版本信息...';try{const result=await api('/api/server/mobile-release',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({version:els.mobileReleaseVersion.value,title:els.mobileReleaseTitle.value,notes:els.mobileReleaseNotes.value,androidDownloadUrl:els.mobileReleaseAndroidUrl.value})});renderMobileRelease(result.release);els.mobileReleaseMessage.textContent='手机端更新 API 已保存。';}catch(error){els.mobileReleaseMessage.textContent=error.message;}}
 
-document.querySelectorAll('[data-tab]').forEach((tab)=>tab.addEventListener('click',()=>{switchTab(tab.dataset.tab);if(tab.dataset.tab==='commissions')void loadCommissions({quiet:true});}));
+document.querySelectorAll('[data-tab]').forEach((tab)=>tab.addEventListener('click',()=>{switchTab(tab.dataset.tab);if(tab.dataset.tab==='commissions')void loadCommissions({quiet:true});if(tab.dataset.tab==='wiki-feedback')void loadWikiFeedback({quiet:true});if(tab.dataset.tab==='wiki-management')void loadWikiManagement({quiet:true});if(tab.dataset.tab==='wiki-content')void loadWikiContent({quiet:true});}));
 document.querySelectorAll('[data-refresh]').forEach((item)=>item.addEventListener('click',()=>loadStatus()));
+document.querySelectorAll('[data-refresh-commissions]').forEach((item)=>item.addEventListener('click',()=>loadCommissions()));
+document.querySelectorAll('[data-refresh-wiki-feedback]').forEach((item)=>item.addEventListener('click',()=>loadWikiFeedback()));
 els.quickWhitelist.addEventListener('click',()=>{switchTab('whitelist');setTimeout(()=>els.whitelistEmail.focus(),0);});
 els.loginForm.addEventListener('submit',async(event)=>{event.preventDefault();els.loginMessage.textContent='正在登录';try{const data=await api('/api/server/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({password:els.password.value})});state.csrf=data.csrf||'';els.password.value='';await Promise.all([loadIcons(),loadStatus(),loadProjectAssets(),loadAppRelease(),loadMobileRelease(),loadCommissions()]);}catch(error){els.loginMessage.textContent=error.message;}});
 els.logout.addEventListener('click',async()=>{try{await api('/api/server/logout',{method:'POST'});}finally{showLogin('已退出登录。');}});
 els.whitelistForm.addEventListener('submit',async(event)=>{event.preventDefault();const email=els.whitelistEmail.value.trim().toLowerCase();await saveWhitelist([...(state.status?.community?.whitelist||[]),email]);els.whitelistEmail.value='';});
-els.wikiAdminForm.addEventListener('submit',async(event)=>{event.preventDefault();const email=els.wikiAdminEmail.value.trim().toLowerCase();await saveWikiAdmins([...(state.status?.community?.wikiAdmins||[]),email]);els.wikiAdminEmail.value='';});
+els.wikiLockForm?.addEventListener('submit',(event)=>{event.preventDefault();void saveWikiLock(els.wikiLockCharacter.value.trim(), els.wikiLockValue.checked);});
+els.wikiAnnouncementForm?.addEventListener('submit', saveWikiAnnouncement);
+els.wikiSponsorsForm?.addEventListener('submit', saveWikiSponsors);
+els.addWikiSponsor?.addEventListener('click', () => { els.wikiSponsorRows.appendChild(createWikiSponsorRow()); els.wikiSponsorRows.lastElementChild?.querySelector('.wiki-sponsor-name')?.focus(); });
+document.querySelectorAll('[data-refresh-wiki-management]').forEach((item)=>item.addEventListener('click',()=>loadWikiManagement()));
+document.querySelectorAll('[data-refresh-wiki-content]').forEach((item)=>item.addEventListener('click',()=>loadWikiContent()));
 els.autoApproveLowRisk.addEventListener('change',()=>saveReviewSettings(els.autoApproveLowRisk.checked));
 els.chartSearch?.addEventListener('input',()=>{state.chartQuery=els.chartSearch.value;renderManagedCharts(state.status?.community?.currentCharts||[]);});
 els.chartCharacter?.addEventListener('change',()=>{state.chartCharacter=els.chartCharacter.value;renderManagedCharts(state.status?.community?.currentCharts||[]);});

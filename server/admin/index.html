@@ -7,9 +7,9 @@
     <title>椰之城维护端</title>
     <link rel="icon" type="image/png" href="/assets/logo.png" />
     <link rel="apple-touch-icon" href="/assets/logo.png" />
-    <link rel="stylesheet" href="/admin/styles.css?v=20260831-wiki-admin" />
+    <link rel="stylesheet" href="/admin/styles.css?v=20260912-wiki-content" />
     <link rel="stylesheet" href="/admin/community-cards.css?v=20260828-mobile-commission" />
-    <link rel="stylesheet" href="/admin/blue-white.css?v=20260907-admin-blue-white-v1" />
+    <link rel="stylesheet" href="/admin/blue-white.css?v=20260912-wiki-content" />
   </head>
   <body>
     <header class="topbar">
@@ -46,10 +46,12 @@
           <button class="active" type="button" data-tab="submissions">投稿审核 <span id="submissionCount">0</span></button>
           <button type="button" data-tab="charts">连段管理 <span id="chartManageCount">0</span></button>
           <button type="button" data-tab="commissions">委托广场 <span id="commissionManageCount">0</span></button>
+          <button type="button" data-tab="wiki-feedback">Wiki 反馈 <span id="wikiFeedbackCount">0</span></button>
+          <button type="button" data-tab="wiki-management">Wiki 管理</button>
           <button type="button" data-tab="withdrawals">撤回申请 <span id="withdrawalCount">0</span></button>
           <button type="button" data-tab="traffic">访问统计</button>
           <button type="button" data-tab="whitelist">UP 白名单</button>
-          <button type="button" data-tab="wiki-admins">Wiki 管理员</button>
+          <button type="button" data-tab="wiki-content">Wiki 内容</button>
           <button type="button" data-tab="project-api">项目 API</button>
           <button type="button" data-tab="smtp">邮件通知</button>
           <button type="button" data-tab="server">服务器</button>
@@ -60,11 +62,6 @@
           <div class="task-list submission-grid" id="submissionList"></div>
         </section>
 
-        <section class="tab-panel" data-panel="commissions" hidden>
-          <div class="section-heading"><div><h2>委托广场</h2><p>查看所有委托及收到的方案。选中的方案会进入投稿审核流程，不会直接公开。</p></div><button class="quiet" type="button" data-refresh-commissions>刷新</button></div>
-          <div class="commission-admin-list" id="commissionAdminList"></div>
-        </section>
-
         <section class="tab-panel" data-panel="charts" hidden>
           <div class="section-heading"><div><h2>当前全部连段</h2><p>这里显示当前网站正在展示的连段。删除后会立即从网站隐藏，之后从 GitHub 更新也不会恢复。</p></div><button class="quiet" type="button" data-refresh>刷新</button></div>
           <form class="manage-filters" id="chartManageFilters">
@@ -73,6 +70,28 @@
             <label><span>标签</span><select id="chartTagSelect"><option value="">全部标签</option></select></label>
           </form>
           <div class="task-list chart-manage-list" id="chartManageList"></div>
+        </section>
+
+        <section class="tab-panel" data-panel="commissions" hidden>
+          <div class="section-heading"><div><h2>委托广场</h2><p>查看所有委托及收到的方案。选中的方案会进入投稿审核流程，不会直接公开。</p></div><button class="quiet" type="button" data-refresh-commissions>刷新</button></div>
+          <div class="commission-admin-list" id="commissionAdminList"></div>
+        </section>
+
+        <section class="tab-panel" data-panel="wiki-feedback" hidden>
+          <div class="section-heading"><div><h2>Wiki 问题反馈</h2><p>用户在角色 Wiki 提交的问题会保存在服务器，并按 SMTP 设置发送到维护邮箱。</p></div><button class="quiet" type="button" data-refresh-wiki-feedback>刷新</button></div>
+          <div class="task-list wiki-feedback-list" id="wikiFeedbackList"></div>
+        </section>
+
+        <section class="tab-panel" data-panel="wiki-management" hidden>
+          <div class="section-heading"><div><h2>Wiki 管理</h2><p>锁定后对应角色的 Wiki 仍可浏览，但登录用户不能新增、修改、删除或移动节点。这里同时显示最近的编辑记录。</p></div><button class="quiet" type="button" data-refresh-wiki-management>刷新</button></div>
+          <form class="inline-form wiki-lock-form" id="wikiLockForm"><input id="wikiLockCharacter" maxlength="80" placeholder="角色名，例如：凌阳" required /><label class="check-row"><input id="wikiLockValue" type="checkbox" checked /><span>锁定角色</span></label><button class="primary" type="submit">应用</button></form>
+          <p class="form-message" id="wikiLockMessage" aria-live="polite"></p>
+          <div class="wiki-management-grid">
+            <section><h3>角色锁定状态</h3><div class="task-list" id="wikiLockList"></div></section>
+            <section><h3>最近编辑记录</h3><div class="task-list" id="wikiEditLogList"></div></section>
+            <section><h3>编辑权限申请</h3><div class="task-list" id="wikiAccessRequestList"></div></section>
+            <section><h3>已授权账号</h3><div class="task-list" id="wikiPermissionList"></div></section>
+          </div>
         </section>
 
         <section class="tab-panel" data-panel="withdrawals" hidden>
@@ -104,10 +123,12 @@
           <div class="chip-list" id="whitelistList"></div>
         </section>
 
-        <section class="tab-panel" data-panel="wiki-admins" hidden>
-          <div class="section-heading"><div><h2>角色 Wiki 管理员</h2><p>只有完成邮箱验证码登录且邮箱在此名单中的账号，才会在本体角色 Wiki 看到维护编辑入口。</p></div></div>
-          <form class="inline-form" id="wikiAdminForm"><input id="wikiAdminEmail" type="email" autocomplete="off" placeholder="name@example.com" required /><button class="primary" type="submit">授予权限</button></form>
-          <div class="chip-list" id="wikiAdminList"></div>
+        <section class="tab-panel" data-panel="wiki-content" hidden>
+          <div class="section-heading"><div><h2>Wiki 内容</h2><p>公告会显示在 Wiki 首页；赞助名单会同步到 Wiki 的赞助窗口。保存后立即生效。</p></div><button class="quiet" type="button" data-refresh-wiki-content>刷新</button></div>
+          <div class="wiki-content-grid">
+            <section class="wiki-announcement-admin wiki-announcement-page"><h3>发布 Wiki 主界面公告</h3><form id="wikiAnnouncementForm"><label>标题<input id="wikiAnnouncementTitle" maxlength="120" required /></label><label>正文<textarea id="wikiAnnouncementBody" maxlength="8000" rows="12" required></textarea></label><div class="wiki-editor-actions"><p class="form-message" id="wikiAnnouncementMessage" aria-live="polite"></p><button class="primary" type="submit">发布公告</button></div></form></section>
+            <section class="wiki-sponsors-admin"><div class="wiki-sponsors-heading"><div><h3>编辑赞助名单</h3><p>只展示你填写的昵称和金额，空金额不会显示金额。</p></div><button class="quiet" id="addWikiSponsorBtn" type="button">添加记录</button></div><form id="wikiSponsorsForm"><div class="wiki-sponsor-rows" id="wikiSponsorRows"></div><div class="wiki-editor-actions"><p class="form-message" id="wikiSponsorsMessage" aria-live="polite"></p><button class="primary" type="submit">保存赞助名单</button></div></form></section>
+          </div>
         </section>
 
         <section class="tab-panel" data-panel="project-api" hidden>
@@ -249,6 +270,6 @@
         <div class="confirm-actions"><button class="quiet" id="confirmCancelBtn" type="button">取消</button><button class="primary" id="confirmAcceptBtn" type="button">确认</button></div>
       </section>
     </div>
-    <script src="/admin/app.js?v=20260831-wiki-admin"></script>
+    <script src="/admin/app.js?v=20260912-wiki-content"></script>
   </body>
 </html>

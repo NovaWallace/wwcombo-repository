@@ -22,6 +22,10 @@ const MAX_WIKI_INPUT_ROUTE_SOURCES = 30;
 const MAX_WIKI_EDIT_LOG_ITEMS = 2000;
 const MAX_WIKI_ANNOUNCEMENT_TITLE = 120;
 const MAX_WIKI_ANNOUNCEMENT_BODY = 8000;
+const MAX_WIKI_SPONSORS = 200;
+const MAX_WIKI_SPONSOR_ID = 80;
+const MAX_WIKI_SPONSOR_NAME = 80;
+const MAX_WIKI_SPONSOR_AMOUNT = 20;
 const MAX_WIKI_ACCESS_REQUESTS = 2000;
 const COMMISSION_AUTO_ADOPT_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 const COMMISSION_TAGS = ['轮椅', '基础', '标准', '进阶', '冒烟', '错轮'];
@@ -488,6 +492,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const wikiPermissionsFile = path.join(root, 'wiki-permissions.json');
   const wikiAccessRequestsFile = path.join(root, 'wiki-access-requests.json');
   const wikiAnnouncementFile = path.join(root, 'wiki-announcement.json');
+  const sponsorsFile = path.join(root, 'sponsors.json');
   const commissionResponsesRoot = path.join(root, 'commission-responses');
   const commentsRoot = path.join(root, 'comments');
   const commentCountsFile = path.join(root, 'comment-counts.json');
@@ -821,6 +826,32 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const announcement = { version: 1, title, body, updatedAt: Date.now() };
     await writeJson(wikiAnnouncementFile, announcement);
     return announcement;
+  }
+
+  function normalizeSponsors(value) {
+    const source = Array.isArray(value) ? value : Array.isArray(value?.items) ? value.items : [];
+    return source.slice(0, MAX_WIKI_SPONSORS).flatMap((item) => {
+      const entry = record(item);
+      const id = wikiText(entry.id, MAX_WIKI_SPONSOR_ID);
+      const name = wikiText(entry.name || entry.nickname, MAX_WIKI_SPONSOR_NAME);
+      const amount = wikiText(entry.amount, MAX_WIKI_SPONSOR_AMOUNT);
+      if (!name) return [];
+      if (amount && !/^\d+(?:\.\d{1,2})?$/u.test(amount)) throw new Error('赞助金额必须是数字，可保留两位小数。');
+      return [{ ...(id ? { id } : {}), name, ...(amount ? { amount } : {}) }];
+    });
+  }
+
+  async function sponsorItems() {
+    const stored = await readJson(sponsorsFile, null);
+    return stored ? normalizeSponsors(stored) : null;
+  }
+
+  async function saveSponsorItems(value) {
+    const source = Array.isArray(value) ? value : value?.items;
+    if (!Array.isArray(source) || source.length > MAX_WIKI_SPONSORS) throw new Error(`赞助名单最多保存 ${MAX_WIKI_SPONSORS} 条。`);
+    const sponsors = normalizeSponsors(source);
+    await writeJson(sponsorsFile, { version: 1, items: sponsors });
+    return sponsors;
   }
 
   async function saveWikiModel(character, formId, model, editorEmail) {
@@ -1756,11 +1787,11 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   }
 
   async function status() {
-    const [queue, published, withdrawals, emails, wikiAdmins, smtp, moderation, downloads, hidden, commissions, wikiFeedback, locks, editLog, permissions, accessRequests, announcement] = await Promise.all([
+    const [queue, published, withdrawals, emails, wikiAdmins, smtp, moderation, downloads, hidden, commissions, wikiFeedback, locks, editLog, permissions, accessRequests, announcement, sponsors] = await Promise.all([
       readJson(queueFile, { pending: [], history: [] }),
       readJson(publishedFile, { charts: [] }),
       readJson(withdrawalsFile, { pending: [], history: [] }),
-      whitelist(), wikiAdminEmails(), smtpSettings(), reviewSettings(), readJson(downloadsFile, {}), hiddenIds(), commissionState(), adminWikiFeedback(), wikiLocks(), wikiEditLog('', 200), wikiPermissions(), wikiAccessRequests(), wikiAnnouncement()
+      whitelist(), wikiAdminEmails(), smtpSettings(), reviewSettings(), readJson(downloadsFile, {}), hiddenIds(), commissionState(), adminWikiFeedback(), wikiLocks(), wikiEditLog('', 200), wikiPermissions(), wikiAccessRequests(), wikiAnnouncement(), sponsorItems()
     ]);
     return {
       submissions: { pending: queue.pending || [], history: (queue.history || []).slice(-30).reverse() },
@@ -1794,7 +1825,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
         permissions,
         accessRequests,
         announcement
-      }
+      },
+      sponsors: sponsors || []
     };
   }
 
@@ -1839,6 +1871,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     setWikiCharacterPermission: (...args) => serializeMutation(() => setWikiCharacterPermission(...args)),
     wikiAnnouncement,
     saveWikiAnnouncement: (...args) => serializeMutation(() => saveWikiAnnouncement(...args)),
+    sponsorItems,
+    saveSponsorItems: (...args) => serializeMutation(() => saveSponsorItems(...args)),
     publicCommissions,
     adminCommissions,
     createCommission: (...args) => serializeMutation(() => createCommission(...args)),
