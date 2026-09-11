@@ -774,7 +774,7 @@ function renderProfileAvatarNode(target, name, fallbackText = profileInitial()) 
 }
 
 function accountSessionHeaders() {
-  return {};
+  return state.accountToken ? { authorization: `Bearer ${state.accountToken}`, 'x-wwcombo-account-client': '1' } : { 'x-wwcombo-account-client': '1' };
 }
 
 function postAccountSessionToParent() {
@@ -4139,6 +4139,8 @@ updateThemeControl();
 updateMotionControl();
 updateEmbeddedClientControls(false);
 renderProfile();
+renderAccountSession();
+void loadAccountSession();
 renderAxisKeymapButtons();
 syncAxisMergeSameMoveControls();
 els.languageSelect.value = i18n.language;
