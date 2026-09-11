@@ -1,0 +1,68 @@
+[
+  {
+    "name": "锁暝",
+    "icons": [
+      {
+        "source": "./assets/character-skill-icons/锁暝/SP_IconSuomingB1.webp",
+        "name": "SP_IconSuomingB1.webp"
+      },
+      {
+        "source": "./assets/character-skill-icons/锁暝/SP_IconSuomingC1.webp",
+        "name": "SP_IconSuomingC1.webp"
+      },
+      {
+        "source": "./assets/character-skill-icons/锁暝/SP_IconSuomingD1.webp",
+        "name": "SP_IconSuomingD1.webp"
+      },
+      {
+        "source": "./assets/character-skill-icons/锁暝/SP_IconSuomingD2.webp",
+        "name": "SP_IconSuomingD2.webp"
+      },
+      {
+        "source": "./assets/character-skill-icons/锁暝/SP_IconSuomingQTE.webp",
+        "name": "SP_IconSuomingQTE.webp"
+      },
+      {
+        "source": "./assets/character-skill-icons/锁暝/SP_IconSuomingY.webp",
+        "name": "SP_IconSuomingY.webp"
+      },
+      {
+        "source": "./assets/character-skill-icons/锁暝/SP_IconSuomingT.webp",
+        "name": "SP_IconSuomingT.webp"
+      }
+    ]
+  },
+  {
+    "name": "心",
+    "icons": [
+      {
+        "source": "./assets/character-skill-icons/心/SP_IconXinB1.webp",
+        "name": "SP_IconXinB1.webp"
+      },
+      {
+        "source": "./assets/character-skill-icons/心/SP_IconXinC1.webp",
+        "name": "SP_IconXinC1.webp"
+      },
+      {
+        "source": "./assets/character-skill-icons/心/SP_IconXinD1.webp",
+        "name": "SP_IconXinD1.webp"
+      },
+      {
+        "source": "./assets/character-skill-icons/心/SP_IconXinD2.webp",
+        "name": "SP_IconXinD2.webp"
+      },
+      {
+        "source": "./assets/character-skill-icons/心/SP_IconXinQTE.webp",
+        "name": "SP_IconXinQTE.webp"
+      },
+      {
+        "source": "./assets/character-skill-icons/心/SP_IconXinY.webp",
+        "name": "SP_IconXinY.webp"
+      },
+      {
+        "source": "./assets/character-skill-icons/心/SP_IconXinT.webp",
+        "name": "SP_IconXinT.webp"
+      }
+    ]
+  }
+]

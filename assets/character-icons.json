@@ -156,7 +156,7 @@
     "./assets/character-icons/role-65.webp"
   ],
   [
-    "清霄",
+    "清宵",
     "./assets/character-icons/role-73.webp"
   ],
   [
@@ -230,5 +230,13 @@
   [
     "秧秧·玄翎",
     "./assets/character-icons/role-70.webp"
+  ],
+  [
+    "心",
+    "./assets/character-icons/心.webp"
+  ],
+  [
+    "锁暝",
+    "./assets/character-icons/锁暝.webp"
   ]
 ]
