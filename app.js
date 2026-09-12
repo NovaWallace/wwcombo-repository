@@ -4141,7 +4141,7 @@ updateMotionControl();
 updateEmbeddedClientControls(false);
 renderProfile();
 renderAccountSession();
-void loadAccountSession();
+window.wwcomboCommunityAccountReady = loadAccountSession();
 renderAxisKeymapButtons();
 syncAxisMergeSameMoveControls();
 els.languageSelect.value = i18n.language;
@@ -4151,4 +4151,6 @@ if (!isWikiRoute) {
   loadIndex();
   void loadCommissions();
   void loadAppRelease();
+} else {
+  void loadCharacterIcons();
 }

@@ -11053,6 +11053,13 @@
     state.selected = queryName === 'home' ? '' : queryName;
     const initial = async () => {
       await loadCharacters();
+      // Account loading starts in app.js. Wait for it before the first detail
+      // request so an already signed-in user receives editable state on the
+      // initial render instead of a stale read-only label.
+      const accountReady = window.wwcomboCommunityAccountReady;
+      if (accountReady && typeof accountReady.then === 'function') {
+        await accountReady.catch(() => {});
+      }
       if (state.selected) await loadDetail(state.selected);
     };
     window.addEventListener('popstate', () => {
