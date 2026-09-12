@@ -1435,9 +1435,10 @@ html[data-theme='day'] .commission-response-card.accepted { border-color: #4b947
 }
 
 /* Character Wiki: a compact knowledge surface that shares the community shell. */
-.wiki-nav-link { min-height: 34px; display: inline-flex; align-items: center; gap: 7px; padding: 0 11px; border: 1px solid var(--line); border-radius: 5px; color: var(--text); background: var(--panel-2); text-decoration: none; font-size: 12px; font-weight: 700; }
+.wiki-nav-link { position: relative; min-height: 34px; display: inline-flex; align-items: center; gap: 7px; padding: 0 11px; border: 1px solid var(--line); border-radius: 5px; color: var(--text); background: var(--panel-2); text-decoration: none; font-size: 12px; font-weight: 700; }
 .wiki-nav-link:hover { border-color: var(--accent); color: var(--accent); }
 .wiki-nav-link svg { width: 15px; height: 15px; }
+.wiki-new-badge { position: absolute; top: -9px; right: -8px; z-index: 1; display: inline-grid; min-width: 27px; height: 16px; place-items: center; padding: 0 4px; background: #e3b62f; color: #fff; font: 900 9px/1 Arial, sans-serif; letter-spacing: .02em; box-shadow: 1px 1px 0 rgba(117, 81, 0, .42); }
 body.wiki-route { background: var(--bg); }
 body.wiki-route > main > :not(#communityWikiPage) { display: none; }
 .wiki-boot-screen { display: none; }
