@@ -47,6 +47,16 @@
         document.documentElement.dataset.theme = 'night';
         if (new URLSearchParams(location.search).has('wiki')) document.documentElement.classList.add('wiki-booting');
       }
+      // Show the boot surface on the same pointer frame as the Wiki link.
+      // The next document will keep the class during its own initialization.
+      document.addEventListener('pointerdown', (event) => {
+        const link = event.target.closest?.('[data-wiki-link]');
+        if (!link) return;
+        try {
+          const destination = new URL(link.href, location.href);
+          if (destination.searchParams.has('wiki')) document.documentElement.classList.add('wiki-booting');
+        } catch {}
+      }, true);
     </script>
     <link rel="icon" type="image/png" href="assets/logo.png" />
     <link rel="apple-touch-icon" href="assets/logo.png" />
@@ -56,13 +66,13 @@
         document.write('<link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />');
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260911-wiki-boot-auth-v2" />
+    <link rel="stylesheet" href="styles.css?v=20260918-plaza-tabs-v4" />
   </head>
   <body>
     <div class="wiki-boot-screen" role="status" aria-live="polite" aria-label="加载中">
       <div class="wiki-boot-screen-inner">
-        <img class="wiki-boot-screen-gif wiki-boot-screen-gif-day" src="assets/wiki-loading-day.gif" alt="" />
-        <img class="wiki-boot-screen-gif wiki-boot-screen-gif-night" src="assets/wiki-loading-night.gif" alt="" />
+        <img class="wiki-boot-screen-gif wiki-boot-screen-gif-day" src="assets/wiki-loading-day.gif?v=20260918-cutout1" alt="" />
+        <img class="wiki-boot-screen-gif wiki-boot-screen-gif-night" src="assets/wiki-loading-night.gif?v=20260918-cutout1" alt="" />
         <span>加载中</span>
       </div>
     </div>
@@ -157,6 +167,7 @@
             <div class="community-tabs" role="tablist" aria-label="社区内容" data-i18n-aria-label="plaza.tabsAria">
               <button class="active" id="comboTabButton" type="button" role="tab" aria-selected="true" data-view="combos" data-i18n="plaza.combos">社区连段</button>
               <button id="commissionTabButton" type="button" role="tab" aria-selected="false" data-view="commissions" data-i18n="plaza.commissions">委托广场</button>
+              <button id="leaderboardTabButton" type="button" role="tab" aria-selected="false" data-view="leaderboard">果力排行</button>
             </div>
             <label class="search-field">
               <span class="sr-only" data-i18n="search.titleLabel">按标题搜索</span>
@@ -306,6 +317,7 @@
         <form class="account-form" id="profileForm">
           <label><span data-i18n="profile.username">用户名</span><input id="profileUsernameInput" maxlength="40" autocomplete="nickname" required /></label>
           <label><span data-i18n="profile.email">邮箱</span><input id="profileEmailInput" type="email" maxlength="254" autocomplete="email" required /></label>
+          <label><span>创作者主页 <small>可选，支持 B 站或抖音</small></span><input id="profileHomepageInput" type="url" maxlength="300" placeholder="https://space.bilibili.com/..." autocomplete="url" /></label>
           <div class="profile-avatar-picker">
             <div class="profile-avatar-picker-head"><span data-i18n="profile.avatar">头像</span><strong id="profileAvatarChoice" data-i18n="profile.avatarNone">未选择</strong></div>
             <div class="profile-avatar-grid" id="profileAvatarGrid"></div>
@@ -652,6 +664,6 @@
     </script>
     <script src="assets/input-icons.js?v=20260801-1"></script>
     <script>window.WWComboInputIcons = WWComboInputIcons;</script>
-    <script type="module" src="assets/wiki-runtime.min.js?v=20260915-local-esm-v2"></script>
+    <script type="module" src="assets/wiki-runtime.min.js?v=20260918-home-boot-v1"></script>
   </body>
 </html>

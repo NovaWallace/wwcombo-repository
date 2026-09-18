@@ -954,6 +954,14 @@ function acceptCommentFrom(address) {
   return true;
 }
 
+function hasCreatorHomepage(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    const host = url.hostname.replace(/^www\./i, '').toLowerCase();
+    return /^https?:$/i.test(url.protocol) && (host === 'bilibili.com' || host.endsWith('.bilibili.com') || host === 'b23.tv' || host === 'douyin.com' || host.endsWith('.douyin.com'));
+  } catch { return false; }
+}
+
 async function publicIndex(voterId = '') {
   const index = JSON.parse((await readFile(path.join(PUBLIC_ROOT, 'community-index.json'), 'utf8')).replace(/^\ufeff/, ''));
   const [communityStatus, engagement, commentCounts] = await Promise.all([
@@ -964,7 +972,7 @@ async function publicIndex(voterId = '') {
   const whitelistMasks = new Set((Array.isArray(communityStatus.whitelist) ? communityStatus.whitelist : []).map(maskedPublicEmail).filter(Boolean));
   index.charts = index.charts.map((chart) => {
     const submitter = chart.submitter && typeof chart.submitter === 'object' && !Array.isArray(chart.submitter) ? { ...chart.submitter } : {};
-    if (whitelistMasks.has(String(submitter.email || '').trim().toLowerCase())) submitter.badge = 'UP';
+    if (whitelistMasks.has(String(submitter.email || '').trim().toLowerCase()) || hasCreatorHomepage(submitter.homepage)) submitter.badge = 'UP';
     else delete submitter.badge;
     return {
       ...chart,
@@ -1113,7 +1121,27 @@ async function handleCommunityApi(req, res, pathname) {
       return;
     }
     const body = await readJsonBody(req, 2200 * 1024);
-    sendJson(res, 200, { ok: true, ...(await community.saveWikiModel(wikiPath[1], body.formId, body.model, account.email, { name: body.editorName, avatar: body.editorAvatar })) }, { 'cache-control': 'no-store' });
+    sendJson(res, 200, { ok: true, ...(await community.saveWikiModel(wikiPath[1], body.formId, body.model, account.email, { name: body.editorName, avatar: body.editorAvatar, homepage: body.editorHomepage })) }, { 'cache-control': 'no-store' });
+    return;
+  }
+  const wikiSoloComboPath = /^\/api\/community\/wiki\/([^/]+)\/solo-combos$/.exec(pathname);
+  if (req.method === 'GET' && wikiSoloComboPath) {
+    const account = readAccountSession(req);
+    sendJson(res, 200, await community.wikiSoloCombos(decodeURIComponent(wikiSoloComboPath[1]), account?.email || ''), { 'cache-control': 'no-store' });
+    return;
+  }
+  if (req.method === 'POST' && wikiSoloComboPath) {
+    const account = readAccountSession(req);
+    if (!account) {
+      sendJson(res, 401, { error: '请先登录邮箱账号后再保存单人连段。' });
+      return;
+    }
+    const body = await readJsonBody(req, 700 * 1024);
+    try {
+      sendJson(res, 200, { combo: await community.saveWikiSoloCombo(decodeURIComponent(wikiSoloComboPath[1]), body.combo, account.email, { name: body.editorName, avatar: body.editorAvatar, homepage: body.editorHomepage }) }, { 'cache-control': 'no-store' });
+    } catch (error) {
+      sendJson(res, Number(error.statusCode || 400), { error: error.message || String(error) });
+    }
     return;
   }
   if (req.method === 'POST' && pathname === '/api/community/preflight') {
@@ -1255,6 +1283,10 @@ async function handleCommunityApi(req, res, pathname) {
     } catch (error) {
       sendJson(res, Number(error.statusCode || 400), { error: error.message || String(error) });
     }
+    return;
+  }
+  if (req.method === 'GET' && pathname === '/api/community/leaderboard') {
+    sendJson(res, 200, await community.publicLeaderboard(), { 'cache-control': 'no-store' });
     return;
   }
   if (req.method === 'POST' && pathname === '/api/community/wiki-feedback') {

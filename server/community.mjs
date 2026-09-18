@@ -64,6 +64,20 @@ function publicEmail(value) {
   return `${Array.from(email.slice(0, at)).slice(0, 2).join('')}***${email.slice(at)}`;
 }
 
+function creatorHomepage(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    const host = url.hostname.replace(/^www\./i, '').toLowerCase();
+    return /^https?:$/i.test(url.protocol) && (host === 'bilibili.com' || host.endsWith('.bilibili.com') || host === 'b23.tv' || host === 'douyin.com' || host.endsWith('.douyin.com'))
+      ? url.href.slice(0, 300)
+      : '';
+  } catch { return ''; }
+}
+
+function hasCreatorHomepage(value) {
+  return Boolean(creatorHomepage(value));
+}
+
 function safeName(value, fallback = 'combo') {
   return String(value || fallback).trim().replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, '-').slice(0, 80) || fallback;
 }
@@ -491,6 +505,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const wikiFeedbackFile = path.join(root, 'wiki-feedback.json');
   const wikiModelsFile = path.join(root, 'wiki-models.json');
   const wikiEditLogFile = path.join(root, 'wiki-edit-log.json');
+  const wikiSoloCombosFile = path.join(root, 'wiki-solo-combos.json');
   const wikiLocksFile = path.join(root, 'wiki-locks.json');
   const wikiPermissionsFile = path.join(root, 'wiki-permissions.json');
   const wikiAccessRequestsFile = path.join(root, 'wiki-access-requests.json');
@@ -544,6 +559,36 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       changed = true;
     }
     if (changed) await writeJson(wikiEditLogFile, { version: 1, items: items.slice(-MAX_WIKI_EDIT_LOG_ITEMS) });
+  }
+
+  async function wikiEditAccess(character, viewerEmail = '') {
+    const name = canonicalCharacterName(character);
+    const email = normalizeEmail(viewerEmail);
+    if (!name || name.length > 80 || isUnsafeWikiKey(name)) throw new Error('角色名无效。');
+    const [locks, permissions] = await Promise.all([
+      readJson(wikiLocksFile, { version: 1, characters: {} }),
+      readJson(wikiPermissionsFile, { version: 1, characters: {} })
+    ]);
+    const lock = record(locks).characters?.[name];
+    const permission = record(record(permissions).characters?.[name]);
+    const granted = Boolean(email && Array.isArray(permission.emails) && permission.emails.map(normalizeEmail).includes(email));
+    const author = email === WIKI_AUTHOR_EMAIL;
+    return {
+      name,
+      email,
+      lock,
+      granted,
+      author,
+      editable: Boolean(email && (lock?.locked !== true || granted || author))
+    };
+  }
+
+  async function appendWikiEditLog(entry) {
+    const logState = record(await readJson(wikiEditLogFile, { version: 1, items: [] }));
+    const items = Array.isArray(logState.items) ? logState.items.slice(-(MAX_WIKI_EDIT_LOG_ITEMS - 1)) : [];
+    items.push({ id: `wiki-edit-${randomUUID()}`, ...entry });
+    await writeJson(wikiEditLogFile, { version: 1, items });
+    return items;
   }
 
   function commentsFile(comboId) {
@@ -723,20 +768,14 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   }
 
   async function wikiPublicState(character, viewerEmail = '') {
-    const name = canonicalCharacterName(character);
-    if (!name || name.length > 80 || isUnsafeWikiKey(name)) throw new Error('角色名无效。');
-    const [stored, locks, permissions, requests, editLog] = await Promise.all([
+    const access = await wikiEditAccess(character, viewerEmail);
+    const { name, email } = access;
+    const [stored, requests, editLog] = await Promise.all([
       readJson(wikiModelsFile, { version: 1, characters: {} }),
-      readJson(wikiLocksFile, { version: 1, characters: {} }),
-      readJson(wikiPermissionsFile, { version: 1, characters: {} }),
       readJson(wikiAccessRequestsFile, { version: 1, items: [] }),
       readJson(wikiEditLogFile, { version: 1, items: [] })
     ]);
     const item = record(record(stored).characters?.[name]);
-    const lock = record(record(locks).characters?.[name]);
-    const email = normalizeEmail(viewerEmail);
-    const permission = record(record(permissions).characters?.[name]);
-    const granted = Boolean(email && Array.isArray(permission.emails) && permission.emails.map(normalizeEmail).includes(email));
     const pending = Boolean(email && Array.isArray(requests.items) && requests.items.some((item) => item?.character === name && normalizeEmail(item.email) === email && item.status === 'pending'));
     const characterEdits = (Array.isArray(editLog.items) ? editLog.items : [])
       .filter((entry) => canonicalCharacterName(entry?.character) === name)
@@ -760,9 +799,9 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       updatedAt: Number(item.updatedAt || 0) || 0,
       updatedBy: publicEmail(item.updatedBy),
       editActivity: { totalEdits: characterEdits.length, participantCount: allParticipants.length, recentEditors: allParticipants.slice(0, 3), participants },
-      lock: lock.locked === true ? { locked: true, lockedAt: Number(lock.lockedAt || 0) || 0 } : { locked: false },
-      editable: Boolean(email && (lock.locked !== true || granted)),
-      access: { granted, pending }
+      lock: access.lock?.locked === true ? { locked: true, lockedAt: Number(access.lock?.lockedAt || 0) || 0 } : { locked: false },
+      editable: access.editable,
+      access: { granted: access.granted, pending }
     };
   }
 
@@ -896,18 +935,13 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const profile = record(editorProfile);
     const editorName = wikiText(profile.name || profile.username, 40);
     const editorAvatar = wikiText(profile.avatar, 80);
+    const editorHomepage = wikiText(profile.homepage, 300);
     if (!name || name.length > 80 || isUnsafeWikiKey(name) || !/^[a-z0-9_-]+$/i.test(form) || isUnsafeWikiKey(form) || !email) throw new Error('Wiki 保存参数不正确。');
     const cleanModel = normalizeWikiModel(model);
     if (cleanModel.character && canonicalCharacterName(cleanModel.character) !== name) throw new Error('Wiki 角色与保存目标不一致。');
     cleanModel.character = name;
-    const [locks, permissions] = await Promise.all([
-      readJson(wikiLocksFile, { version: 1, characters: {} }),
-      readJson(wikiPermissionsFile, { version: 1, characters: {} })
-    ]);
-    const lock = record(locks).characters?.[name];
-    const permission = record(record(permissions).characters?.[name]);
-    const granted = Array.isArray(permission.emails) && permission.emails.map(normalizeEmail).includes(email);
-    if (lock?.locked === true && !granted) {
+    const access = await wikiEditAccess(name, email);
+    if (!access.editable) {
       const error = new Error('该角色 Wiki 已被维护端锁定，暂时不能修改。');
       error.statusCode = 423;
       throw error;
@@ -923,21 +957,18 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     stored.characters[name] = previous;
     await writeJson(wikiModelsFile, stored);
 
-    const logState = record(await readJson(wikiEditLogFile, { version: 1, items: [] }));
-    const items = Array.isArray(logState.items) ? logState.items.slice(-(MAX_WIKI_EDIT_LOG_ITEMS - 1)) : [];
-    items.push({
-      id: `wiki-edit-${randomUUID()}`,
+    const items = await appendWikiEditLog({
       character: name,
       form,
       editorEmail: email,
       ...(editorName ? { editorName } : {}),
       ...(editorAvatar ? { editorAvatar } : {}),
+      ...(editorHomepage ? { homepage: editorHomepage } : {}),
       savedAt: Date.now(),
       action: 'save',
       nodeCount: cleanModel.nodes.length,
       modelVersion: cleanModel.version
     });
-    await writeJson(wikiEditLogFile, { version: 1, items });
     const characterEdits = items
       .filter((entry) => canonicalCharacterName(entry?.character) === name)
       .sort((left, right) => Number(right?.savedAt || 0) - Number(left?.savedAt || 0));
@@ -996,6 +1027,111 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       .slice(-Math.max(1, Math.min(500, Number(limit) || 200)))
       .reverse()
       .map((item) => ({ ...item, editorEmail: normalizeEmail(item.editorEmail) || '邮箱未知' }));
+  }
+
+  function normalizeSoloCombo(character, combo, email, existing = {}) {
+    const source = record(combo);
+    const nodes = Array.isArray(source.nodes) ? source.nodes.slice(0, 500).map((node) => record(node)) : [];
+    const buffs = Array.isArray(source.buffs) ? source.buffs.slice(0, 500).map((buff) => record(buff)) : [];
+    const name = wikiText(source.name, 120) || '未命名连段';
+    const id = wikiText(source.id, 120) || `solo-${randomUUID()}`;
+    const createdAt = Number(existing.createdAt || source.createdAt || Date.now()) || Date.now();
+    const editorName = wikiText(source.owner?.name || source.editorName, 80);
+    const editorAvatar = wikiText(source.owner?.avatar || source.editorAvatar, 80);
+    return {
+      id,
+      character: canonicalCharacterName(character),
+      name,
+      mode: 'combo',
+      nodes,
+      buffs,
+      createdAt,
+      updatedAt: Date.now(),
+      owner: {
+        email: normalizeEmail(existing.owner?.email || email),
+        ...(editorName ? { name: editorName } : {}),
+        ...(editorAvatar ? { avatar: editorAvatar } : {})
+      }
+    };
+  }
+
+  function publicSoloCombo(combo, viewerEmail = '') {
+    const owner = record(combo.owner);
+    const ownerEmail = normalizeEmail(owner.email);
+    return {
+      id: String(combo.id || ''),
+      character: canonicalCharacterName(combo.character),
+      name: String(combo.name || '未命名连段'),
+      mode: 'combo',
+      nodes: Array.isArray(combo.nodes) ? combo.nodes : [],
+      buffs: [],
+      createdAt: Number(combo.createdAt || 0) || 0,
+      updatedAt: Number(combo.updatedAt || combo.createdAt || 0) || 0,
+      owner: {
+        name: String(owner.name || publicEmail(ownerEmail) || '匿名用户'),
+        ...(owner.avatar ? { avatar: String(owner.avatar) } : {})
+      },
+      editable: Boolean(ownerEmail && ownerEmail === normalizeEmail(viewerEmail))
+    };
+  }
+
+  async function wikiSoloCombos(character, viewerEmail = '') {
+    const name = canonicalCharacterName(character);
+    const stored = record(await readJson(wikiSoloCombosFile, { version: 1, characters: {} }));
+    const items = Array.isArray(stored.characters?.[name]) ? stored.characters[name] : [];
+    return {
+      version: 1,
+      character: name,
+      updatedAt: Math.max(0, ...items.map((item) => Number(item?.updatedAt || 0))),
+      combos: items.map((item) => publicSoloCombo(item, viewerEmail)).sort((left, right) => right.updatedAt - left.updatedAt)
+    };
+  }
+
+  async function saveWikiSoloCombo(character, combo, email, editorProfile = {}) {
+    const name = canonicalCharacterName(character);
+    const accountEmail = normalizeEmail(email);
+    if (!name || !accountEmail) throw new Error('单人连段保存参数不正确。');
+    const access = await wikiEditAccess(name, accountEmail);
+    if (!access.editable) {
+      const error = new Error('该角色 Wiki 已被维护端锁定，暂时不能修改。');
+      error.statusCode = 423;
+      throw error;
+    }
+    const stored = record(await readJson(wikiSoloCombosFile, { version: 1, characters: {} }));
+    stored.version = 1;
+    stored.characters = record(stored.characters);
+    const current = Array.isArray(stored.characters[name]) ? stored.characters[name] : [];
+    const requestedId = wikiText(record(combo).id, 120);
+    const index = current.findIndex((item) => item?.id === requestedId);
+    const existing = index >= 0 ? record(current[index]) : null;
+    if (existing && normalizeEmail(existing.owner?.email) !== accountEmail && accountEmail !== WIKI_AUTHOR_EMAIL) {
+      const error = new Error('只有单人连段作者可以修改这条连段。');
+      error.statusCode = 403;
+      throw error;
+    }
+    const clean = normalizeSoloCombo(name, combo, accountEmail, existing || {});
+    clean.owner.name = wikiText(editorProfile.name || clean.owner.name, 80) || publicEmail(accountEmail) || '匿名用户';
+    clean.owner.avatar = wikiText(editorProfile.avatar || clean.owner.avatar, 80);
+    clean.owner.homepage = wikiText(editorProfile.homepage || clean.owner.homepage, 300);
+    if (index >= 0) current[index] = clean; else current.push(clean);
+    stored.characters[name] = current.slice(-100);
+    await writeJson(wikiSoloCombosFile, stored);
+
+    if (index < 0) {
+      await appendWikiEditLog({
+        character: name,
+        form: 'solo-combo',
+        editorEmail: accountEmail,
+        ...(clean.owner.name ? { editorName: clean.owner.name } : {}),
+        ...(clean.owner.avatar ? { editorAvatar: clean.owner.avatar } : {}),
+        ...(clean.owner.homepage ? { homepage: clean.owner.homepage } : {}),
+        savedAt: clean.updatedAt,
+        action: 'solo-combo-upload',
+        nodeCount: clean.nodes.length,
+        modelVersion: 1
+      });
+    }
+    return publicSoloCombo(clean, accountEmail);
   }
 
   async function resolveWikiFeedback(id) {
@@ -1059,9 +1195,10 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const fileName = safeName(body.fileName || 'combo.wwcombo.json');
     const storedFile = `${id}.wwcombo.json`;
     const avatar = String(body.avatar || '').trim().slice(0, 80);
+    const homepage = String(body.homepage || '').trim().slice(0, 300);
     const submission = {
       id, username, email, fileName, storedFile, status: 'pending', submittedAt: Date.now(), address: String(address || ''),
-      avatar, preview: submissionPreview(content), preflight
+      avatar, homepage, preview: submissionPreview(content), preflight
     };
     await writeFile(path.join(pendingRoot, storedFile), serialized, { encoding: 'utf8', mode: 0o600 });
     const queue = await readJson(queueFile, { pending: [], history: [] });
@@ -1106,8 +1243,9 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const submission = queue.pending[index];
     const source = path.join(pendingRoot, submission.storedFile);
     const payload = JSON.parse(await readFile(source, 'utf8'));
-    const up = (await whitelist()).includes(normalizeEmail(submission.email));
-    const submitter = { nickname: submission.username, email: publicEmail(submission.email), ...(submission.avatar ? { avatar: submission.avatar } : {}), ...(up ? { badge: 'UP' } : {}) };
+    const homepage = creatorHomepage(submission.homepage);
+    const up = (await whitelist()).includes(normalizeEmail(submission.email)) || Boolean(homepage);
+    const submitter = { nickname: submission.username, email: publicEmail(submission.email), ...(submission.avatar ? { avatar: submission.avatar } : {}), ...(homepage ? { homepage } : {}), ...(up ? { badge: 'UP' } : {}) };
     const summary = chartSummary(payload, submitter);
     const { chart: sourceChart } = submittedChart(payload);
     const chart = canonicalizeChartCharacters(sourceChart);
@@ -1487,7 +1625,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
           nickname: String(response.username || '未命名用户'),
           email: publicEmail(responseEmail),
           ...(response.avatar ? { avatar: String(response.avatar) } : {}),
-          ...(upEmails.has(responseEmail) ? { badge: 'UP' } : {})
+          ...(response.homepage ? { homepage: String(response.homepage) } : {}),
+          ...(upEmails.has(responseEmail) || hasCreatorHomepage(response.homepage) ? { badge: 'UP' } : {})
         },
         packageUrl: `/api/community/commissions/${encodeURIComponent(item.id)}/responses/${encodeURIComponent(response.id)}/package`
       };
@@ -1504,7 +1643,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
         nickname: String(owner.username || '未命名用户'),
         email: publicEmail(ownerEmail),
         ...(owner.avatar ? { avatar: String(owner.avatar) } : {}),
-        ...(upEmails.has(ownerEmail) ? { badge: 'UP' } : {})
+        ...(owner.homepage ? { homepage: String(owner.homepage) } : {}),
+        ...(upEmails.has(ownerEmail) || hasCreatorHomepage(owner.homepage) ? { badge: 'UP' } : {})
       },
       viewerIsOwner: Boolean(viewer && ownerEmail === viewer),
       status: item.status === 'completed' ? 'completed' : 'open',
@@ -1562,7 +1702,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       description,
       characters,
       tag,
-      owner: { username, email, avatar: String(body.avatar || '').trim().slice(0, 80) },
+      owner: { username, email, avatar: String(body.avatar || '').trim().slice(0, 80), homepage: String(body.homepage || '').trim().slice(0, 300) },
       status: 'open',
       interests: {},
       responses: [],
@@ -1614,6 +1754,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       username,
       email,
       avatar: String(body.avatar || '').trim().slice(0, 80),
+      homepage: String(body.homepage || '').trim().slice(0, 300),
       fileName: safeName(body.fileName || 'combo.wwcombo.json'),
       storedFile,
       preview,
@@ -1673,6 +1814,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       username: response.username,
       email: response.email,
       avatar: response.avatar,
+      homepage: response.homepage,
       fileName: response.fileName,
       content
     }, 'commission-adoption');
@@ -1837,6 +1979,138 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     return { id: item.id, status: 'withdrawn' };
   }
 
+  async function publicLeaderboard() {
+    const [published, downloads, commissions, editLog] = await Promise.all([
+      readJson(publishedFile, { charts: [] }),
+      readJson(downloadsFile, {}),
+      commissionState(),
+      readJson(wikiEditLogFile, { version: 1, items: [] })
+    ]);
+    const users = new Map();
+    const cleanName = (value) => String(value || '').trim().slice(0, 80);
+    const publicAvatar = (value) => cleanName(value).slice(0, 80);
+    const publicHomepage = (value) => {
+      try {
+        const url = new URL(String(value || '').trim());
+        return /^https?:$/i.test(url.protocol) && /(bilibili\.com|b23\.tv|douyin\.com)$/i.test(url.hostname.replace(/^www\./i, '')) ? url.href.slice(0, 300) : '';
+      } catch { return ''; }
+    };
+    const identity = (value, fallback = '匿名用户') => {
+      const source = record(value);
+      const email = normalizeEmail(source.email || source.editorEmail);
+      const name = cleanName(source.nickname || source.username || source.editorName || source.name);
+      return {
+        key: email ? `email:${email}` : `name:${name || fallback}`,
+        name: name || (email ? publicEmail(email) : fallback),
+        avatar: publicAvatar(source.avatar || source.editorAvatar),
+        homepage: publicHomepage(source.homepage || source.creatorHomepage)
+      };
+    };
+    const ensure = (value, fallback) => {
+      const person = identity(value, fallback);
+      const current = users.get(person.key) || {
+        key: person.key,
+        name: person.name,
+        email: person.key.startsWith('email:') ? publicEmail(person.key.slice(6)) : '',
+        avatar: person.avatar,
+        homepage: person.homepage,
+        characters: [],
+        score: 0,
+        combo: { uploads: 0, downloads: 0, score: 0 },
+        commission: { published: 0, responses: 0, adopted: 0, received: 0, score: 0 },
+        wiki: { soloCombos: 0, repairs: 0, score: 0 }
+      };
+      if (person.name !== '匿名用户') current.name = person.name;
+      if (person.key.startsWith('email:')) current.email = publicEmail(person.key.slice(6));
+      if (person.avatar) current.avatar = person.avatar;
+      if (person.homepage) current.homepage = person.homepage;
+      users.set(person.key, current);
+      return current;
+    };
+    const add = (value, section, field, points, fallback) => {
+      const user = ensure(value, fallback);
+      user[section][field] += 1;
+      user[section].score += points;
+      user.score += points;
+    };
+    const addCharacters = (user, values) => {
+      for (const character of Array.isArray(values) ? values : [values]) {
+        const name = canonicalCharacterName(character);
+        if (name && !user.characters.includes(name)) user.characters.push(name);
+      }
+      user.characters = user.characters.slice(0, 8);
+    };
+
+    for (const chart of (Array.isArray(published?.charts) ? published.charts : [])) {
+      const comboUser = ensure(chart.submitter || chart, '连段作者');
+      add(chart.submitter || chart, 'combo', 'uploads', 200, '连段作者');
+      addCharacters(comboUser, chart.characters || chart.character);
+      const count = Math.max(0, Number(downloads?.[chart.id] || 0));
+      if (count) {
+        const user = ensure(chart.submitter || chart, '连段作者');
+        user.combo.downloads += count;
+        user.combo.score += count;
+        user.score += count;
+      }
+    }
+    for (const commission of (Array.isArray(commissions?.commissions) ? commissions.commissions : [])) {
+      const commissionOwner = ensure(commission.owner, '委托发布者');
+      add(commission.owner, 'commission', 'published', 100, '委托发布者');
+      addCharacters(commissionOwner, commission.characters);
+      for (const response of (Array.isArray(commission.responses) ? commission.responses : [])) {
+        const responseUser = ensure(response, '回应作者');
+        add(response, 'commission', 'responses', 200, '回应作者');
+        addCharacters(responseUser, commission.characters);
+        const owner = ensure(commission.owner, '委托发布者');
+        owner.commission.received += 1;
+        owner.commission.score += 100;
+        owner.score += 100;
+        if (response.status === 'accepted' || response.acceptedAt) {
+          add(response, 'commission', 'adopted', 200, '回应作者');
+          if (!response.autoAdopted && !commission.autoAdopted) {
+            const ownerUser = ensure(commission.owner, '委托发布者');
+            ownerUser.commission.adopted += 1;
+            ownerUser.commission.score += 100;
+            ownerUser.score += 100;
+          }
+        }
+      }
+    }
+    for (const entry of (Array.isArray(editLog?.items) ? editLog.items : [])) {
+      if (entry.action === 'author-baseline') continue;
+      if (['solo-combo-upload', 'solo-combo', 'single-combo-upload'].includes(entry.action)) {
+        const wikiUser = ensure(entry, 'Wiki 作者');
+        add(entry, 'wiki', 'soloCombos', 200, 'Wiki 作者');
+        addCharacters(wikiUser, entry.character);
+      } else if (entry.action === 'save' || entry.action === 'repair') {
+        const wikiUser = ensure(entry, 'Wiki 编辑者');
+        add(entry, 'wiki', 'repairs', 300, 'Wiki 编辑者');
+        addCharacters(wikiUser, entry.character);
+      }
+    }
+    const rows = [...users.values()]
+      .filter((item) => item.score > 0)
+      .sort((left, right) => right.score - left.score || left.name.localeCompare(right.name, 'zh-CN'))
+      .map((item, index) => ({
+        rank: index + 1,
+        name: item.name,
+        ...(item.email ? { email: item.email } : {}),
+        ...(item.avatar ? { avatar: item.avatar } : {}),
+        ...(item.homepage ? { homepage: item.homepage } : {}),
+        characters: item.characters,
+        score: item.score,
+        combo: { uploads: item.combo.uploads, downloads: item.combo.downloads },
+        commission: { published: item.commission.published, responses: item.commission.responses, adopted: item.commission.adopted },
+        wiki: { soloCombos: item.wiki.soloCombos, repairs: item.wiki.repairs }
+      }));
+    return {
+      version: 1,
+      updatedAt: Date.now(),
+      rules: { comboUpload: 200, comboDownload: 1, commissionPublish: 100, commissionResponse: 200, commissionAdopted: 200, commissionReceived: 100, commissionActiveAdopt: 100, wikiSoloCombo: 200, wikiRepair: 300 },
+      users: rows
+    };
+  }
+
   async function status() {
     const [queue, published, withdrawals, emails, wikiAdmins, smtp, moderation, downloads, hidden, commissions, wikiFeedback, locks, editLog, permissions, accessRequests, announcement, sponsors] = await Promise.all([
       readJson(queueFile, { pending: [], history: [] }),
@@ -1916,6 +2190,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     wikiLocks,
     setWikiLock: (...args) => serializeMutation(() => setWikiLock(...args)),
     wikiEditLog,
+    wikiSoloCombos,
+    saveWikiSoloCombo: (...args) => serializeMutation(() => saveWikiSoloCombo(...args)),
     requestWikiAccess: (...args) => serializeMutation(() => requestWikiAccess(...args)),
     wikiAccessRequests,
     wikiPermissions,
@@ -1927,6 +2203,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     sponsorItems,
     saveSponsorItems: (...args) => serializeMutation(() => saveSponsorItems(...args)),
     publicCommissions,
+    publicLeaderboard,
     adminCommissions,
     createCommission: (...args) => serializeMutation(() => createCommission(...args)),
     addCommissionInterest: (...args) => serializeMutation(() => addCommissionInterest(...args)),
