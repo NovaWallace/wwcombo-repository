@@ -47,9 +47,10 @@
         document.documentElement.dataset.theme = 'night';
         if (new URLSearchParams(location.search).has('wiki')) document.documentElement.classList.add('wiki-booting');
       }
-      // Show the boot surface on the same pointer frame as the Wiki link.
-      // The next document will keep the class during its own initialization.
-      document.addEventListener('pointerdown', (event) => {
+      // Show the boot surface only after the link has received a complete click.
+      // Opening it on pointerdown places the overlay under the pointer before
+      // pointerup, which can cancel the link's native navigation.
+      document.addEventListener('click', (event) => {
         const link = event.target.closest?.('[data-wiki-link]');
         if (!link) return;
         try {
