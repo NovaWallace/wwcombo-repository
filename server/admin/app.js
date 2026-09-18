@@ -9,6 +9,7 @@ const els = {
   chartManageCount: byId('chartManageCount'), chartManageList: byId('chartManageList'), chartSearch: byId('chartSearchInput'), chartCharacter: byId('chartCharacterSelect'), chartTag: byId('chartTagSelect'),
   commissionManageCount: byId('commissionManageCount'), commissionAdminList: byId('commissionAdminList'),
   wikiFeedbackCount: byId('wikiFeedbackCount'), wikiFeedbackList: byId('wikiFeedbackList'), wikiLockForm: byId('wikiLockForm'), wikiLockCharacter: byId('wikiLockCharacter'), wikiLockValue: byId('wikiLockValue'), wikiLockMessage: byId('wikiLockMessage'), wikiLockList: byId('wikiLockList'), wikiEditLogList: byId('wikiEditLogList'), wikiAnnouncementForm: byId('wikiAnnouncementForm'), wikiAnnouncementTitle: byId('wikiAnnouncementTitle'), wikiAnnouncementBody: byId('wikiAnnouncementBody'), wikiAnnouncementMessage: byId('wikiAnnouncementMessage'), wikiSponsorsForm: byId('wikiSponsorsForm'), wikiSponsorRows: byId('wikiSponsorRows'), wikiSponsorsMessage: byId('wikiSponsorsMessage'), addWikiSponsor: byId('addWikiSponsorBtn'), wikiAccessRequestList: byId('wikiAccessRequestList'), wikiPermissionList: byId('wikiPermissionList'),
+  clientAnnouncementForm: byId('clientAnnouncementForm'), clientAnnouncementEnabled: byId('clientAnnouncementEnabled'), clientAnnouncementTitle: byId('clientAnnouncementTitle'), clientAnnouncementBody: byId('clientAnnouncementBody'), clientAnnouncementMessage: byId('clientAnnouncementMessage'),
   submissionList: byId('submissionList'), withdrawalList: byId('withdrawalList'), whitelistForm: byId('whitelistForm'), whitelistEmail: byId('whitelistEmail'),
   whitelistList: byId('whitelistList'), quickWhitelist: byId('quickWhitelistBtn'), smtpForm: byId('smtpForm'), smtpHost: byId('smtpHost'),
   smtpPort: byId('smtpPort'), smtpUser: byId('smtpUser'), smtpPass: byId('smtpPass'), smtpFrom: byId('smtpFrom'), smtpTo: byId('smtpTo'),
@@ -33,7 +34,7 @@ const els = {
   projectAssetMessage: byId('projectAssetMessage'), deleteProjectAsset: byId('deleteProjectAssetBtn'), newProjectAsset: byId('newProjectAssetBtn'), refreshProjectAssets: byId('refreshProjectAssetsBtn'), syncProjectAssets: byId('syncProjectAssetsBtn'),
   copyProjectApi: byId('copyProjectApiBtn'), projectApiUrl: byId('projectApiUrl'), projectApiRevision: byId('projectApiRevision'),
   appReleaseForm: byId('appReleaseForm'), appReleaseVersion: byId('appReleaseVersion'), appReleaseTitle: byId('appReleaseTitle'), appReleaseNotes: byId('appReleaseNotes'), appReleaseQuarkUrl: byId('appReleaseQuarkUrl'), appReleaseBaiduUrl: byId('appReleaseBaiduUrl'), appReleaseCloud123Url: byId('appReleaseCloud123Url'), appReleaseGithubUrl: byId('appReleaseGithubUrl'),
-  appReleaseCurrent: byId('appReleaseCurrent'), appReleaseMessage: byId('appReleaseMessage'), mobileReleaseForm: byId('mobileReleaseForm'), mobileReleaseVersion: byId('mobileReleaseVersion'), mobileReleaseTitle: byId('mobileReleaseTitle'), mobileReleaseNotes: byId('mobileReleaseNotes'), mobileReleaseAndroidUrl: byId('mobileReleaseAndroidUrl'), mobileReleaseCurrent: byId('mobileReleaseCurrent'), mobileReleaseMessage: byId('mobileReleaseMessage'),
+  appReleaseCurrent: byId('appReleaseCurrent'), appReleaseMessage: byId('appReleaseMessage'), appReleaseDeltaFromVersion: byId('appReleaseDeltaFromVersion'), appReleaseDeltaTargetSha256: byId('appReleaseDeltaTargetSha256'), appReleaseDeltaFile: byId('appReleaseDeltaFile'), uploadAppReleaseDelta: byId('uploadAppReleaseDeltaBtn'), appReleaseDeltaMessage: byId('appReleaseDeltaMessage'), mobileReleaseForm: byId('mobileReleaseForm'), mobileReleaseVersion: byId('mobileReleaseVersion'), mobileReleaseTitle: byId('mobileReleaseTitle'), mobileReleaseNotes: byId('mobileReleaseNotes'), mobileReleaseAndroidUrl: byId('mobileReleaseAndroidUrl'), mobileReleaseCurrent: byId('mobileReleaseCurrent'), mobileReleaseMessage: byId('mobileReleaseMessage'),
   trafficUpdatedAt: byId('trafficUpdatedAt'), trafficTotalViews: byId('trafficTotalViews'), trafficSince: byId('trafficSince'), trafficTodayViews: byId('trafficTodayViews'), trafficTodayCompare: byId('trafficTodayCompare'),
   trafficTodayVisitors: byId('trafficTodayVisitors'), trafficWeekViews: byId('trafficWeekViews'), trafficWeekVisitors: byId('trafficWeekVisitors'), trafficPeakWindow: byId('trafficPeakWindow'), trafficPeakViews: byId('trafficPeakViews'),
   trafficBusiestDay: byId('trafficBusiestDay'), trafficDailyChart: byId('trafficDailyChart'), trafficHourlyChart: byId('trafficHourlyChart'), trafficSectionBreakdown: byId('trafficSectionBreakdown'), trafficSourceBreakdown: byId('trafficSourceBreakdown')
@@ -403,6 +404,37 @@ async function loadWikiContent({ quiet = false } = {}) {
   }
 }
 
+function renderClientAnnouncement(announcement = {}) {
+  if (!els.clientAnnouncementForm) return;
+  if (document.activeElement?.closest('#clientAnnouncementForm')) return;
+  els.clientAnnouncementEnabled.checked = announcement.enabled === true;
+  els.clientAnnouncementTitle.value = announcement.title || '';
+  els.clientAnnouncementBody.value = announcement.body || '';
+}
+
+async function loadClientAnnouncement({ quiet = false } = {}) {
+  try {
+    const result = await api('/api/server/community/client-announcement');
+    renderClientAnnouncement(result.announcement || {});
+    return result;
+  } catch (error) {
+    if (!quiet) els.clientAnnouncementMessage.textContent = error.message;
+    throw error;
+  }
+}
+
+async function saveClientAnnouncement(event) {
+  event.preventDefault();
+  els.clientAnnouncementMessage.textContent = '正在保存公告...';
+  try {
+    const result = await api('/api/server/community/client-announcement', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ enabled: els.clientAnnouncementEnabled.checked, title: els.clientAnnouncementTitle.value, body: els.clientAnnouncementBody.value }) });
+    renderClientAnnouncement(result.announcement || {});
+    els.clientAnnouncementMessage.textContent = result.announcement?.enabled ? '桌面端公告已启用并保存。' : '公告内容已保存，当前未启用。';
+  } catch (error) {
+    els.clientAnnouncementMessage.textContent = `保存失败：${error.message}`;
+  }
+}
+
 async function loadWikiFeedback({ quiet = false } = {}) {
   try { const data = await api('/api/server/community/wiki-feedback'); renderWikiFeedback(data.items); return data; }
   catch (error) { if (!quiet) els.wikiFeedbackList.replaceChildren(Object.assign(document.createElement('p'), { className: 'error-text', textContent: error.message })); throw error; }
@@ -585,7 +617,8 @@ function renderAppRelease(release) {
   const legacyExternal = release.download?.url && release.download.url !== '/api/app-release/download' ? release.download.url : '';
   const links = release.downloadLinks || {};
   state.appRelease=release;els.appReleaseVersion.value=release.version||'0.5.0';els.appReleaseTitle.value=release.title||'';els.appReleaseNotes.value=release.notes||'';els.appReleaseQuarkUrl.value=links.quark||links.china||'';els.appReleaseBaiduUrl.value=links.baidu||'';els.appReleaseCloud123Url.value=links.cloud123||links.lanzou||'';els.appReleaseGithubUrl.value=links.github||links.global||legacyExternal;
-  els.appReleaseCurrent.textContent=[links.quark||links.china,links.baidu,links.cloud123||links.lanzou,links.github||links.global||legacyExternal].some(Boolean)?'已配置一条或多条下载线路。':'尚未填写下载线路。';
+  const deltaCount=Array.isArray(release.incrementalUpdates)?release.incrementalUpdates.length:0;
+  els.appReleaseCurrent.textContent=([links.quark||links.china,links.baidu,links.cloud123||links.lanzou,links.github||links.global||legacyExternal].some(Boolean)?'已配置一条或多条下载线路。':'尚未填写下载线路。')+(deltaCount?` 已配置 ${deltaCount} 个差分包。`:'');
 }
 async function loadAppRelease(){const release=await api('/api/server/app-release');renderAppRelease(release);return release;}
 async function saveAppRelease(event){event.preventDefault();els.appReleaseMessage.textContent='正在发布版本信息...';try{const result=await api('/api/server/app-release',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({version:els.appReleaseVersion.value,title:els.appReleaseTitle.value,notes:els.appReleaseNotes.value,quarkDownloadUrl:els.appReleaseQuarkUrl.value,baiduDownloadUrl:els.appReleaseBaiduUrl.value,cloud123DownloadUrl:els.appReleaseCloud123Url.value,githubDownloadUrl:els.appReleaseGithubUrl.value})});renderAppRelease(result.release);els.appReleaseMessage.textContent='版本 API 已发布，四条下载线路已保存。';}catch(error){els.appReleaseMessage.textContent=error.message;}}
@@ -593,7 +626,7 @@ function renderMobileRelease(release){els.mobileReleaseVersion.value=release.ver
 async function loadMobileRelease(){const release=await api('/api/server/mobile-release');renderMobileRelease(release);return release;}
 async function saveMobileRelease(event){event.preventDefault();els.mobileReleaseMessage.textContent='正在保存手机端版本信息...';try{const result=await api('/api/server/mobile-release',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({version:els.mobileReleaseVersion.value,title:els.mobileReleaseTitle.value,notes:els.mobileReleaseNotes.value,androidDownloadUrl:els.mobileReleaseAndroidUrl.value})});renderMobileRelease(result.release);els.mobileReleaseMessage.textContent='手机端更新 API 已保存。';}catch(error){els.mobileReleaseMessage.textContent=error.message;}}
 
-document.querySelectorAll('[data-tab]').forEach((tab)=>tab.addEventListener('click',()=>{switchTab(tab.dataset.tab);if(tab.dataset.tab==='commissions')void loadCommissions({quiet:true});if(tab.dataset.tab==='wiki-feedback')void loadWikiFeedback({quiet:true});if(tab.dataset.tab==='wiki-management')void loadWikiManagement({quiet:true});if(tab.dataset.tab==='wiki-content')void loadWikiContent({quiet:true});}));
+document.querySelectorAll('[data-tab]').forEach((tab)=>tab.addEventListener('click',()=>{switchTab(tab.dataset.tab);if(tab.dataset.tab==='commissions')void loadCommissions({quiet:true});if(tab.dataset.tab==='wiki-feedback')void loadWikiFeedback({quiet:true});if(tab.dataset.tab==='wiki-management')void loadWikiManagement({quiet:true});if(tab.dataset.tab==='wiki-content')void loadWikiContent({quiet:true});if(tab.dataset.tab==='client-announcement')void loadClientAnnouncement({quiet:true});}));
 document.querySelectorAll('[data-refresh]').forEach((item)=>item.addEventListener('click',()=>loadStatus()));
 document.querySelectorAll('[data-refresh-commissions]').forEach((item)=>item.addEventListener('click',()=>loadCommissions()));
 document.querySelectorAll('[data-refresh-wiki-feedback]').forEach((item)=>item.addEventListener('click',()=>loadWikiFeedback()));
@@ -604,9 +637,11 @@ els.whitelistForm.addEventListener('submit',async(event)=>{event.preventDefault(
 els.wikiLockForm?.addEventListener('submit',(event)=>{event.preventDefault();void saveWikiLock(els.wikiLockCharacter.value.trim(), els.wikiLockValue.checked);});
 els.wikiAnnouncementForm?.addEventListener('submit', saveWikiAnnouncement);
 els.wikiSponsorsForm?.addEventListener('submit', saveWikiSponsors);
+els.clientAnnouncementForm?.addEventListener('submit', saveClientAnnouncement);
 els.addWikiSponsor?.addEventListener('click', () => { els.wikiSponsorRows.appendChild(createWikiSponsorRow()); els.wikiSponsorRows.lastElementChild?.querySelector('.wiki-sponsor-name')?.focus(); });
 document.querySelectorAll('[data-refresh-wiki-management]').forEach((item)=>item.addEventListener('click',()=>loadWikiManagement()));
 document.querySelectorAll('[data-refresh-wiki-content]').forEach((item)=>item.addEventListener('click',()=>loadWikiContent()));
+document.querySelectorAll('[data-refresh-client-announcement]').forEach((item)=>item.addEventListener('click',()=>loadClientAnnouncement()));
 els.autoApproveLowRisk.addEventListener('change',()=>saveReviewSettings(els.autoApproveLowRisk.checked));
 els.chartSearch?.addEventListener('input',()=>{state.chartQuery=els.chartSearch.value;renderManagedCharts(state.status?.community?.currentCharts||[]);});
 els.chartCharacter?.addEventListener('change',()=>{state.chartCharacter=els.chartCharacter.value;renderManagedCharts(state.status?.community?.currentCharts||[]);});
@@ -617,6 +652,7 @@ els.smtpResend.addEventListener('click',async()=>{if(!await askConfirmation('补
 els.update.addEventListener('click',async()=>{if(!await askConfirmation('确认拉取三个 GitHub 仓库并重启网站？私有投稿不会被覆盖。',{title:'更新服务器',confirmText:'更新',danger:false}))return;els.update.disabled=true;try{const result=await api('/api/server/update',{method:'POST'});els.output.textContent=`新版本 ${result.releaseId} 已构建，服务正在重启。`;setTimeout(()=>loadStatus({quiet:true}).catch(()=>{}),1800);}catch(error){els.output.textContent=error.body?.update?.error||error.message;}});
 els.projectAssetForm.addEventListener('submit',saveProjectAsset);els.deleteProjectAsset.addEventListener('click',deleteProjectAsset);els.newProjectAsset.addEventListener('click',newProjectAsset);els.refreshProjectAssets.addEventListener('click',()=>loadProjectAssets());els.syncProjectAssets.addEventListener('click',syncProjectAssetNames);
 els.appReleaseForm.addEventListener('submit',saveAppRelease);
+els.uploadAppReleaseDelta?.addEventListener('click',async()=>{const file=els.appReleaseDeltaFile.files?.[0];if(!file){els.appReleaseDeltaMessage.textContent='请选择 .wwdelta 文件。';return;}els.appReleaseDeltaMessage.textContent='正在上传差分包...';els.uploadAppReleaseDelta.disabled=true;try{const result=await api('/api/server/app-release/delta',{method:'PUT',headers:{'x-from-version':els.appReleaseDeltaFromVersion.value.trim(),'x-target-sha256':els.appReleaseDeltaTargetSha256.value.trim(),'x-file-name':file.name,'content-type':'application/octet-stream'},body:file});state.appRelease=result.release;renderAppRelease(result.release);els.appReleaseDeltaMessage.textContent='差分包已上传并绑定到当前目标版本。';els.appReleaseDeltaFile.value='';}catch(error){els.appReleaseDeltaMessage.textContent=`上传失败：${error.message}`;}finally{els.uploadAppReleaseDelta.disabled=false;}});
 els.mobileReleaseForm.addEventListener('submit',saveMobileRelease);
 els.projectAssetSearch.addEventListener('input',renderProjectAssetList);els.projectAssetHasBase.addEventListener('change',updateProjectAssetPreview);
 for(const input of [els.projectAssetCropX,els.projectAssetCropY,els.projectAssetCropW,els.projectAssetCropH])input.addEventListener('input',updateProjectAssetPreview);
@@ -632,4 +668,4 @@ els.passwordForm.addEventListener('submit',async(event)=>{event.preventDefault()
  els.confirmCancel.addEventListener('click',()=>closeConfirmation(null));els.confirmAccept.addEventListener('click',()=>closeConfirmation(state.confirmationMode==='input'?els.confirmInput.value:true));els.confirmBackdrop.addEventListener('click',(event)=>{if(event.target===els.confirmBackdrop)closeConfirmation(null);});
  window.addEventListener('keydown',(event)=>{if(event.key==='Escape'){if(!els.confirmBackdrop.hidden)closeConfirmation(null);else if(!els.uploadBackdrop.hidden)closeUpload();else if(!els.manageDetailBackdrop.hidden)closeManageDetail();else if(!els.reviewBackdrop.hidden)closeReview();}});
 let axisResizeTimer=0;window.addEventListener('resize',()=>{clearTimeout(axisResizeTimer);axisResizeTimer=setTimeout(renderActiveAdminAxes,120);});
-loadStatus().then(()=>Promise.all([loadIcons(),loadProjectAssets(),loadAppRelease(),loadMobileRelease(),loadCommissions()])).catch(()=>{});
+loadStatus().then(()=>Promise.all([loadIcons(),loadProjectAssets(),loadAppRelease(),loadMobileRelease(),loadCommissions(),loadClientAnnouncement({quiet:true})])).catch(()=>{});

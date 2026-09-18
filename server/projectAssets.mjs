@@ -14,6 +14,8 @@ const IMAGE_TYPES = new Map([
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 const MAX_RELEASE_BYTES = 500 * 1024 * 1024;
 const RELEASE_EXTENSIONS = new Set(['.exe', '.msi', '.zip']);
+const MAX_DELTA_BYTES = 500 * 1024 * 1024;
+const DELTA_EXTENSION = '.wwdelta';
 
 function cleanText(value, maxLength = 120) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
@@ -145,6 +147,18 @@ function normalizeRelease(value, previous = {}) {
     if (url && !/^https?:\/\//i.test(url)) throw new Error('Download link ' + key + ' must use http:// or https://.');
   }
   const download = suppliedDownload || (previousManagedDownload ? previousDownload : null);
+  const incrementalUpdates = (Array.isArray(value?.incrementalUpdates) ? value.incrementalUpdates : Array.isArray(previous.incrementalUpdates) ? previous.incrementalUpdates : [])
+    .slice(0, 20)
+    .flatMap((item) => {
+      const entry = item && typeof item === 'object' ? item : {};
+      const fromVersion = cleanText(entry.fromVersion, 40);
+      const url = cleanText(entry.url, 1000);
+      const fileName = cleanText(entry.fileName, 160);
+      const sha256 = cleanText(entry.sha256, 64).toLowerCase();
+      const targetSha256 = cleanText(entry.targetSha256, 64).toLowerCase();
+      if (!/^\d+\.\d+\.\d+$/.test(fromVersion) || !(/^(?:https?:\/\/|\/api\/)/i.test(url)) || !/^[a-f0-9]{64}$/.test(sha256) || !/^[a-f0-9]{64}$/.test(targetSha256)) return [];
+      return [{ fromVersion, url, fileName, bytes: Math.max(0, Math.round(Number(entry.bytes) || 0)), sha256, targetSha256 }];
+    });
   return {
     schemaVersion: 1,
     version,
@@ -152,6 +166,7 @@ function normalizeRelease(value, previous = {}) {
     notes: cleanText(value?.notes ?? previous.notes, 4000),
     publishedAt: cleanText(value?.publishedAt ?? previous.publishedAt, 60) || new Date().toISOString(),
     download,
+    incrementalUpdates,
     downloadLinks: {
       ...downloadLinks,
       china: downloadLinks.quark,
@@ -182,6 +197,11 @@ function managedReleaseName(download) {
   if (download?.url !== '/api/app-release/download') return '';
   const fileName = cleanText(download?.storedName, 120);
   return /^[a-f0-9]{20}\.(?:exe|msi|zip)$/.test(fileName) ? fileName : '';
+}
+
+function managedDeltaName(value) {
+  const fileName = cleanText(value?.storedName, 120);
+  return /^[a-f0-9]{20}\.wwdelta$/.test(fileName) ? fileName : '';
 }
 
 export function createProjectAssetsService({ runtimeRoot, serverDir }) {
@@ -355,7 +375,8 @@ export function createProjectAssetsService({ runtimeRoot, serverDir }) {
 
   function publicRelease() {
     const { storedName: _storedName, ...download } = release.download || {};
-    return { ...release, download: release.download ? download : null };
+    const incrementalUpdates = (release.incrementalUpdates || []).map(({ storedName: _deltaStoredName, ...item }) => item);
+    return { ...release, download: release.download ? download : null, incrementalUpdates };
   }
 
   function adminRelease() {
@@ -386,6 +407,50 @@ export function createProjectAssetsService({ runtimeRoot, serverDir }) {
       release.publishedAt = new Date().toISOString();
       await writeAtomicJson(releasePath, release);
       if (previousName && !managedReleaseName(release.download)) await rm(path.join(releaseRoot, previousName), { force: true }).catch(() => {});
+      return release;
+    });
+  }
+
+  async function uploadReleaseDelta(stream, fromVersion, targetSha256, fileName, contentLength) {
+    return serialize(async () => {
+      const sourceVersion = cleanText(fromVersion, 40);
+      if (!/^\d+\.\d+\.\d+$/.test(sourceVersion)) throw new Error('差分包来源版本号无效。');
+      const targetHash = cleanText(targetSha256, 64).toLowerCase();
+      if (!/^[a-f0-9]{64}$/.test(targetHash)) throw new Error('目标 exe 的 SHA-256 无效。');
+      if (Number(contentLength) > MAX_DELTA_BYTES) throw new Error('差分包不能超过 500 MB。');
+      const safeFileName = path.basename(cleanText(fileName, 160));
+      const temporary = path.join(releaseRoot, `.delta-upload-${process.pid}-${randomUUID()}.tmp`);
+      const handle = await open(temporary, 'wx');
+      const hash = createHash('sha256');
+      let bytes = 0;
+      try {
+        for await (const chunk of stream) {
+          bytes += chunk.length;
+          if (bytes > MAX_DELTA_BYTES) throw new Error('差分包不能超过 500 MB。');
+          hash.update(chunk);
+          await handle.write(chunk);
+        }
+      } catch (error) {
+        await handle.close().catch(() => {});
+        await rm(temporary, { force: true }).catch(() => {});
+        throw error;
+      }
+      await handle.close();
+      if (!bytes) { await rm(temporary, { force: true }); throw new Error('差分包文件为空。'); }
+      const sha256 = hash.digest('hex');
+      const storedName = `${sha256.slice(0, 20)}${DELTA_EXTENSION}`;
+      const target = path.join(releaseRoot, storedName);
+      if (existsSync(target)) await rm(temporary, { force: true });
+      else await moveWithRetry(temporary, target);
+      const previous = (release.incrementalUpdates || []).find((item) => item.fromVersion === sourceVersion);
+      const incrementalUpdates = [
+        ...(release.incrementalUpdates || []).filter((item) => item.fromVersion !== sourceVersion),
+        { fromVersion: sourceVersion, url: `/api/app-release/delta/${encodeURIComponent(storedName)}`, fileName: safeFileName || `${sourceVersion}-to-${release.version}${DELTA_EXTENSION}`, bytes, sha256, targetSha256: targetHash, storedName }
+      ].slice(-20);
+      release = { ...release, publishedAt: new Date().toISOString(), incrementalUpdates };
+      await writeAtomicJson(releasePath, release);
+      const previousName = managedDeltaName(previous);
+      if (previousName && previousName !== storedName && !incrementalUpdates.some((item) => managedDeltaName(item) === previousName)) await rm(path.join(releaseRoot, previousName), { force: true }).catch(() => {});
       return release;
     });
   }
@@ -434,5 +499,5 @@ export function createProjectAssetsService({ runtimeRoot, serverDir }) {
     });
   }
 
-  return { initialize, publicManifest, adminManifest, upsert, remove, syncSeedNames, imageRoot, publicRelease, adminRelease, saveRelease, uploadReleasePackage, releaseRoot, publicMobileRelease, adminMobileRelease, saveMobileRelease };
+  return { initialize, publicManifest, adminManifest, upsert, remove, syncSeedNames, imageRoot, publicRelease, adminRelease, saveRelease, uploadReleasePackage, uploadReleaseDelta, releaseRoot, publicMobileRelease, adminMobileRelease, saveMobileRelease };
 }

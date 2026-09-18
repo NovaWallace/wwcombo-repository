@@ -52,6 +52,7 @@
           <button type="button" data-tab="traffic">访问统计</button>
           <button type="button" data-tab="whitelist">UP 白名单</button>
           <button type="button" data-tab="wiki-content">Wiki 内容</button>
+          <button type="button" data-tab="client-announcement">桌面公告</button>
           <button type="button" data-tab="project-api">项目 API</button>
           <button type="button" data-tab="smtp">邮件通知</button>
           <button type="button" data-tab="server">服务器</button>
@@ -131,6 +132,18 @@
           </div>
         </section>
 
+        <section class="tab-panel" data-panel="client-announcement" hidden>
+          <div class="section-heading"><div><h2>桌面端公告</h2><p>公告会显示在桌面端主界面顶部。关闭后不会删除已填写的内容，重新启用即可恢复。</p></div><button class="quiet" type="button" data-refresh-client-announcement>刷新</button></div>
+          <section class="client-announcement-admin">
+            <form id="clientAnnouncementForm">
+              <label class="check-row client-announcement-enabled"><input id="clientAnnouncementEnabled" type="checkbox" /><span>启用桌面端公告</span></label>
+              <label><span>标题</span><input id="clientAnnouncementTitle" maxlength="120" placeholder="例如：版本更新公告" /></label>
+              <label><span>正文</span><textarea id="clientAnnouncementBody" maxlength="4000" rows="8" placeholder="填写要展示给桌面端用户的公告内容"></textarea></label>
+              <div class="wiki-editor-actions"><p class="form-message" id="clientAnnouncementMessage" aria-live="polite"></p><button class="primary" type="submit">保存公告</button></div>
+            </form>
+          </section>
+        </section>
+
         <section class="tab-panel" data-panel="project-api" hidden>
           <div class="section-heading"><div><h2>角色翻译与招式块底图</h2><p>单个角色可在右侧编辑保存；一键补齐只填写当前为空的外文名，不覆盖手动修改。</p></div><div class="section-heading-actions"><button class="primary" id="syncProjectAssetsBtn" type="button">一键补齐全部外文名</button><button class="quiet" id="refreshProjectAssetsBtn" type="button">刷新</button></div></div>
           <div class="api-endpoint"><span>公开接口</span><code id="projectApiUrl">/api/project-assets/v1/manifest.json</code><button class="quiet" id="copyProjectApiBtn" type="button">复制地址</button><small id="projectApiRevision">-</small></div>
@@ -146,6 +159,15 @@
               <label class="release-url-github"><span>GitHub</span><input id="appReleaseGithubUrl" type="url" placeholder="填写 GitHub Release 链接" /></label>
             </div>
             <div class="release-current" id="appReleaseCurrent">尚未配置下载地址。</div>
+            <div class="release-delta-editor">
+              <div class="release-editor-head"><div><span>INCREMENTAL UPDATE</span><h3>上传差分包（可选）</h3><p>先保存上面的目标版本，再选择由哪个旧版本升级到当前版本的 .wwdelta 文件。没有适用差分包时，用户仍可下载完整包。</p></div></div>
+              <div class="release-fields release-delta-fields">
+                <label><span>来源版本</span><input id="appReleaseDeltaFromVersion" inputmode="numeric" placeholder="0.65.0" /></label>
+                <label><span>目标 exe SHA-256</span><input id="appReleaseDeltaTargetSha256" maxlength="64" placeholder="新版本 wwcombo.exe 的 SHA-256" /></label>
+                <label class="release-package"><span>差分包文件</span><input id="appReleaseDeltaFile" type="file" accept=".wwdelta,application/octet-stream" /></label>
+              </div>
+              <div class="release-actions"><p class="form-message" id="appReleaseDeltaMessage" aria-live="polite"></p><button class="quiet" id="uploadAppReleaseDeltaBtn" type="button">上传差分包</button></div>
+            </div>
             <div class="release-actions"><p class="form-message" id="appReleaseMessage" aria-live="polite"></p><button class="primary" type="submit">发布版本信息</button></div>
           </form>
           <form class="release-editor mobile-release-editor" id="mobileReleaseForm">

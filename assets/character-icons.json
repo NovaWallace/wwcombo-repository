@@ -116,6 +116,14 @@
     "./assets/character-icons/role-5.webp"
   ],
   [
+    "心",
+    "./assets/character-icons/role-75.webp"
+  ],
+  [
+    "锁暝",
+    "./assets/character-icons/role-76.webp"
+  ],
+  [
     "秧秧",
     "./assets/character-icons/role-1.webp"
   ],
@@ -156,7 +164,7 @@
     "./assets/character-icons/role-65.webp"
   ],
   [
-    "清宵",
+    "清霄",
     "./assets/character-icons/role-73.webp"
   ],
   [
@@ -230,13 +238,5 @@
   [
     "秧秧·玄翎",
     "./assets/character-icons/role-70.webp"
-  ],
-  [
-    "心",
-    "./assets/character-icons/心.webp"
-  ],
-  [
-    "锁暝",
-    "./assets/character-icons/锁暝.webp"
   ]
 ]

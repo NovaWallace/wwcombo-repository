@@ -30,7 +30,7 @@ const MAX_ACCOUNT_CODE_FAILURES = 5;
 const COMMISSION_AUTO_ADOPT_INTERVAL_MS = 10 * 60 * 1000;
 const SPONSOR_DATA_FILE = 'assets/sponsors-fallback.json';
 const SPONSOR_CACHE_MS = 5 * 60 * 1000;
-const PUBLIC_ROOT_FILES = new Set(['/index.html', '/app.js', '/i18n.js', '/styles.css', '/wiki.js', '/site.webmanifest', '/robots.txt', '/sitemap.xml', '/build-info.json']);
+const PUBLIC_ROOT_FILES = new Set(['/index.html', '/styles.css', '/site.webmanifest', '/robots.txt', '/sitemap.xml', '/build-info.json']);
 const CHARACTER_API_ORIGIN = 'https://wuwa-hpyg-tool.200503.xyz';
 const CONTENT_TYPES = new Map([
   ['.html', 'text/html; charset=utf-8'],
@@ -173,6 +173,7 @@ function safeTarget(root, relative) {
 }
 
 function cacheControlFor(relative) {
+  if (/^assets[\\/]wiki-.+-[A-Za-z0-9_-]+\.min\.js$/u.test(relative)) return 'public, max-age=31536000, immutable';
   if (
     relative.endsWith('.html')
     || relative.endsWith('.js')
@@ -598,6 +599,21 @@ async function handleAdminApi(req, res, pathname) {
     return;
   }
 
+  if (req.method === 'GET' && pathname === '/api/server/community/client-announcement') {
+    const session = requireSession(req, res);
+    if (!session) return;
+    sendJson(res, 200, { announcement: await community.clientAnnouncement() });
+    return;
+  }
+
+  if (req.method === 'PUT' && pathname === '/api/server/community/client-announcement') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    const body = await readJsonBody(req, 16 * 1024);
+    sendJson(res, 200, { ok: true, announcement: await community.saveClientAnnouncement(body) });
+    return;
+  }
+
   if (req.method === 'GET' && pathname === '/api/server/community/sponsors') {
     const session = requireSession(req, res);
     if (!session) return;
@@ -764,6 +780,20 @@ async function handleAdminApi(req, res, pathname) {
     if (!session) return;
     const fileName = decodeURIComponent(String(req.headers['x-file-name'] || ''));
     const release = await projectAssets.uploadReleasePackage(req, fileName, Number(req.headers['content-length'] || 0));
+    sendJson(res, 200, { ok: true, release });
+    return;
+  }
+
+  if (req.method === 'PUT' && pathname === '/api/server/app-release/delta') {
+    const session = requireSession(req, res, true);
+    if (!session) return;
+    const release = await projectAssets.uploadReleaseDelta(
+      req,
+      String(req.headers['x-from-version'] || ''),
+      String(req.headers['x-target-sha256'] || ''),
+      String(req.headers['x-file-name'] || ''),
+      Number(req.headers['content-length'] || 0)
+    );
     sendJson(res, 200, { ok: true, release });
     return;
   }
@@ -1051,6 +1081,10 @@ async function handleCommunityApi(req, res, pathname) {
     sendJson(res, 200, await community.wikiAnnouncement(), { 'cache-control': 'no-store' });
     return;
   }
+  if (req.method === 'GET' && pathname === '/api/community/client-announcement') {
+    sendJson(res, 200, await community.clientAnnouncement(), { 'cache-control': 'no-store' });
+    return;
+  }
   const wikiAccessPath = /^\/api\/community\/wiki\/([^/]+)\/access-request$/.exec(pathname);
   if (req.method === 'POST' && wikiAccessPath) {
     const account = readAccountSession(req);
@@ -1079,7 +1113,7 @@ async function handleCommunityApi(req, res, pathname) {
       return;
     }
     const body = await readJsonBody(req, 2200 * 1024);
-    sendJson(res, 200, { ok: true, ...(await community.saveWikiModel(wikiPath[1], body.formId, body.model, account.email)) }, { 'cache-control': 'no-store' });
+    sendJson(res, 200, { ok: true, ...(await community.saveWikiModel(wikiPath[1], body.formId, body.model, account.email, { name: body.editorName, avatar: body.editorAvatar })) }, { 'cache-control': 'no-store' });
     return;
   }
   if (req.method === 'POST' && pathname === '/api/community/preflight') {
@@ -1353,6 +1387,14 @@ const server = createServer(async (req, res) => {
           'link': `<${PUBLIC_URL}/>; rel="canonical"`,
           'x-robots-tag': 'index, follow, max-image-preview:large'
         }
+      });
+      return;
+    }
+    const deltaPath = /^\/api\/app-release\/delta\/([a-f0-9]{20}\.wwdelta)$/.exec(pathname);
+    if ((req.method === 'GET' || req.method === 'HEAD') && deltaPath) {
+      await serveFile(req, res, projectAssets.releaseRoot, deltaPath[1], {
+        cacheControl: 'no-cache',
+        headers: { 'access-control-allow-origin': '*', 'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(deltaPath[1])}` }
       });
       return;
     }

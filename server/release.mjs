@@ -7,7 +7,7 @@ import { promisify } from 'node:util';
 import { moveWithRetry, replaceWithRetry } from './fsSafe.mjs';
 
 const execFileAsync = promisify(execFile);
-const PUBLIC_SITE_ENTRIES = ['.nojekyll', 'index.html', 'app.js', 'i18n.js', 'styles.css', 'wiki.js', 'site.webmanifest', 'robots.txt', 'sitemap.xml', 'assets'];
+const PUBLIC_SITE_ENTRIES = ['.nojekyll', 'index.html', 'styles.css', 'site.webmanifest', 'robots.txt', 'sitemap.xml', 'assets'];
 const DEFAULT_REPOSITORY_URLS = {
   deta1: 'https://github.com/NovaWallace/wwcombo-deta1.git',
   deta2: 'https://github.com/NovaWallace/wwcombo-deta2.git'
@@ -81,6 +81,9 @@ function encodedPublishedPath(parts) {
 }
 
 async function copyPublicRelease({ mainRoot, dataPaths, stagingRoot }) {
+  if (!existsSync(path.join(mainRoot, 'assets', 'wiki-runtime.min.js'))) {
+    throw new Error('主目录缺少已构建的 Wiki runtime，请先运行 npm run community:build。');
+  }
   for (const entry of PUBLIC_SITE_ENTRIES) {
     const source = path.join(mainRoot, entry);
     if (!existsSync(source)) throw new Error(`主仓库缺少网站文件: ${entry}`);

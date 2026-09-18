@@ -22,6 +22,8 @@ const MAX_WIKI_INPUT_ROUTE_SOURCES = 30;
 const MAX_WIKI_EDIT_LOG_ITEMS = 2000;
 const MAX_WIKI_ANNOUNCEMENT_TITLE = 120;
 const MAX_WIKI_ANNOUNCEMENT_BODY = 8000;
+const MAX_CLIENT_ANNOUNCEMENT_TITLE = 120;
+const MAX_CLIENT_ANNOUNCEMENT_BODY = 4000;
 const MAX_WIKI_SPONSORS = 200;
 const MAX_WIKI_SPONSOR_ID = 80;
 const MAX_WIKI_SPONSOR_NAME = 80;
@@ -387,6 +389,7 @@ function normalizeWikiModel(value) {
     return {
       id,
       title,
+      slang: wikiText(node.slang, 80),
       category,
       tone: wikiText(node.tone, 40),
       input: category === 'buff' ? [] : wikiTextList(node.input),
@@ -492,6 +495,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const wikiPermissionsFile = path.join(root, 'wiki-permissions.json');
   const wikiAccessRequestsFile = path.join(root, 'wiki-access-requests.json');
   const wikiAnnouncementFile = path.join(root, 'wiki-announcement.json');
+  const clientAnnouncementFile = path.join(root, 'client-announcement.json');
   const sponsorsFile = path.join(root, 'sponsors.json');
   const commissionResponsesRoot = path.join(root, 'commission-responses');
   const commentsRoot = path.join(root, 'comments');
@@ -737,15 +741,25 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const characterEdits = (Array.isArray(editLog.items) ? editLog.items : [])
       .filter((entry) => canonicalCharacterName(entry?.character) === name)
       .sort((left, right) => Number(right?.savedAt || 0) - Number(left?.savedAt || 0));
-    const participantName = (entry) => String(entry?.editorName || '').trim() || publicEmail(entry?.editorEmail) || '维护端';
-    const allParticipants = [...new Set(characterEdits.map(participantName))];
+    const participantKey = (entry) => normalizeEmail(entry?.editorEmail) || String(entry?.editorName || '').trim() || 'maintenance';
+    const participantMap = new Map();
+    characterEdits.forEach((entry) => {
+      const key = participantKey(entry);
+      if (participantMap.has(key)) return;
+      const avatar = String(entry?.editorAvatar || '').trim().slice(0, 80);
+      participantMap.set(key, {
+        name: String(entry?.editorName || '').trim() || publicEmail(entry?.editorEmail) || '维护端',
+        ...(avatar ? { avatar } : {})
+      });
+    });
+    const allParticipants = [...participantMap.values()];
     const participants = allParticipants.slice(0, 200);
     return {
       character: name,
       models: record(item.forms),
       updatedAt: Number(item.updatedAt || 0) || 0,
       updatedBy: publicEmail(item.updatedBy),
-      editActivity: { totalEdits: characterEdits.length, participantCount: allParticipants.length, recentEditors: allParticipants.slice(0, 2), participants },
+      editActivity: { totalEdits: characterEdits.length, participantCount: allParticipants.length, recentEditors: allParticipants.slice(0, 3), participants },
       lock: lock.locked === true ? { locked: true, lockedAt: Number(lock.lockedAt || 0) || 0 } : { locked: false },
       editable: Boolean(email && (lock.locked !== true || granted)),
       access: { granted, pending }
@@ -828,6 +842,27 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     return announcement;
   }
 
+  async function clientAnnouncement() {
+    const stored = record(await readJson(clientAnnouncementFile, { version: 1 }));
+    return {
+      enabled: stored.enabled === true,
+      title: wikiText(stored.title, MAX_CLIENT_ANNOUNCEMENT_TITLE),
+      body: wikiText(stored.body, MAX_CLIENT_ANNOUNCEMENT_BODY),
+      updatedAt: Number(stored.updatedAt || 0) || 0
+    };
+  }
+
+  async function saveClientAnnouncement(value) {
+    const source = record(value);
+    const enabled = source.enabled === true;
+    const title = wikiText(source.title, MAX_CLIENT_ANNOUNCEMENT_TITLE);
+    const body = wikiText(source.body, MAX_CLIENT_ANNOUNCEMENT_BODY);
+    if (enabled && (!title || !body)) throw new Error('启用公告时，标题和内容不能为空。');
+    const announcement = { version: 1, enabled, title, body, updatedAt: Date.now() };
+    await writeJson(clientAnnouncementFile, announcement);
+    return announcement;
+  }
+
   function normalizeSponsors(value) {
     const source = Array.isArray(value) ? value : Array.isArray(value?.items) ? value.items : [];
     return source.slice(0, MAX_WIKI_SPONSORS).flatMap((item) => {
@@ -854,10 +889,13 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     return sponsors;
   }
 
-  async function saveWikiModel(character, formId, model, editorEmail) {
+  async function saveWikiModel(character, formId, model, editorEmail, editorProfile = {}) {
     const name = canonicalCharacterName(character);
     const form = wikiText(formId, 40);
     const email = normalizeEmail(editorEmail);
+    const profile = record(editorProfile);
+    const editorName = wikiText(profile.name || profile.username, 40);
+    const editorAvatar = wikiText(profile.avatar, 80);
     if (!name || name.length > 80 || isUnsafeWikiKey(name) || !/^[a-z0-9_-]+$/i.test(form) || isUnsafeWikiKey(form) || !email) throw new Error('Wiki 保存参数不正确。');
     const cleanModel = normalizeWikiModel(model);
     if (cleanModel.character && canonicalCharacterName(cleanModel.character) !== name) throw new Error('Wiki 角色与保存目标不一致。');
@@ -892,6 +930,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       character: name,
       form,
       editorEmail: email,
+      ...(editorName ? { editorName } : {}),
+      ...(editorAvatar ? { editorAvatar } : {}),
       savedAt: Date.now(),
       action: 'save',
       nodeCount: cleanModel.nodes.length,
@@ -901,7 +941,18 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const characterEdits = items
       .filter((entry) => canonicalCharacterName(entry?.character) === name)
       .sort((left, right) => Number(right?.savedAt || 0) - Number(left?.savedAt || 0));
-    const allParticipants = [...new Set(characterEdits.map((entry) => String(entry?.editorName || '').trim() || publicEmail(entry?.editorEmail) || '维护端'))];
+    const participantKey = (entry) => normalizeEmail(entry?.editorEmail) || String(entry?.editorName || '').trim() || 'maintenance';
+    const participantMap = new Map();
+    characterEdits.forEach((entry) => {
+      const key = participantKey(entry);
+      if (participantMap.has(key)) return;
+      const avatar = String(entry?.editorAvatar || '').trim().slice(0, 80);
+      participantMap.set(key, {
+        name: String(entry?.editorName || '').trim() || publicEmail(entry?.editorEmail) || '维护端',
+        ...(avatar ? { avatar } : {})
+      });
+    });
+    const allParticipants = [...participantMap.values()];
     return {
       model: cleanModel,
       savedAt: previous.updatedAt,
@@ -909,7 +960,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       editActivity: {
         totalEdits: characterEdits.length,
         participantCount: allParticipants.length,
-        recentEditors: allParticipants.slice(0, 2),
+        recentEditors: allParticipants.slice(0, 3),
         participants: allParticipants.slice(0, 200)
       }
     };
@@ -1871,6 +1922,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     setWikiCharacterPermission: (...args) => serializeMutation(() => setWikiCharacterPermission(...args)),
     wikiAnnouncement,
     saveWikiAnnouncement: (...args) => serializeMutation(() => saveWikiAnnouncement(...args)),
+    clientAnnouncement,
+    saveClientAnnouncement: (...args) => serializeMutation(() => saveClientAnnouncement(...args)),
     sponsorItems,
     saveSponsorItems: (...args) => serializeMutation(() => saveSponsorItems(...args)),
     publicCommissions,
