@@ -875,6 +875,7 @@ html[data-theme='day'] .wiki-feedback-context strong { color: #17282d; }
 .commission-view .search-controls {
   grid-template-columns: minmax(420px, 1.2fr) minmax(320px, 1fr) 210px;
 }
+
 .commission-view .community-tabs { min-width: 0; }
 .leaderboard-view .community-tabs { width: min(560px, 100%); }
 
@@ -3114,9 +3115,24 @@ html:not([data-theme='day']) .leaderboard-metric-headers small { color: #aeb8ba;
 .leaderboard-metric-header-details { gap: 0; }
 .leaderboard-metric-headers small { text-align: left; }
 .leaderboard-metric-header-details { width: auto; }
+/* Keep creator links in the metric rail so the first score group stays aligned. */
+.leaderboard-metrics { grid-template-columns: 50px repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; }
+.leaderboard-homepage-slot { width: 50px; height: 50px; display: grid; place-items: center; }
+.leaderboard-homepage { width: 50px; height: 50px; display: grid; place-items: center; margin: 0; }
+.leaderboard-homepage img { width: 44px; height: 44px; object-fit: contain; }
+.leaderboard-metric-headers { grid-template-columns: 50px repeat(3, minmax(0, 1fr)); gap: 6px; }
+.leaderboard-metric-headers > .leaderboard-metric-header-spacer { display: block; width: 50px; height: 1px; }
 @media (min-width: 821px) {
   .leaderboard-view .results-head { grid-template-columns: minmax(190px, .8fr) minmax(0, 1.2fr); padding: 0 330px 0 24px; }
   .leaderboard-metric-headers { width: 432px; flex: 0 0 432px; margin-left: 24px; }
+}
+@media (max-width: 520px) {
+  .leaderboard-metrics { width: 100%; grid-template-columns: 40px repeat(3, minmax(0, 1fr)); gap: 4px; }
+  .leaderboard-homepage-slot,
+  .leaderboard-homepage { width: 40px; height: 40px; }
+  .leaderboard-homepage img { width: 36px; height: 36px; }
+  .leaderboard-metric-headers { grid-template-columns: 40px repeat(3, minmax(0, 1fr)); gap: 4px; }
+  .leaderboard-metric-headers > .leaderboard-metric-header-spacer { width: 40px; }
 }
 @media (max-width: 520px) {
   .leaderboard-view .results-head { display: block; }

@@ -3701,17 +3701,25 @@ function renderLeaderboardCard(user, displayRank = user.rank) {
   const summary = document.createElement('span');
   summary.textContent = user.email || '';
   const homepage = safeProfileHomepage(user.homepage);
+  let homepageLink = null;
   if (homepage) {
     const link = document.createElement('a'); link.className = 'leaderboard-homepage'; link.href = homepage; link.target = '_blank'; link.rel = 'noopener noreferrer';
     const platform = /douyin\.com$/i.test(new URL(homepage).hostname.replace(/^www\./i, '')) ? '抖音' : 'bilibili';
     link.title = `打开${platform}创作者主页`;
-    link.innerHTML = platform === 'bilibili' ? '<img src="./assets/bilibili.png" alt="bilibili">' : '<span aria-label="抖音">抖</span>';
-    copy.append(name, link, summary);
-  } else copy.append(name, summary);
+    link.setAttribute('aria-label', link.title);
+    link.innerHTML = platform === 'bilibili' ? '<img src="./assets/bilibili.png" alt="bilibili">' : '<img src="./assets/douyin.png" alt="抖音">';
+    homepageLink = link;
+  }
+  copy.append(name, summary);
   identity.append(avatar, copy);
   const metrics = document.createElement('div');
   metrics.className = 'leaderboard-metrics';
+  const homepageSlot = document.createElement('span');
+  homepageSlot.className = 'leaderboard-homepage-slot';
+  if (homepageLink) homepageSlot.append(homepageLink);
+  else homepageSlot.setAttribute('aria-hidden', 'true');
   metrics.append(
+    homepageSlot,
     leaderboardMetric('打轴高手', [user.combo?.uploads || 0, user.combo?.downloads || 0], '仇远', '上传 / 下载', { showLabel: false }),
     leaderboardMetric('果宝特攻', [user.commission?.published || 0, user.commission?.responses || 0, user.commission?.adopted || 0], '菲比', '求助 / 回应 / 采纳', { showLabel: false }),
     leaderboardMetric('人形百科', [user.wiki?.soloCombos || 0, user.wiki?.repairs || 0], '西格莉卡', '流程 / 修正', { showLabel: false })
