@@ -1,5 +1,6 @@
 const CHARACTER_ICON_API = 'https://wuwa-hpyg-tool.200503.xyz/api/v1/batch-icons/character';
 const CHARACTER_ICON_MANIFEST = './assets/character-icons.json';
+const WIKI_EMBLEM_ROOT = './assets/wiki-character-emblems-bright/';
 const UNKNOWN_CHARACTER_ICON = './assets/unknown-character.jpg';
 const CHARACTER_ICON_CACHE_KEY = 'wwcombo-character-icons-v2';
 const APP_RELEASE_MANIFEST_PATH = '/api/project-assets/v1/app-release.json';
@@ -289,6 +290,9 @@ const savedKeys = savedAxisKeySettings();
 const state = {
   charts: [],
   commissions: [],
+  leaderboard: [],
+  leaderboardRules: null,
+  leaderboardLoadState: 'idle',
   view: 'combos',
   theme: document.documentElement.dataset.theme === 'day' ? 'day' : 'night',
   heroMotionEnabled: savedHeroMotionEnabled(),
@@ -349,10 +353,17 @@ if (state.axisKeySettings?.preferences.inputMode === 'gamepad') state.axisIconSe
 function savedProfile() {
   try {
     const value = JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY) || '{}');
-    return { username: String(value.username || '').trim().slice(0, 40), email: String(value.email || '').trim().toLowerCase().slice(0, 254), avatar: String(value.avatar || '').trim().slice(0, 80) };
+    return { username: String(value.username || '').trim().slice(0, 40), email: String(value.email || '').trim().toLowerCase().slice(0, 254), avatar: String(value.avatar || '').trim().slice(0, 80), homepage: safeProfileHomepage(value.homepage) };
   } catch {
-    return { username: '', email: '', avatar: '' };
+    return { username: '', email: '', avatar: '', homepage: '' };
   }
+}
+
+function safeProfileHomepage(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    return /^https?:$/i.test(url.protocol) && /(bilibili\.com|b23\.tv|douyin\.com)$/i.test(url.hostname.replace(/^www\./i, '')) ? url.href.slice(0, 300) : '';
+  } catch { return ''; }
 }
 
 state.profile = savedProfile();
@@ -378,6 +389,7 @@ const els = {
   profileForm: document.getElementById('profileForm'),
   profileUsernameInput: document.getElementById('profileUsernameInput'),
   profileEmailInput: document.getElementById('profileEmailInput'),
+  profileHomepageInput: document.getElementById('profileHomepageInput'),
   accountSession: document.querySelector('.profile-account-session'),
   accountStatus: document.getElementById('accountStatus'),
   accountStatusDetail: document.getElementById('accountStatusDetail'),
@@ -462,7 +474,9 @@ const els = {
   commissionTemplate: document.getElementById('commissionTemplate'),
   comboTab: document.getElementById('comboTabButton'),
   commissionTab: document.getElementById('commissionTabButton'),
+  leaderboardTab: document.getElementById('leaderboardTabButton'),
   resultsTitle: document.getElementById('resultsTitle'),
+  leaderboardMetricHeaders: document.getElementById('leaderboardMetricHeaders'),
   createCommission: document.getElementById('createCommissionBtn'),
   commissionCreateBackdrop: document.getElementById('commissionCreateBackdrop'),
   commissionCreateForm: document.getElementById('commissionCreateForm'),
@@ -674,7 +688,10 @@ const sourceUrl = (!isFilePreview && /(^|\/)demo-index\.json(?:$|\?)/i.test(requ
 const commissionSourceUrl = requestedCommissionSource
   ? new URL(requestedCommissionSource, location.href).href
   : '/api/community/commissions';
-state.view = params.get('view') === 'commissions' ? 'commissions' : 'combos';
+const leaderboardSourceUrl = location.protocol === 'file:'
+  ? './api/community/leaderboard'
+  : (params.get('leaderboardSource') ? new URL(params.get('leaderboardSource'), location.href).href : '/api/community/leaderboard');
+state.view = ['commissions', 'leaderboard'].includes(params.get('view')) ? params.get('view') : 'combos';
 
 function appReleaseManifestUrl() {
   if (location.protocol === 'file:') return `${APP_RELEASE_FALLBACK_ORIGIN}${APP_RELEASE_MANIFEST_PATH}`;
@@ -686,7 +703,7 @@ const CLIENT_DOWNLOAD_CHANNELS = [
   { key: 'quark', label: '夸克网盘', icon: 'cloud-download' },
   { key: 'baidu', label: '百度网盘', icon: 'cloud' },
   { key: 'cloud123', label: '123 云盘', icon: 'archive' },
-  { key: 'github', label: 'GitHub', icon: 'github' }
+  { key: 'github', label: 'GitHub', icon: 'code' }
 ];
 
 function appReleaseDownloadLinks(release) {
@@ -958,6 +975,7 @@ function openProfile() {
   state.profileDraftAvatar = state.profile.avatar;
   els.profileUsernameInput.value = state.profile.username;
   els.profileEmailInput.value = state.profile.email;
+  if (els.profileHomepageInput) els.profileHomepageInput.value = state.profile.homepage || '';
   renderProfileAvatarGrid();
   els.profileFeedback.textContent = '';
   els.profileFeedback.className = 'form-feedback';
@@ -1409,7 +1427,7 @@ async function submitCombo(event) {
     const response = await fetch(commissionId ? `/api/community/commissions/${encodeURIComponent(commissionId)}/responses` : '/api/community/submit', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: state.profile.username, email: state.profile.email, avatar: state.profile.avatar, fileName: source.filename, content: source.payload })
+      body: JSON.stringify({ username: state.profile.username, email: state.profile.email, avatar: state.profile.avatar, homepage: state.profile.homepage, fileName: source.filename, content: source.payload })
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
@@ -1698,10 +1716,12 @@ function filenameFor(chart) {
 function submitterFor(chart) {
   const nickname = String(chart.submitter?.nickname || '').trim();
   const email = String(chart.submitter?.email || '').trim();
+  const homepage = safeProfileHomepage(chart.submitter?.homepage);
   return {
     nickname: nickname || t('submitter.historical'),
     email: email || t('submitter.noEmail'),
-    badge: String(chart.submitter?.badge || '').toUpperCase() === 'UP' ? 'UP' : '',
+    homepage,
+    badge: String(chart.submitter?.badge || '').toUpperCase() === 'UP' || homepage ? 'UP' : '',
     avatars: splitCharacterNames(chart.submitter?.avatar)
   };
 }
@@ -2025,15 +2045,23 @@ function closeCharacterPicker() {
 function renderFilters() {
   renderCharacterTrigger();
   const commissionView = state.view === 'commissions';
-  els.sortField.hidden = commissionView;
-  els.tagFilter.hidden = false;
+  const leaderboardView = state.view === 'leaderboard';
+  document.body.classList.toggle('leaderboard-view', leaderboardView);
+  document.body.classList.toggle('commission-view', commissionView);
+  els.sortField.hidden = commissionView || leaderboardView;
+  els.tagFilter.hidden = leaderboardView;
+  els.reset.hidden = leaderboardView;
   els.createCommission.hidden = true;
-  els.resultsTitle.textContent = t(commissionView ? 'plaza.commissions' : 'results.title');
+  els.resultsTitle.hidden = leaderboardView;
+  if (els.leaderboardMetricHeaders) els.leaderboardMetricHeaders.hidden = !leaderboardView;
+  els.resultsTitle.textContent = leaderboardView ? '' : t(commissionView ? 'plaza.commissions' : 'results.title');
   els.title.placeholder = t(commissionView ? 'commission.searchPlaceholder' : 'search.titlePlaceholder');
-  els.comboTab.classList.toggle('active', !commissionView);
-  els.comboTab.setAttribute('aria-selected', String(!commissionView));
+  els.comboTab.classList.toggle('active', state.view === 'combos');
+  els.comboTab.setAttribute('aria-selected', String(state.view === 'combos'));
   els.commissionTab.classList.toggle('active', commissionView);
   els.commissionTab.setAttribute('aria-selected', String(commissionView));
+  els.leaderboardTab?.classList.toggle('active', leaderboardView);
+  els.leaderboardTab?.setAttribute('aria-selected', String(leaderboardView));
   const tags = commissionView
     ? uniqueSorted(state.commissions.flatMap(commissionTags))
     : uniqueSorted(state.charts.flatMap((chart) => Array.isArray(chart.tags) ? chart.tags : []));
@@ -2507,7 +2535,7 @@ async function submitCommission(event) {
     const response = await fetch('/api/community/commissions', {
       method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        username: state.profile.username, email: state.profile.email, avatar: state.profile.avatar,
+        username: state.profile.username, email: state.profile.email, avatar: state.profile.avatar, homepage: state.profile.homepage,
         title: els.commissionTitleInput.value.trim(), description: els.commissionDescriptionInput.value.trim(),
         characters: state.commissionCreateCharacters, tag: state.commissionCreateTag
       })
@@ -3554,6 +3582,13 @@ function closeDetails() {
   syncModalBody();
 }
 
+// Wiki flow cards reuse the community detail modal so the preview stays
+// identical to the main combo plaza, including the full axis renderer.
+window.addEventListener('wwcombo-open-chart', (event) => {
+  const chart = event.detail?.chart;
+  if (chart && typeof chart === 'object' && chart.id) void openDetails(chart);
+});
+
 function syncUrl() {
   const next = new URLSearchParams(location.search);
   next.delete('character');
@@ -3562,7 +3597,7 @@ function syncUrl() {
     ['characters', state.characters.join(',')],
     ['tag', state.tag],
     ['sort', state.sort === 'version' ? '' : state.sort],
-    ['view', state.view === 'commissions' ? 'commissions' : '']
+    ['view', state.view === 'combos' ? '' : state.view]
   ];
   for (const [key, value] of values) {
     if (value) next.set(key, value);
@@ -3571,12 +3606,126 @@ function syncUrl() {
   history.replaceState(null, '', `${location.pathname}${next.size ? `?${next}` : ''}${location.hash}`);
 }
 
+function leaderboardMetric(label, value, iconName, detail, options = {}) {
+  const item = document.createElement('div');
+  item.className = 'leaderboard-metric';
+  const icon = document.createElement('img');
+  icon.className = 'leaderboard-metric-icon';
+  icon.src = `${WIKI_EMBLEM_ROOT}${encodeURIComponent(iconName)}.png?v=20260910-emblems-v2`;
+  icon.alt = '';
+  icon.loading = 'lazy';
+  icon.decoding = 'async';
+  icon.setAttribute('aria-hidden', 'true');
+  const valueParts = Array.isArray(value) ? value.map((part) => String(part)) : String(value ?? '0').split(/\s*\/\s*/);
+  const iconBlock = document.createElement('div'); iconBlock.className = 'leaderboard-metric-heading';
+  const iconCircle = document.createElement('span'); iconCircle.className = 'leaderboard-metric-icon-circle';
+  iconCircle.append(icon);
+  iconBlock.append(iconCircle);
+  if (options.showLabel !== false) {
+    const title = document.createElement('span'); title.className = 'leaderboard-metric-label';
+    const titleText = document.createElement('span'); titleText.textContent = label;
+    const titleDetail = document.createElement('small'); titleDetail.className = 'leaderboard-metric-label-detail'; titleDetail.textContent = detail || '';
+    title.append(titleText, titleDetail);
+    iconBlock.append(title);
+  } else {
+    iconBlock.setAttribute('aria-label', `${label}${detail ? `：${detail}` : ''}`);
+    iconBlock.title = `${label}${detail ? ` · ${detail}` : ''}`;
+  }
+  const valueBlock = document.createElement('div'); valueBlock.className = 'leaderboard-metric-value';
+  valueBlock.style.setProperty('--metric-count', String(valueParts.length));
+  valueParts.forEach((part) => {
+    const count = document.createElement('strong'); count.className = 'leaderboard-metric-value-part'; count.textContent = part;
+    valueBlock.append(count);
+  });
+  item.append(iconBlock, valueBlock);
+  return item;
+}
+
+function renderLeaderboardCard(user, displayRank = user.rank) {
+  const card = document.createElement('article');
+  const rank = Math.max(1, Number(displayRank) || 1);
+  card.className = `leaderboard-card${rank <= 3 ? ` top-${rank}` : ''}`;
+  const rankNode = document.createElement('strong');
+  rankNode.className = 'leaderboard-rank';
+  rankNode.textContent = String(rank).padStart(2, '0');
+  rankNode.setAttribute('aria-label', `第 ${rank} 名`);
+  const identity = document.createElement('div');
+  identity.className = 'leaderboard-user';
+  const avatar = document.createElement('span');
+  avatar.className = 'leaderboard-avatar profile-avatar';
+  renderProfileAvatarNode(avatar, user.avatar, Array.from(user.name || '?')[0] || '?');
+  const copy = document.createElement('div');
+  const name = document.createElement('h3');
+  name.textContent = user.name || '匿名用户';
+  const summary = document.createElement('span');
+  summary.textContent = user.email || '';
+  const homepage = safeProfileHomepage(user.homepage);
+  if (homepage) {
+    const link = document.createElement('a'); link.className = 'leaderboard-homepage'; link.href = homepage; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    const platform = /douyin\.com$/i.test(new URL(homepage).hostname.replace(/^www\./i, '')) ? '抖音' : 'bilibili';
+    link.title = `打开${platform}创作者主页`;
+    link.innerHTML = platform === 'bilibili' ? '<img src="./assets/bilibili.png" alt="bilibili">' : '<span aria-label="抖音">抖</span>';
+    copy.append(name, link, summary);
+  } else copy.append(name, summary);
+  identity.append(avatar, copy);
+  const metrics = document.createElement('div');
+  metrics.className = 'leaderboard-metrics';
+  metrics.append(
+    leaderboardMetric('打轴高手', [user.combo?.uploads || 0, user.combo?.downloads || 0], '仇远', '上传 / 下载', { showLabel: false }),
+    leaderboardMetric('果宝特攻', [user.commission?.published || 0, user.commission?.responses || 0, user.commission?.adopted || 0], '菲比', '求助 / 回应 / 采纳', { showLabel: false }),
+    leaderboardMetric('人形百科', [user.wiki?.soloCombos || 0, user.wiki?.repairs || 0], '西格莉卡', '流程 / 修正', { showLabel: false })
+  );
+  const decoration = document.createElement('div'); decoration.className = 'leaderboard-decoration';
+  // The leaderboard's avatar field stores the selected character name. It is
+  // separate from the user's profile avatar and should use the same base-art
+  // crop as commission cards.
+  const decorated = Array.isArray(user.characters) ? user.characters[0] : (user.character || user.avatar);
+  if (decorated) applyBaseDecoration(decoration, { longestCharacter: decorated }, [decorated]);
+  card.append(rankNode, identity, metrics, decoration);
+  return card;
+}
+
+function renderLeaderboardRules() {
+  const rules = document.createElement('section');
+  rules.className = 'leaderboard-rules';
+  rules.setAttribute('aria-label', '果力计分规则');
+  const title = document.createElement('div');
+  title.className = 'leaderboard-rules-title';
+  title.innerHTML = '<i data-lucide="sparkles" aria-hidden="true"></i><strong>贡献排行</strong><span>按当前公开贡献实时排序</span>';
+  const items = [
+    ['打轴高手', '连段上传与下载'],
+    ['果宝特攻', '委托发布、回应与采纳'],
+    ['人形百科', '单人连段与 Wiki 修正']
+  ];
+  const list = document.createElement('div');
+  list.className = 'leaderboard-rule-list';
+  for (const [label, copy] of items) {
+    const item = document.createElement('p');
+    item.innerHTML = `<strong>${label}</strong><span>${copy}</span>`;
+    list.appendChild(item);
+  }
+  rules.append(title, list);
+  return rules;
+}
+
 function render() {
   const commissionView = state.view === 'commissions';
-  const items = commissionView ? filteredCommissions() : filteredCharts();
+  const leaderboardView = state.view === 'leaderboard';
+  const items = leaderboardView ? state.leaderboard : commissionView ? filteredCommissions() : filteredCharts();
   els.list.classList.toggle('commission-list', commissionView);
+  els.list.classList.toggle('leaderboard-list', leaderboardView);
   const cards = [];
-  if (commissionView) {
+  if (leaderboardView) {
+    let previousScore = null;
+    let displayRank = 0;
+    cards.push(...items.map((user, index) => {
+      const score = Number(user?.score);
+      if (index === 0) displayRank = 1;
+      else if (!Number.isFinite(score) || score !== previousScore) displayRank = index + 1;
+      previousScore = Number.isFinite(score) ? score : null;
+      return renderLeaderboardCard(user, displayRank);
+    }));
+  } else if (commissionView) {
     const topInterestCounts = commissionTopInterestTiers(items);
     let previousGroup = -1;
     for (const item of items) {
@@ -3594,9 +3743,9 @@ function render() {
     }
   }
   els.list.replaceChildren(...cards);
-  els.count.textContent = t(commissionView ? 'commission.results' : 'unit.results', { count: items.length });
-  els.empty.querySelector('strong').textContent = t(commissionView ? 'commission.empty' : 'empty.title');
-  els.empty.querySelector('span').textContent = t(commissionView ? 'commission.emptyHint' : 'empty.body');
+  els.count.textContent = leaderboardView ? `共 ${items.length} 位贡献者` : t(commissionView ? 'commission.results' : 'unit.results', { count: items.length });
+  els.empty.querySelector('strong').textContent = leaderboardView ? '还没有果力记录' : t(commissionView ? 'commission.empty' : 'empty.title');
+  els.empty.querySelector('span').textContent = leaderboardView ? '社区产生公开贡献后，排行会自动更新。' : t(commissionView ? 'commission.emptyHint' : 'empty.body');
   els.empty.hidden = items.length > 0;
   els.list.hidden = items.length === 0;
   els.clearTitle.classList.toggle('visible', Boolean(state.title));
@@ -3618,7 +3767,7 @@ function resetFilters() {
 }
 
 function setCommunityView(view) {
-  const next = view === 'commissions' ? 'commissions' : 'combos';
+  const next = ['commissions', 'leaderboard'].includes(view) ? view : 'combos';
   if (state.view === next) return;
   state.view = next;
   state.tag = '';
@@ -3626,6 +3775,7 @@ function setCommunityView(view) {
   renderFilters();
   render();
   if (next === 'commissions' && state.commissionLoadState === 'idle') void loadCommissions();
+  if (next === 'leaderboard' && state.leaderboardLoadState === 'idle') void loadLeaderboard();
   if (next === 'commissions') {
     if (state.commissionLoadState === 'loading') setStatus('', t('commission.loading'));
     else if (state.commissionLoadState === 'ready') setStatus('ready', commissionReadyStatus());
@@ -3634,6 +3784,10 @@ function setCommunityView(view) {
       els.errorMessage.textContent = t('commission.loadError', { error: t('error.later') });
       setStatus('error', t('commission.loadFailed'));
     }
+  } else if (next === 'leaderboard') {
+    if (state.leaderboardLoadState === 'loading') setStatus('', '正在统计果力');
+    else if (state.leaderboardLoadState === 'ready') setStatus('ready', `已统计 ${state.leaderboard.length} 位贡献者`);
+    else if (state.leaderboardLoadState === 'error') setStatus('error', '果力排行读取失败');
   } else if (state.indexLoadState === 'ready') setStatus('ready', t('status.ready', { count: state.charts.length, date: formatDate(state.indexUpdatedAt) }));
   else if (state.indexLoadState === 'error') {
     els.error.hidden = false;
@@ -3926,9 +4080,38 @@ async function loadCommissions() {
   }
 }
 
+async function loadLeaderboard() {
+  state.leaderboardLoadState = 'loading';
+  if (state.view === 'leaderboard') setStatus('', '正在统计果力');
+  try {
+    const response = await fetch(leaderboardSourceUrl, { cache: 'no-cache', credentials: 'same-origin' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if (!Array.isArray(data.users)) throw new Error('排行数据格式无效');
+    state.leaderboard = data.users;
+    state.leaderboardRules = data.rules || null;
+    state.leaderboardLoadState = 'ready';
+    renderFilters();
+    render();
+    if (state.view === 'leaderboard') setStatus('ready', `已统计 ${state.leaderboard.length} 位贡献者`);
+  } catch (error) {
+    state.leaderboard = [];
+    state.leaderboardLoadState = 'error';
+    if (state.view === 'leaderboard') {
+      els.list.replaceChildren();
+      els.list.hidden = true;
+      els.empty.hidden = true;
+      els.error.hidden = false;
+      els.errorMessage.textContent = `排行读取失败：${error.message}`;
+      setStatus('error', '果力排行读取失败');
+    }
+  }
+}
+
 els.form.addEventListener('submit', (event) => event.preventDefault());
 els.comboTab?.addEventListener('click', () => setCommunityView('combos'));
 els.commissionTab?.addEventListener('click', () => setCommunityView('commissions'));
+els.leaderboardTab?.addEventListener('click', () => setCommunityView('leaderboard'));
 els.createCommission?.addEventListener('click', openCommissionCreate);
 els.closeCommissionCreate?.addEventListener('click', closeCommissionCreate);
 els.cancelCommissionCreate?.addEventListener('click', closeCommissionCreate);
@@ -4049,7 +4232,7 @@ els.cancelComments?.addEventListener('click', closeComments);
 els.commentsBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.commentsBackdrop) closeComments(); });
 els.reset.addEventListener('click', resetFilters);
 els.emptyReset.addEventListener('click', resetFilters);
-els.retry.addEventListener('click', () => { els.error.hidden = true; if (state.view === 'commissions') void loadCommissions(); else void loadIndex(); });
+els.retry.addEventListener('click', () => { els.error.hidden = true; if (state.view === 'commissions') void loadCommissions(); else if (state.view === 'leaderboard') void loadLeaderboard(); else void loadIndex(); });
 els.themeToggle?.addEventListener('click', () => {
   setTheme(state.theme === 'day' ? 'night' : 'day');
 });
@@ -4064,7 +4247,7 @@ els.verifyAccount?.addEventListener('click', () => { void verifyAccount(); });
 els.accountLogout?.addEventListener('click', () => { void logoutAccount(); });
 els.profileForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const nextProfile = { ...state.profile, username: els.profileUsernameInput.value.trim().slice(0, 40), email: els.profileEmailInput.value.trim().toLowerCase().slice(0, 254), avatar: state.profileDraftAvatar };
+  const nextProfile = { ...state.profile, username: els.profileUsernameInput.value.trim().slice(0, 40), email: els.profileEmailInput.value.trim().toLowerCase().slice(0, 254), avatar: state.profileDraftAvatar, homepage: safeProfileHomepage(els.profileHomepageInput?.value) };
   const accountChanged = state.accountSession.authenticated && state.accountSession.email !== nextProfile.email;
   state.profile = nextProfile;
   try { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.profile)); } catch {}
@@ -4081,7 +4264,7 @@ els.profileForm?.addEventListener('submit', async (event) => {
   }, 500);
 });
 els.clearProfile?.addEventListener('click', () => {
-  state.profile = { username: '', email: '', avatar: '' };
+  state.profile = { username: '', email: '', avatar: '', homepage: '' };
   state.profileDraftAvatar = '';
   try { localStorage.removeItem(PROFILE_STORAGE_KEY); } catch {}
   els.profileUsernameInput.value = '';
@@ -4150,6 +4333,7 @@ if (!isWikiRoute) {
   initHeroSpine();
   loadIndex();
   void loadCommissions();
+  void loadLeaderboard();
   void loadAppRelease();
 } else {
   void loadCharacterIcons();

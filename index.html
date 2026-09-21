@@ -55,7 +55,11 @@
         if (!link) return;
         try {
           const destination = new URL(link.href, location.href);
-          if (destination.searchParams.has('wiki')) document.documentElement.classList.add('wiki-booting');
+          if (!destination.searchParams.has('wiki')) return;
+          if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          document.documentElement.classList.add('wiki-booting');
+          requestAnimationFrame(() => location.assign(destination.href));
         } catch {}
       }, true);
     </script>
@@ -67,13 +71,13 @@
         document.write('<link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />');
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260918-plaza-tabs-v4" />
+    <link rel="stylesheet" href="styles.css?v=20260921-wiki-flow-bright-v1" />
   </head>
   <body>
     <div class="wiki-boot-screen" role="status" aria-live="polite" aria-label="加载中">
       <div class="wiki-boot-screen-inner">
-        <img class="wiki-boot-screen-gif wiki-boot-screen-gif-day" src="assets/wiki-loading-day.gif?v=20260918-cutout1" alt="" />
-        <img class="wiki-boot-screen-gif wiki-boot-screen-gif-night" src="assets/wiki-loading-night.gif?v=20260918-cutout1" alt="" />
+        <img class="wiki-boot-screen-gif wiki-boot-screen-gif-day" src="./assets/wiki-loading-day.gif?v=20260920-gif-mime" alt="" loading="eager" />
+        <img class="wiki-boot-screen-gif wiki-boot-screen-gif-night" src="./assets/wiki-loading-night.gif?v=20260920-gif-mime" alt="" loading="eager" />
         <span>加载中</span>
       </div>
     </div>
@@ -206,6 +210,11 @@
             <div>
               <h2 id="resultsTitle" data-i18n="results.title">社区连段</h2>
               <p id="resultCount">0 个结果</p>
+            </div>
+            <div id="leaderboardMetricHeaders" class="leaderboard-metric-headers" aria-label="果力排行指标" hidden>
+              <span><strong>打轴高手</strong><span class="leaderboard-metric-header-details"><small>上传</small><small>下载</small></span></span>
+              <span><strong>果宝特攻</strong><span class="leaderboard-metric-header-details is-three"><small>求助</small><small>回应</small><small>采纳</small></span></span>
+              <span><strong>人形百科</strong><span class="leaderboard-metric-header-details"><small>流程</small><small>修正</small></span></span>
             </div>
             <div class="results-tools">
               <button id="createCommissionBtn" class="create-commission-button" type="button" hidden>
@@ -665,6 +674,6 @@
     </script>
     <script src="assets/input-icons.js?v=20260801-1"></script>
     <script>window.WWComboInputIcons = WWComboInputIcons;</script>
-    <script type="module" src="assets/wiki-runtime.min.js?v=20260918-home-boot-v1"></script>
+    <script type="module" src="assets/wiki-runtime.min.js?v=20260921-wiki-flow-emblem-v1"></script>
   </body>
 </html>

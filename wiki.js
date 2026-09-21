@@ -4,7 +4,7 @@
   const PROJECT_ASSET_MANIFEST_PATH = '/api/project-assets/v1/manifest.json';
   const APP_RELEASE_FALLBACK_ORIGIN = 'https://Nova.fb520.site';
   const ICON_MANIFEST_URL = './assets/character-icons.json?v=20260903-avatar-name-fix1';
-  const TIDE_ICON_MANIFEST_URL = './assets/button-icons/tide/characters/index.json';
+  const TIDE_ICON_MANIFEST_URL = './assets/button-icons/tide/characters/index.json?v=20260919-wiki-rail-icons-v1';
   const PORTRAIT_ROOT = './assets/character-portraits/';
   const EMBLEM_ROOT = './assets/wiki-character-emblems-bright/';
   const PORTRAIT_ASSET_VERSION = '20260905-halfbody1';
@@ -44,18 +44,19 @@
   ];
   const ELEMENTS = ['全部', '冷凝', '热熔', '导电', '气动', '衍射', '湮灭'];
   const elementColors = { 冷凝: '#62b9e6', 热熔: '#ef885c', 导电: '#b37be8', 气动: '#6fc88d', 衍射: '#e8c65a', 湮灭: '#e079bf' };
-  // The full roster has been rechecked against the current API snapshot and
-  // the normalized input vocabulary is now enabled for every character.
-  const REVIEWED_WIKI_CHARACTERS = new Set(['散华', '白芷', '凌阳', '折枝', '釉瑚', '珂莱塔', '绯雪', '洛瑟菈', '穗穗', '炽霞', '安可', '莫特斐', '长离', '布兰特', '露帕', '嘉贝莉娜', '莫宁', '爱弥斯', '达妮娅', '景燃', '卡卡罗', '吟霖', '渊武', '今汐', '相里要', '奥古斯塔', '卜灵', '守岸人', '丽贝卡', '漂泊者·导电', '心', '锁暝', '秧秧', '秋水', '忌炎', '鉴心', '漂泊者·气动', '夏空', '卡提希娅', '尤诺', '仇远', '西格莉卡', '清宵', '漂泊者·衍射', '维里奈', '灯灯', '菲比', '千咲', '赞妮', '琳奈', '陆·赫斯', '露西', '桃祈', '丹瑾', '椿', '漂泊者·湮灭', '洛可可', '坎特蕾拉', '弗洛洛', '秧秧·玄翎']);
+  const WIKI_RESOURCE_CACHE = 'wwcombo-wiki-resources-v3';
     const state = {
     characters: [], icons: new Map(), query: '', element: '全部', selected: '',
     info: new Map(), wikiState: new Map(), characterBasePresets: new Map(), loading: true, detailLoading: false, error: '', detailError: '',
     selectedNode: '', profileOpen: false, editing: false, contextMenu: null, clipboard: null,
     editorStore: {}, editorHistory: [], editorFuture: [], contextDismiss: null,
-    graphZoom: 1, graphCanvasZoom: 1, graphContentZoom: 1, graphPan: { x: 0, y: 0 }, expandedGroups: {}, replacementStates: {}, inputRouteStates: {}, editorDraftCategory: 'normal', tideIcons: new Map(), formId: 'normal', formIds: {}, chainIds: {}, modeIds: {}, wikiSaveTimers: new Map(), wikiSaveChains: new Map(), wikiSaveStatus: '', announcement: null, announcementOpen: false, hoveredCharacter: ''
+    graphZoom: 1, graphCanvasZoom: 1, graphContentZoom: 1, graphPan: { x: 0, y: 0 }, expandedGroups: {}, replacementStates: {}, inputRouteStates: {}, editorDraftCategory: 'normal', tideIcons: new Map(), formId: 'normal', formIds: {}, chainIds: {}, modeIds: {}, wikiSaveTimers: new Map(), wikiSaveChains: new Map(), wikiSaveStatus: '', announcement: null, announcementOpen: false, hoveredCharacter: '',
+    homeMenuName: '', homeSurfaceTab: 'selector', homeContentTab: 'profile', homeSelectorScrollLeft: {}, homeSurfaceLoading: false, homeSurfaceLoadingSequence: 0, homeSurfaceFullscreen: false, homeCharacterPickerOpen: false, soloComboOpen: false, soloComboTab: 'solo', soloComboEditing: false, soloComboEditMode: 'combo', soloComboDraft: null, soloComboSelection: -1, soloComboClipboard: null, soloComboHistory: [], soloComboFuture: [], soloNativeDrag: null, soloComboCommunity: [], soloComboCommunityLoading: false, soloComboCommunityLoaded: false, soloComboPanelRect: null, soloCombosByCharacter: new Map(), soloComboLoadState: new Map(), soloComboSaveState: '', soloComboSaveConfirm: false, homeFlowPreview: null, homeInfoLoadPromises: new Map(), homeInfoLoadState: new Map(), homeWikiLoadPromises: new Map(), homeFlowLoadPromises: new Map(), homeTreeAssetLoadPromises: new Map()
   };
 
   const EDITOR_STORAGE_KEY = 'wwcombo-community-wiki-editor-v1';
+  const SLANG_STORAGE_KEY = 'wwcombo-community-wiki-slang-v1';
+  const SOLO_COMBO_PREVIEW_STORAGE_KEY = 'wwcombo-community-wiki-solo-combos-preview-v1';
   const CATEGORY_ORDER = ['buff', 'other', 'skill', 'normal', 'heavy', 'liberation'];
   const categoryLabels = { normal: 'normal', heavy: 'heavy', skill: 'skill', liberation: 'liberation', other: 'other', buff: 'buff' };
   const wikiNameCollator = new Intl.Collator('zh-u-co-pinyin', { usage: 'sort', sensitivity: 'base', numeric: true });
@@ -69,7 +70,7 @@
       search: '搜索角色', all: '全部属性', count: '{count} 名角色', api: '数据来自角色资料 API', latestUpdate: '数据库更新：补充角色技能、形态与 Buff 派生关系', loading: '正在读取角色资料', failed: '角色资料读取失败', retry: '重新读取',
       back: '返回角色列表', skills: '技能与派生', raw: '技能原文', base: '基础资料', star: '星级', element: '属性', weapon: '武器',
       treeHint: '按输入类型整理；双击招式查看触发条件、前置状态与产生效果。', conditions: '触发与关联', trigger: '触发按键', inputCondition: '输入条件', prerequisites: '前置条件', effects: '产生 / 消耗', noDetails: '这条技能暂时没有可提取的额外条件。',
-       normal: '普攻', heavy: '重击', skill: '技能', liberation: '解放', other: '其他', buff: 'Buff', noCharacters: '没有找到符合条件的角色。', details: '查看详情', close: '关闭详情', forms: '形态 / 状态', stats: '基础数值',
+      normal: '普攻', heavy: '重击', skill: '技能', liberation: '解放', other: '其他', buff: 'Buff', flow: '流程', homeRaw: '原文', noCharacters: '没有找到符合条件的角色。', details: '查看详情', close: '关闭详情', forms: '形态 / 状态', stats: '基础数值',
        noInfo: '暂时没有技能资料', detailLoading: '正在读取技能资料', skillCount: '{count} 项技能', nodeCount: '{count} 个节点', stageCount: '{count} 段', expand: '点击展开', collapse: '收起段落', edit: '编辑模式', editing: '编辑中', localPreview: '本地预览', readonly: '只读', add: '新增招式块', save: '保存节点', cancel: '取消', delete: '删除', copy: '复制', paste: '粘贴', cut: '剪切', undo: '撤销', redo: '重做', resetLayout: '恢复自动布局', restore: '恢复节点', newAction: '新建招式块', newBuff: '新建 Buff 块', name: '节点名称', category: '节点类型', input: '触发按键', prerequisites: '前置条件', effects: 'Buff / 效果', notes: '备注', connect: '关联节点', independent: '独立起点', chain: '共鸣链', baseChain: '本体', chainLevel: '{count}链及以上', chainAny: '全部共鸣链', form: '所属形态', formShared: '两种形态通用', airborne: '空中状态', airborneNone: '无', airborneOnly: '仅空中', airborneAvailable: '可空中', airborneAscend: '升空', inputRoutes: '多按键触发路径', inputRouteHint: '每条路径可指定不同输入及其前置节点', inputRouteAdd: '添加输入路径', inputRouteRemove: '移除路径', editorHint: '编辑模式下可拖动节点；双击节点查看详情，右键打开编辑菜单。', selectedNode: '选中招式', editorTitle: 'Wiki 编辑', noNode: '请先选择一个招式节点', graphNodes: '个节点'
     },
     'en-US': {
@@ -110,6 +111,10 @@
   Object.assign(copy['ja-JP'], { airborne: '空中状態', airborneNone: 'なし', airborneOnly: '空中のみ', airborneAvailable: '空中可', airborneAscend: '上昇', inputRoutes: '複数入力ルート', inputRouteHint: '入力と前提ノードをルートごとに設定します', inputRouteAdd: '入力ルートを追加', inputRouteRemove: 'ルートを削除' });
   Object.assign(copy['ko-KR'], { airborne: '공중 상태', airborneNone: '없음', airborneOnly: '공중 전용', airborneAvailable: '공중 가능', airborneAscend: '상승', inputRoutes: '다중 입력 경로', inputRouteHint: '각 경로의 입력과 선행 노드를 설정합니다', inputRouteAdd: '입력 경로 추가', inputRouteRemove: '경로 삭제' });
   Object.assign(copy['zh-CN'], { loginToEdit: '登录后可编辑', localEdit: '本地编辑', locked: '维护端已锁定', construction: '人工校验中', requestEdit: '反馈 / 申请编辑权', announcement: '最新公告', closeAnnouncement: '关闭公告', noAnnouncement: '暂无公告', saving: '正在保存', saved: '已保存', saveFailed: '保存失败' });
+  Object.assign(copy['zh-CN'], { tree: '树图', combo: '连段', teamFlow: '队伍流程', soloFlow: '单人连段', soloCombo: '单人连段', newCombo: '新建连段', comboName: '连段名称', saveCombo: '保存连段', noSoloCombos: '还没有保存的单人连段', comboEditor: '连段编辑区', comboMode: '连段', buffMode: 'Buff', dropNodes: '点击树图招式加入，或拖入此处', selected: '已选', bindBuff: '绑定 Buff', buffStart: '开始', buffEnd: '结束', buffStacks: '叠层', communityLoading: '正在读取连段社区', noCommunityCombos: '当前还没有可展示的社区连段', slangName: '黑话代号', slangPreset: '留空使用自动预设', copyTool: '复制', cutTool: '剪切', pasteTool: '粘贴', undoTool: '撤销', redoTool: '重做', remove: '移除' });
+  Object.assign(copy['en-US'], { slangName: 'Shorthand', slangPreset: 'Leave blank to use the automatic preset' });
+  Object.assign(copy['ja-JP'], { slangName: '俗称コード', slangPreset: '空欄で自動プリセット' });
+  Object.assign(copy['ko-KR'], { slangName: '통칭 코드', slangPreset: '비워 두면 자동 프리셋 사용' });
   Object.assign(copy['en-US'], { loginToEdit: 'Sign in to edit', localEdit: 'Local editing', locked: 'Locked by maintenance', construction: 'Under manual review', requestEdit: 'Report / Request access', announcement: 'Latest announcement', closeAnnouncement: 'Close announcement', noAnnouncement: 'No announcement yet', saving: 'Saving', saved: 'Saved', saveFailed: 'Save failed' });
   Object.assign(copy['ja-JP'], { loginToEdit: 'ログインして編集', localEdit: 'ローカル編集', locked: 'メンテナンス側でロック中', construction: '手動検証中', requestEdit: '報告 / 編集権限を申請', announcement: '最新のお知らせ', closeAnnouncement: 'お知らせを閉じる', noAnnouncement: 'お知らせはありません', saving: '保存中', saved: '保存済み', saveFailed: '保存失敗' });
   Object.assign(copy['ko-KR'], { loginToEdit: '로그인 후 편집', localEdit: '로컬 편집', locked: '관리자 잠금', construction: '수동 검증 중', requestEdit: '신고 / 편집 권한 신청', announcement: '최신 공지', closeAnnouncement: '공지 닫기', noAnnouncement: '공지가 없습니다', saving: '저장 중', saved: '저장됨', saveFailed: '저장 실패' });
@@ -209,15 +214,44 @@
       window.clearTimeout(timeout);
     }
   }
+  async function readCachedJson(url) {
+    if (!('caches' in window)) return null;
+    try {
+      const cache = await caches.open(WIKI_RESOURCE_CACHE);
+      const response = await cache.match(url);
+      return response ? await response.json() : null;
+    } catch {
+      return null;
+    }
+  }
+  async function cacheJsonResponse(url, response) {
+    if (!response?.ok || !('caches' in window)) return;
+    try {
+      const cache = await caches.open(WIKI_RESOURCE_CACHE);
+      await cache.put(url, response.clone());
+    } catch {
+      // Cache storage is an optimization; the network response remains valid.
+    }
+  }
+  async function readCachedJsonOrFetch(url, options = {}, timeoutMs = 12000) {
+    const cached = await readCachedJson(url);
+    if (cached !== null) {
+      // Keep the first render cache-first while refreshing it for the next visit.
+      void fetchJsonWithTimeout(url, { ...options, cache: 'no-cache' }, timeoutMs)
+        .then((response) => cacheJsonResponse(url, response))
+        .catch(() => {});
+      return cached;
+    }
+    const response = await fetchJsonWithTimeout(url, options, timeoutMs);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    await cacheJsonResponse(url, response);
+    return response.json();
+  }
   async function loadCharacterBasePresets() {
     state.characterBasePresets = new Map();
     for (const manifestUrl of projectAssetManifestUrls()) {
-      const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 1500);
       try {
-        const response = await fetch(manifestUrl, { cache: 'no-store', mode: 'cors', signal: controller.signal });
-        if (!response.ok) continue;
-        const manifest = await response.json();
+        const manifest = await readCachedJsonOrFetch(manifestUrl, { cache: 'force-cache', mode: 'cors' }, 1500);
         const characters = Array.isArray(manifest?.characters) ? manifest.characters : [];
         for (const entry of characters) {
           const preset = entry?.basePreset;
@@ -235,8 +269,6 @@
         if (state.characterBasePresets.size) return;
       } catch (error) {
         console.warn('[wiki] character base preset manifest unavailable', manifestUrl, error);
-      } finally {
-        window.clearTimeout(timeout);
       }
     }
   }
@@ -394,6 +426,32 @@
     return [...new Set(sources.filter(Boolean))];
   };
   const preloadCharacterVisuals = (entry, options = {}) => Promise.all(visualSourcesFor(entry).map((source) => preloadWikiImage(source, options)));
+  // The home surface only needs a small, predictable visual bundle. Keep the
+  // large skill/tree assets out of the critical path, while warming every
+  // avatar used by the selector and the first character's complete card.
+  const homeVisualSourcesFor = (entry, includePortrait = false) => {
+    const name = typeof entry === 'string' ? entry : entry?.name;
+    const character = typeof entry === 'string' ? state.characters.find((item) => item.name === entry) : entry;
+    const sources = [
+      iconFor(name),
+      basicAttackIconFor(name),
+      elementIconFor(character?.element),
+      elementBackgroundFor(character?.element)
+    ];
+    if (includePortrait) sources.push(portraitFor(name));
+    return [...new Set(sources.filter(Boolean))];
+  };
+  const preloadHomeSurface = async (characters, priorityName = '赞妮') => {
+    const entries = Array.isArray(characters) ? characters : [];
+    const priority = entries.find((entry) => characterName(entry) === priorityName) || entries[0];
+    const avatarSources = [...new Set(entries.flatMap((entry) => homeVisualSourcesFor(entry)))];
+    const prioritySources = priority ? homeVisualSourcesFor(priority, true).concat(emblemFor(priority.name), nameBackgroundFor(priority.name)) : [];
+    // Only the first card is critical for entering the Wiki. The selector
+    // assets are warmed after the first paint so a community-to-Wiki click
+    // never waits for the entire roster.
+    await Promise.all([...new Set(prioritySources.filter(Boolean))].map((source) => preloadWikiImage(source, { decode: true })));
+    void Promise.all([...new Set(avatarSources.filter(Boolean))].map((source) => preloadWikiImage(source)));
+  };
   const preloadWikiVisuals = (characters, priorityName = '赞妮') => {
     const entries = Array.isArray(characters) ? characters : [];
     const priority = entries.find((entry) => characterName(entry) === priorityName);
@@ -487,6 +545,11 @@
       '漂泊者·雷': '漂泊者·导电'
     }[normalized] || normalized;
     return state.tideIcons.get(value) || state.tideIcons.get(normalized) || state.tideIcons.get(alias);
+  }
+
+  function basicAttackIconFor(name) {
+    return tideIconManifestFor(name)?.basic_attack
+      || './assets/button-icons/tide/basic_attack.png';
   }
 
   const actionTextPatterns = {
@@ -6099,7 +6162,7 @@
         n('lingyang-normal-aerial', P('空中攻击', 'Aerial Attack'), 'other', tapBasic, { sourceTitle: '空中攻击', prerequisites: [P('处于空中', 'Airborne')], effects: [P('消耗耐力进行空中下落攻击', 'Consume Stamina for a plunging attack')] }),
         n('lingyang-aerial', P('空中攻击·登楼·尾坠千斤', 'Aerial Attack: Ascending Tower: Thousand-Pound Drop'), 'other', tapBasic, { sourceTitle: '空中攻击·登楼·尾坠千斤', prerequisites: [P('重击后；狮魂未满；短按普攻', 'After Heavy Attack; Lionheart is not full; tap Basic Attack')], effects: [P('消耗耐力进行空中下落攻击', 'Consume Stamina for a plunging attack')] }),
         n('lingyang-qishi', P('重击·起势·纵地金光', 'Heavy Attack: Rising Golden Light'), 'heavy', holdBasic, { sourceTitle: '重击·起势·纵地金光', prerequisites: [P('重击时狮魂满，或行狮状态中回到地面', 'Lionheart is full on Heavy Attack, or return to the ground during Lion Dance')], effects: [P('进入或再次回到行狮状态并跃至空中', 'Enter or re-enter Lion Dance and return to the air')] }),
-        n('lingyang-dodge', P('闪避反击', 'Dodge Counter'), 'other', dodgeBasic, { sourceTitle: '闪避反击', effects: [P('成功闪避后短按普攻攻击目标', 'After a successful dodge, tap Basic Attack to attack the target')] }),
+        n('lingyang-dodge', P('闪避反击', 'Dodge Counter'), 'other', dodgeBasic, { sourceTitle: '闪避反击', formId: 'normal', formManual: true, effects: [P('成功闪避后短按普攻攻击目标；之后短按普攻接普攻第3段', 'After a successful dodge, tap Basic Attack to attack the target; then tap Basic Attack to continue with Basic Attack 3')] }),
         n('lingyang-skill', P('共鸣技能·冲掌·势式相承', 'Resonance Skill: Palm Strike: Successive Forms'), 'skill', tapSkill, { sourceTitle: '冲掌·势式相承', effects: [P('攻击目标；不会打断普攻循环段数', 'Attack the target; does not reset the Basic Attack chain')] }),
         n('lingyang-fierce-leap', P('共鸣技能·惊跃·郁怒追逃', 'Resonance Skill: Fierce Leap: Wrathful Pursuit'), 'skill', tapSkill, { sourceTitle: '惊跃·郁怒追逃', inputRoutes: [{ input: tapSkill, fromIds: ['lingyang-basic-3', 'lingyang-basic-4', 'lingyang-basic-5', 'lingyang-collapse'] }], prerequisites: [P('普攻第3、4、5段或崩拳命中目标后，冲掌替换', 'Palm Strike is replaced after Basic Attack 3, 4, 5, or Collapse Fist hits')], effects: [P('回复狮魂；施放后普攻第5段替换为崩拳·当头咆哮', 'Restore Lionheart; after casting, Basic Attack 5 is replaced by Collapse Fist: Head-on Roar')], notes: [P('若由崩拳命中后施放，本次惊跃后短按普攻可接普攻第3段', 'When cast after Collapse Fist hits, tap Basic Attack after this Fierce Leap to continue with Basic Attack 3')] }),
         n('lingyang-liberation', P('共鸣解放·奋进·狮子奋迅，俱足万行', 'Resonance Liberation: Advance: Lion’s Vigor'), 'liberation', tapLiberation, { sourceTitle: '奋进·狮子奋迅，俱足万行', effects: [P('攻击目标并回复狮魂，获得狮子奋迅祝福', 'Attack the target, restore Lionheart, and gain Lion’s Vigor')] }),
@@ -6108,6 +6171,7 @@
         n('lingyang-lion-state', P('行狮状态', 'Lion Dance State'), 'buff', P('重击·起势命中；或变奏/解放后狮魂满时短按普攻', 'Triggered by Rising Golden Light, or by tapping Basic Attack after Intro/Liberation with full Lionheart'), { sourceTitle: '行狮', tone: 'form-alt', effects: [P('普攻替换为狂态·摇光金狮舞；共鸣技能替换为飞身式·翻山越涧；狮魂耗尽后结束', 'Replace Basic Attack with Frenzy: Shimmering Golden Lion Dance and Resonance Skill with Vaulting Form; ends when Lionheart is depleted'), P('行狮中回到地面后可施放重击·起势·纵地金光再次升空；狮魂低于10点时短按普攻施放凌云式·腿打连环', 'After returning to the ground during Lion Dance, Rising Golden Light can launch him again; tap Basic Attack when Lionheart falls below 10 to cast Cloudstride: Chain Kicks')], notes: [P('基础持续5秒；同时处于狮子奋迅时狮魂消耗速率降低50%，最多延长至10秒', 'Base duration is 5s; Lion’s Vigor halves Lionheart drain and can extend it to 10s')] }),
         n('lingyang-lion-basic-1', P('狂态·摇光金狮舞 第1段', 'Frenzy: Shimmering Golden Lion Dance 1'), 'normal', tapBasic, { tone: 'form-alt', prerequisites: [P('处于行狮状态', 'Lion Dance is active')], effects: [P('持续消耗狮魂', 'Continuously consume Lionheart')] }),
         n('lingyang-lion-basic-2', P('狂态·摇光金狮舞 第2段', 'Frenzy: Shimmering Golden Lion Dance 2'), 'normal', tapBasic, { tone: 'form-alt', prerequisites: [P('狂态·摇光金狮舞第1段', 'Frenzy: Shimmering Golden Lion Dance 1')], effects: [P('持续消耗狮魂', 'Continuously consume Lionheart')] }),
+        n('lingyang-lion-dodge', P('闪避反击', 'Dodge Counter'), 'other', dodgeBasic, { tone: 'form-alt', prerequisites: [P('行狮状态；成功闪避后一定时间内短按普攻', 'Lion Dance active; tap Basic Attack shortly after a successful dodge')], effects: [P('攻击目标；之后短按普攻接狂态·摇光金狮舞第2段', 'Attack the target; then tap Basic Attack to continue with Frenzy: Shimmering Golden Lion Dance 2')] }),
         n('lingyang-lion-skill', P('飞身式·翻山越涧', 'Vaulting Form: Crossing Mountains and Valleys'), 'skill', tapSkill, { tone: 'form-alt', prerequisites: [P('处于行狮状态', 'Lion Dance is active')], effects: [P('消耗狮魂并回复协奏能量', 'Consume Lionheart and restore Concerto Energy')] }),
         n('lingyang-chain-kicks', P('凌云式·腿打连环', 'Cloudstride: Chain Kicks'), 'normal', tapBasic, { tone: 'form-alt', prerequisites: [P('行狮状态中狮魂消耗至10点以下；短按普攻', 'During Lion Dance, Lionheart falls below 10; tap Basic Attack')], effects: [P('施放后可接空中攻击·登楼·尾坠千斤', 'Enables Aerial Attack: Ascending Tower: Thousand-Pound Drop')] }),
         n('lingyang-spirit', P('狮魂', 'Lionheart'), 'buff', P('惊跃、变奏或解放获得；上限100点', 'Gained by Fierce Leap, Intro, or Liberation; cap 100'), { sourceTitle: '狮魂的获取规则', effects: [P('行狮期间持续消耗；消耗时回复协奏能量；满值是进入行狮路线的关键条件', 'Continuously consumed during Lion Dance and restores Concerto Energy when consumed; full Lionheart is the key condition for entering the Lion Dance route')] }),
@@ -6120,14 +6184,14 @@
         const id = String(node.id || '');
         const formId = id.includes('lingyang-lion') || ['lingyang-chain-kicks', 'lingyang-training'].includes(id)
           ? 'lion'
-          : ['lingyang-entry-boost', 'lingyang-spirit', 'lingyang-normal-aerial', 'lingyang-aerial', 'lingyang-qishi', 'lingyang-dodge', 'lingyang-skill', 'lingyang-fierce-leap', 'lingyang-liberation', 'lingyang-intro', 'lingyang-harmonic', 'lingyang-outro'].includes(id)
+          : ['lingyang-entry-boost', 'lingyang-spirit', 'lingyang-normal-aerial', 'lingyang-aerial', 'lingyang-qishi', 'lingyang-skill', 'lingyang-fierce-leap', 'lingyang-liberation', 'lingyang-intro', 'lingyang-harmonic', 'lingyang-outro'].includes(id)
             ? 'shared'
             : 'normal';
         return { ...node, formId };
       });
       return chain(formNodes, [
         ...basicEdges('lingyang', 5), ...basicEdges('lingyang-lion', 2),
-        e('lingyang-lion-state', 'lingyang-normal-aerial', 'buff'),
+        e('lingyang-lion-state', 'lingyang-normal-aerial', 'buff'), e('lingyang-lion-state', 'lingyang-lion-dodge', 'buff'),
         e('lingyang-basic-3', 'lingyang-fierce-leap'), e('lingyang-basic-4', 'lingyang-fierce-leap'), e('lingyang-basic-5', 'lingyang-fierce-leap', 'buff'), e('lingyang-basic-5', 'lingyang-collapse', 'replacement'), e('lingyang-collapse', 'lingyang-fierce-leap'), e('lingyang-fierce-leap', 'lingyang-basic-3', 'conditional-derivation'), e('lingyang-heavy', 'lingyang-qishi'), e('lingyang-heavy', 'lingyang-aerial'), e('lingyang-qishi', 'lingyang-lion-state'), e('lingyang-intro', 'lingyang-lion-state'), e('lingyang-liberation', 'lingyang-lion-state'), e('lingyang-liberation', 'lingyang-lion-frenzy', 'buff'), e('lingyang-lion-frenzy', 'lingyang-lion-state', 'buff'), e('lingyang-lion-state', 'lingyang-lion-basic-1', 'buff'), e('lingyang-lion-state', 'lingyang-lion-skill', 'buff'), e('lingyang-lion-state', 'lingyang-chain-kicks', 'buff'), e('lingyang-lion-basic-1', 'lingyang-lion-basic-2'), e('lingyang-lion-basic-2', 'lingyang-chain-kicks', 'buff'), e('lingyang-chain-kicks', 'lingyang-aerial'), e('lingyang-spirit', 'lingyang-lion-state', 'buff'), e('lingyang-spirit', 'lingyang-qishi', 'buff'), e('lingyang-fierce-leap', 'lingyang-spirit', 'buff'), e('lingyang-intro', 'lingyang-spirit', 'buff'), e('lingyang-intro', 'lingyang-entry-boost', 'buff'), e('lingyang-liberation', 'lingyang-spirit', 'buff'), e('lingyang-lion-basic-1', 'lingyang-training', 'buff'), e('lingyang-lion-basic-2', 'lingyang-training', 'buff'), e('lingyang-training', 'lingyang-lion-skill', 'buff')
       ].flat());
     }
@@ -7154,14 +7218,6 @@
           airborneTag: 'available',
           effects: [P('造成热熔伤害并治疗附近队伍；结束后进入燃焰状态', 'Deal Fusion damage and heal nearby teammates; enter Scorching Flame after the cast ends')]
         }),
-        n('brandt-winged-fantasy', P('浮翼狂想', 'Winged Fantasy'), 'buff', P('施放共鸣解放·直到世界尽头后附加', 'Granted by Resonance Liberation: Till the End of the World'), {
-          sourceTitle: '浮翼狂想',
-          effects: [P('队伍中登场角色普攻命中时协同攻击打出1发加强音；重击命中时打出2发；每0.35秒最多1次', 'When the active character’s Basic Attack hits, perform a coordinated attack with 1 Enhanced Note; Heavy Attack hits fire 2; at most once every 0.35s')]
-        }),
-        n('brandt-enhanced-note', P('加强音', 'Enhanced Note'), 'other', P('自动触发', 'Automatic trigger'), {
-          sourceTitle: '加强音',
-          effects: [P('造成热熔伤害', 'Deal Fusion damage')]
-        }),
         n('brandt-intro', P('变奏技能·为我！', 'Intro Skill: For Me!'), 'other', intro, {
           sourceTitle: '为我！',
           effects: [P('攻击目标并获得幕间掌声', 'Attack the target and gain Interlude Applause')]
@@ -7206,13 +7262,12 @@
         e('brandt-basic-2', 'brandt-fantasia'), e('brandt-basic-4', 'brandt-fantasia'), e('brandt-air-basic-4', 'brandt-fantasia'),
         e('brandt-air-basic-1', 'brandt-air-grapple'), e('brandt-air-basic-2', 'brandt-air-grapple'), e('brandt-air-grapple', 'brandt-aerial-dodge'), e('brandt-aerial-dodge', 'brandt-air-basic-2'),
         e('brandt-air-grapple', 'brandt-aerial-plunge'), e('brandt-anchor', 'brandt-aerial-plunge'),
-        e('brandt-liberation', 'brandt-winged-fantasy', 'buff'), e('brandt-winged-fantasy', 'brandt-enhanced-note', 'buff'),
         e('brandt-intro', 'brandt-interlude', 'buff'), e('brandt-interlude', 'brandt-air-basic-2', 'buff'),
         e('brandt-liberation', 'brandt-scorching', 'buff'), e('brandt-scorching', 'brandt-my-life', 'buff'),
         e('brandt-basic-1', 'brandt-applause', 'buff'), e('brandt-basic-2', 'brandt-applause', 'buff'), e('brandt-basic-3', 'brandt-applause', 'buff'), e('brandt-basic-4', 'brandt-applause', 'buff'),
         e('brandt-anchor', 'brandt-applause', 'buff'), e('brandt-intro', 'brandt-applause', 'buff'), e('brandt-applause', 'brandt-applause-heal', 'buff'),
         e('brandt-applause', 'brandt-flame-ruin', 'buff'), e('brandt-anchor', 'brandt-flame-ruin', 'replacement'),
-        e('brandt-outro', 'brandt-flame-ruin', 'buff'), e('brandt-enhanced-note', 'brandt-applause', 'buff')
+        e('brandt-outro', 'brandt-flame-ruin', 'buff')
       ]);
     }
 
@@ -7231,7 +7286,7 @@
     // lives in coldModel, so return that authored model like the other roles.
     if (rewrittenColdModel) return rewrittenColdModel;
     const n = (id, title, category, input, options) => specialNode(id, title, category, input, options);
-    const chain = (nodes, edges = []) => ({ version: name === '琳奈' ? COLD_MODEL_SCHEMA_VERSION : 3, character: name, formId, nodes, edges, positions: {} });
+    const chain = (nodes, edges = []) => ({ version: name === '赞妮' ? 4 : name === '琳奈' ? COLD_MODEL_SCHEMA_VERSION : 3, character: name, formId, nodes, edges, positions: {} });
     const P = (zh, en) => uiText(zh, en || zh);
     const tapBasic = uiText('短按普攻', 'Tap Basic Attack');
     const holdBasic = uiText('长按普攻', 'Hold Basic Attack');
@@ -7248,12 +7303,12 @@
       if (formId === 'blazing') {
         const nodes = [
           n('zanni-blazing-state', uiText('灼焰形态', 'Blazing Form'), 'buff', uiText('施放共鸣解放·重燃后进入', 'Enter after Resonance Liberation: Reignite'), { effects: [uiText('焰光上限提升至150；普攻、重击和共鸣技能替换；持续结束后退出', 'Raise Flameglow cap to 150; replace Basic, Heavy, and Resonance Skill; exit when the state ends')] }),
-          n('zanni-blazing-basic-1', uiText('重斩·破晓', 'Heavy Slash: Daybreak'), 'normal', uiText('灼焰形态下短按普攻', 'Tap Basic Attack in Blazing Form'), { prerequisites: [uiText('灼焰形态；焰光不少于30点', 'Blazing Form; at least 30 Flameglow')], effects: [uiText('消耗焰光；之后立即短按普攻可接重斩·将明', 'Consume Flameglow; tap Basic Attack immediately afterward to enter Coming Dawn')] }),
-          n('zanni-blazing-basic-2', uiText('重斩·将明', 'Heavy Slash: Coming Dawn'), 'normal', uiText('重斩·破晓后短按普攻', 'Tap Basic Attack after Heavy Slash: Daybreak'), { prerequisites: [uiText('重斩·破晓后立即短按普攻', 'Tap Basic Attack immediately after Daybreak')], effects: [uiText('消耗焰光；之后普攻替换为重斩·终夜', 'Consume Flameglow; then replace Basic Attack with Final Night')] }),
+          n('zanni-blazing-basic-1', uiText('重斩·破晓', 'Heavy Slash: Daybreak'), 'normal', uiText('灼焰形态下短按普攻', 'Tap Basic Attack in Blazing Form'), { replacementGroup: 'zanni-ready-heavy-slash', replacementBase: true, replacementSourceIds: ['zanni-ready'], prerequisites: [uiText('灼焰形态；焰光不少于30点', 'Blazing Form; at least 30 Flameglow')], effects: [uiText('消耗焰光；之后立即短按普攻可接重斩·将明', 'Consume Flameglow; tap Basic Attack immediately afterward to enter Coming Dawn')] }),
+          n('zanni-blazing-basic-2', uiText('重斩·将明', 'Heavy Slash: Coming Dawn'), 'normal', uiText('重斩·破晓后短按普攻', 'Tap Basic Attack after Heavy Slash: Daybreak'), { replacementGroup: 'zanni-ready-heavy-slash', replacementSourceIds: ['zanni-ready'], prerequisites: [uiText('重斩·破晓后立即短按普攻', 'Tap Basic Attack immediately after Daybreak')], effects: [uiText('消耗焰光；之后普攻替换为重斩·终夜', 'Consume Flameglow; then replace Basic Attack with Final Night')] }),
           n('zanni-blazing-basic-3', uiText('重斩·终夜', 'Heavy Slash: Final Night'), 'normal', uiText('重斩·将明后短按普攻', 'Tap Basic Attack after Heavy Slash: Coming Dawn'), { prerequisites: [uiText('重斩·将明后；或准备架势结束', 'After Coming Dawn; or when Ready Stance ends')], effects: [uiText('最多消耗40点焰光，每消耗1点提高本次伤害倍率', 'Consume up to 40 Flameglow; each point increases this hit’s multiplier')] }),
           n('zanni-blazing-lantern', uiText('引燃明灯', 'Kindling Lantern'), 'skill', holdSkill, { prerequisites: [uiText('灼焰形态；焰光不少于30点；共鸣技能被替换', 'Blazing Form; at least 30 Flameglow; Resonance Skill is replaced')], effects: [uiText('按住共鸣技能进入准备架势', 'Hold Resonance Skill to enter Ready Stance')] }),
           n('zanni-ready', uiText('准备架势', 'Ready Stance'), 'skill', holdSkill, { prerequisites: [uiText('引燃明灯后继续按住共鸣技能', 'Keep holding Resonance Skill after Kindling Lantern')], effects: [uiText('免疫打断；松开时施放重斩·破晓；受击时施放重斩·闪裂', 'Gain interruption immunity; release to cast Daybreak; when hit, cast Flash Split')] }),
-          n('zanni-flash', uiText('重斩·闪裂', 'Heavy Slash: Flash Split'), 'normal', uiText('准备架势期间受到攻击', 'Take an attack during Ready Stance'), { prerequisites: [uiText('准备架势；受到攻击', 'Ready Stance; take an attack')], effects: [uiText('消耗焰光；普攻替换为重斩·终夜', 'Consume Flameglow; replace Basic Attack with Final Night')] }),
+          n('zanni-flash', uiText('重斩·闪裂', 'Heavy Slash: Flash Split'), 'normal', uiText('准备架势期间受到攻击', 'Take an attack during Ready Stance'), { replacementGroup: 'zanni-ready-heavy-slash', replacementSourceIds: ['zanni-ready'], prerequisites: [uiText('准备架势；受到攻击', 'Ready Stance; take an attack')], effects: [uiText('消耗焰光；普攻替换为重斩·终夜', 'Consume Flameglow; replace Basic Attack with Final Night')] }),
           n('zanni-blazing-liberation', uiText('终绝将至之刻', 'Final Moment'), 'liberation', tapLiberation, { formId: 'blazing', formManual: true, prerequisites: [uiText('灼焰形态期间焰光低于30点或持续8秒', 'During Blazing Form, Flameglow below 30 or the state lasts 8s')], effects: [uiText('造成衍射伤害并退出灼焰形态', 'Deal Spectro damage and exit Blazing Form')] }),
           n('zanni-blazing-outro', uiText('来日道标', 'Beacon for Tomorrow'), 'other', uiText('延奏技能 / 切换角色', 'Outro Skill / switch character'), { formId: 'shared', formManual: true, effects: [uiText('清空烈阳余烬并强化队伍衍射伤害', 'Clear Solar Ember and boost team Spectro damage')] }),
           n('zanni-solar-ember', uiText('烈阳余烬', 'Solar Ember'), 'buff', uiText('队伍对目标附加光噪效应时转化获得', 'Gained when the team applies Spectro Frazzle to a target'), { formId: 'shared', formManual: true, effects: [uiText('上限60层；每层持续6秒；转化层数汲取焰光', 'Cap 60; each stack lasts 6s; converted stacks draw Flameglow')] }),
@@ -7299,10 +7354,11 @@
           n('lingyang-lion-skill', uiText('飞身式·翻山越涧', 'Vaulting Form: Crossing Mountains and Valleys'), 'skill', tapSkill, { prerequisites: [uiText('处于行狮状态', 'Lion Dance is active')], effects: [uiText('消耗狮魂并回复协奏能量', 'Consume Lionheart and restore Concerto Energy')] }),
           n('lingyang-chain-kicks', uiText('凌云式·腿打连环', 'Cloudstride: Chain Kicks'), 'normal', tapBasic, { prerequisites: [uiText('狮魂低于10点', 'Lionheart below 10')], effects: [uiText('可接空中攻击·登楼·尾坠千斤', 'Enables Aerial Attack: Ascending Tower: Thousand-Pound Drop')] }),
           n('lingyang-lion-heavy', uiText('起势·纵地金光', 'Rising Golden Light'), 'heavy', holdBasic, { prerequisites: [uiText('行狮状态中回到地面', 'Return to the ground during Lion Dance')], effects: [uiText('重新回到空中', 'Return to the air')] }),
+          n('lingyang-lion-dodge', uiText('闪避反击', 'Dodge Counter'), 'other', tapDodge, { formId: 'lion', formManual: true, prerequisites: [uiText('行狮状态；成功闪避后一定时间内短按普攻', 'Lion Dance active; tap Basic Attack shortly after a successful dodge')], effects: [uiText('攻击目标；之后短按普攻接狂态·摇光金狮舞第2段', 'Attack the target; then tap Basic Attack to continue with Frenzy: Shimmering Golden Lion Dance 2')] }),
           n('lingyang-spirit', uiText('狮魂', 'Lionheart'), 'buff', uiText('资源；上限100点', 'Resource; cap 100'), { effects: [uiText('消耗时回复协奏能量', 'Restores Concerto Energy when consumed')] }),
           n('lingyang-lion-outro', uiText('留痕·踏雪点星', 'Trace: Snowstep Starfall'), 'other', uiText('切换至下一位登场角色', 'Switch to the next character'), { effects: [uiText('释放冷凝冲击波', 'Release a Glacio shockwave')] })
         ];
-        return chain(nodes, [{ from: 'lingyang-lion-state', to: 'lingyang-lion-basic-1', kind: 'buff' }, { from: 'lingyang-lion-state', to: 'lingyang-lion-skill', kind: 'buff' }, { from: 'lingyang-lion-basic-1', to: 'lingyang-lion-basic-2' }, { from: 'lingyang-chain-kicks', to: 'lingyang-lion-heavy' }, { from: 'lingyang-spirit', to: 'lingyang-lion-state', kind: 'buff' }]);
+         return chain(nodes, [{ from: 'lingyang-lion-state', to: 'lingyang-lion-basic-1', kind: 'buff' }, { from: 'lingyang-lion-state', to: 'lingyang-lion-dodge', kind: 'buff' }, { from: 'lingyang-lion-state', to: 'lingyang-lion-skill', kind: 'buff' }, { from: 'lingyang-lion-basic-1', to: 'lingyang-lion-basic-2' }, { from: 'lingyang-chain-kicks', to: 'lingyang-lion-heavy' }, { from: 'lingyang-spirit', to: 'lingyang-lion-state', kind: 'buff' }]);
       }
       const basicIds = ['lingyang-basic-1', 'lingyang-basic-2', 'lingyang-basic-3', 'lingyang-basic-4', 'lingyang-basic-5'];
       const nodes = [
@@ -7316,7 +7372,7 @@
         n('lingyang-heavy', uiText('重击', 'Heavy Attack'), 'heavy', holdBasic, { effects: [uiText('狮魂满时进入行狮', 'Enter Lion Dance when Lionheart is full')] }),
         n('lingyang-liberation', uiText('奋进·狮子奋迅，俱足万行', 'Advance: Lion’s Vigor'), 'liberation', tapLiberation, { effects: [uiText('获得狮子奋迅并回复狮魂', 'Gain Lion’s Vigor and restore Lionheart')] }),
         n('lingyang-intro', uiText('出洞·睡狮蛰醒', 'Emergence: Sleeping Lion Awakens'), 'other', uiText('协奏能量充满后切入凌阳', 'Switch to Lingyang with full Concerto Energy'), { effects: [uiText('回复狮魂', 'Restore Lionheart')] }),
-        n('lingyang-dodge', uiText('闪避反击', 'Dodge Counter'), 'other', tapDodge),
+         n('lingyang-dodge', uiText('闪避反击', 'Dodge Counter'), 'other', tapDodge, { formId: 'normal', formManual: true }),
         n('lingyang-spirit-normal', uiText('狮魂', 'Lionheart'), 'buff', uiText('惊跃、变奏或解放获得；上限100点', 'Gained by Fierce Leap, Intro, or Liberation; cap 100'), { sourceTitle: '狮魂的获取规则', effects: [uiText('行狮期间持续消耗；消耗时回复协奏能量；满值后重击或特定切人后的短按普攻可进入行狮', 'Continuously consumed during Lion Dance; restores Concerto Energy when consumed; when full, Heavy Attack or the post-switch Basic Attack route can enter Lion Dance')] }),
         n('lingyang-outro', uiText('留痕·踏雪点星', 'Trace: Snowstep Starfall'), 'other', uiText('切换至下一位登场角色', 'Switch to the next character'), { effects: [uiText('释放冷凝冲击波', 'Release a Glacio shockwave')] })
       ];
@@ -7628,6 +7684,19 @@
     return src ? `<img class="community-wiki-avatar${large ? ' large' : ''}" src="${esc(src)}" alt="" loading="lazy">` : `<span class="community-wiki-avatar fallback${large ? ' large' : ''}">${esc(name.slice(0, 1))}</span>`;
   }
 
+  function wikiEditorProfile() {
+    try {
+      const value = JSON.parse(localStorage.getItem('wwcombo-community-profile-v1') || '{}');
+      return {
+        name: clean(value?.username).slice(0, 40),
+        avatar: clean(value?.avatar).slice(0, 80),
+        homepage: clean(value?.homepage).slice(0, 300)
+      };
+    } catch {
+      return { name: '', avatar: '', homepage: '' };
+    }
+  }
+
   function weaponIcon(entry) {
     const source = tideIconManifestFor(entry.name)?.basic_attack || './assets/button-icons/tide/basic_attack.png';
     const label = displayValue(entry.weaponType || t('weapon'));
@@ -7645,22 +7714,206 @@
     return `${displayValue(entry.element || '')} · ${displayValue(entry.weaponType || '')}`;
   }
 
+  function homeCharacterPickerMarkup(activeName) {
+    const knownElements = ELEMENTS.slice(1);
+    const extraElements = [...new Set(state.characters.map((entry) => entry.element).filter((element) => element && !knownElements.includes(element)))];
+    const groups = [...knownElements, ...extraElements].map((element) => ({
+      element,
+      members: state.characters
+        .filter((entry) => entry.element === element)
+        .sort((left, right) => Number(right.star) - Number(left.star) || wikiNameCollator.compare(left.name, right.name))
+    })).filter((group) => group.members.length);
+    return `<div class="community-wiki-home-character-picker" role="dialog" aria-label="角色列表"><div class="community-wiki-home-character-picker-head"><strong>切换角色</strong><button type="button" data-wiki-home-character-picker-close title="关闭角色列表" aria-label="关闭角色列表"><i data-lucide="x"></i></button></div><div class="community-wiki-home-character-picker-body">${groups.map(({ element, members }) => `<section class="community-wiki-home-character-picker-group" style="--wiki-element:${esc(colorFor(element))}"><header><img src="${esc(elementIconFor(element))}" alt="" aria-hidden="true"><strong>${esc(displayValue(element))}</strong></header><div class="community-wiki-home-character-picker-items">${members.map((entry) => `<button type="button" class="community-wiki-home-character-picker-item ${entry.name === activeName ? 'active' : ''}" data-wiki-home-character-choice="${esc(entry.name)}" style="--wiki-rarity:${Number(entry.star) >= 5 ? '#d7ad52' : '#9c76dd'}" title="${esc(entry.name)}"><span class="community-wiki-home-character-picker-avatar">${avatar(entry.name)}</span><span>${esc(entry.name)}</span><small>${Number(entry.star) >= 5 ? '5★' : '4★'}</small></button>`).join('')}</div></section>`).join('')}</div></div>`;
+  }
+
+  function homeSurfaceRailLeading(activeName) {
+    if (state.homeSurfaceFullscreen) {
+      return `<button type="button" class="community-wiki-home-surface-character" data-wiki-home-character-picker-toggle title="切换角色" aria-label="切换角色"><span class="community-wiki-home-surface-character-avatar">${avatar(activeName, true)}<i data-lucide="repeat-2"></i></span></button>`;
+    }
+    return `<button type="button" class="community-wiki-home-surface-back" data-wiki-home-reset title="${esc(t('back'))}" aria-label="${esc(t('back'))}"><i data-lucide="arrow-left"></i></button>`;
+  }
+
+  function homeSurfaceFullscreenButton() {
+    return `<button type="button" class="community-wiki-home-surface-fullscreen" data-wiki-home-fullscreen title="${state.homeSurfaceFullscreen ? '退出全屏' : '全屏显示'}" aria-label="${state.homeSurfaceFullscreen ? '退出全屏' : '全屏显示'}"><i data-lucide="move"></i></button>`;
+  }
+
   function renderShell(content, detail = false) {
+    document.body.classList.toggle('wiki-home-surface-fullscreen', Boolean(state.homeSurfaceFullscreen));
+    // Home avatar rows are rebuilt when an avatar opens its action rail. Keep
+    // each element row's horizontal position so the rebuild does not jump it
+    // back to the first character.
+    WIKI_ROOT.querySelectorAll('[data-wiki-selector-scroll]').forEach((element) => {
+      const key = element.closest('[data-wiki-character-group]')?.dataset.wikiCharacterGroup || '';
+      if (key) state.homeSelectorScrollLeft[key] = element.scrollLeft;
+    });
     WIKI_ROOT.innerHTML = `<div class="community-wiki-inner${detail ? ' is-detail' : ''}">${content}</div>`;
     WIKI_ROOT.querySelectorAll('[data-wiki-action]').forEach((element) => element.addEventListener('click', () => handleAction(element.dataset.wikiAction || '', element.dataset.name || '')));
     WIKI_ROOT.querySelectorAll('[data-wiki-search]').forEach((element) => element.addEventListener('input', () => { state.query = element.value; renderHome(); }));
     WIKI_ROOT.querySelectorAll('[data-wiki-element]').forEach((element) => element.addEventListener('click', () => { state.element = element.dataset.wikiElement || '全部'; renderHome(); }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-choice]').forEach((element) => element.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (window.matchMedia('(max-width: 820px)').matches) {
+        state.homeMenuName = state.homeMenuName === element.dataset.wikiHomeChoice ? '' : (element.dataset.wikiHomeChoice || '');
+        renderHome();
+        return;
+      }
+      state.selected = '';
+      const name = element.dataset.wikiHomeChoice || '';
+      if (!name) return;
+      const token = ++state.homeSurfaceLoadingSequence;
+      state.homeMenuName = name;
+      state.homeSurfaceTab = 'raw';
+      state.homeContentTab = 'profile';
+      state.homeSurfaceFullscreen = false;
+      state.homeCharacterPickerOpen = false;
+      state.soloComboOpen = false;
+      state.homeFlowPreview = null;
+      state.homeSurfaceLoading = true;
+      renderHome();
+      beginHomeSurfaceLoad(name, 'raw', token);
+    }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-choice]').forEach((element) => element.addEventListener('pointerenter', () => {
+      const name = element.dataset.wikiHomeChoice || '';
+      if (name && !homeInfoReady(name)) void ensureHomeInfo(name);
+    }, { once: true }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-reset]').forEach((element) => element.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      state.selected = '';
+      state.homeMenuName = '';
+      state.homeSurfaceTab = 'selector';
+      state.homeContentTab = 'profile';
+      state.homeSurfaceFullscreen = false;
+      state.homeCharacterPickerOpen = false;
+      state.soloComboOpen = false;
+      renderHome();
+    }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-fullscreen]').forEach((element) => element.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      state.homeSurfaceFullscreen = !state.homeSurfaceFullscreen;
+      state.homeCharacterPickerOpen = false;
+      renderHome();
+    }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-character-picker-toggle]').forEach((element) => element.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      state.homeCharacterPickerOpen = !state.homeCharacterPickerOpen;
+      renderHome();
+    }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-character-picker-close]').forEach((element) => element.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      state.homeCharacterPickerOpen = false;
+      renderHome();
+    }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-character-choice]').forEach((element) => element.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const name = element.dataset.wikiHomeCharacterChoice || '';
+      if (!name) return;
+      const token = ++state.homeSurfaceLoadingSequence;
+      state.homeMenuName = name;
+      state.selected = state.homeSurfaceTab === 'tree' ? name : '';
+      state.homeContentTab = 'profile';
+      state.homeCharacterPickerOpen = false;
+      state.homeSurfaceLoading = true;
+      renderHome();
+      beginHomeSurfaceLoad(name, state.homeSurfaceTab, token);
+    }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-rail]').forEach((element) => element.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const name = element.dataset.wikiName || '';
+      if (element.dataset.wikiHomeRail === 'tree') navigate(name);
+      else beginSoloCombo(name);
+    }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-main]').forEach((element) => element.addEventListener('click', (event) => {
+      if (window.matchMedia('(max-width: 820px)').matches) {
+        handleAction('open', element.dataset.name || '');
+        return;
+      }
+      event.preventDefault();
+      state.selected = '';
+      state.homeMenuName = '';
+      state.homeSurfaceTab = 'selector';
+      state.homeContentTab = 'profile';
+      state.homeSurfaceFullscreen = false;
+      state.homeCharacterPickerOpen = false;
+      state.soloComboOpen = false;
+      renderHome();
+    }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-surface-tab]').forEach((element) => element.addEventListener('click', () => {
+      const name = element.dataset.wikiName || state.homeMenuName;
+      if (!name) return;
+      const nextTab = element.dataset.wikiHomeSurfaceTab || 'raw';
+      const token = ++state.homeSurfaceLoadingSequence;
+      state.homeSurfaceTab = nextTab;
+      state.selected = state.homeSurfaceTab === 'tree' ? name : '';
+      if (state.homeSurfaceTab === 'raw') state.homeContentTab = 'profile';
+      state.soloComboOpen = false;
+      state.homeSurfaceLoading = true;
+      renderHome();
+      beginHomeSurfaceLoad(name, nextTab, token);
+    }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-content-tab]').forEach((element) => element.addEventListener('click', () => {
+      const name = element.dataset.wikiName || state.homeMenuName;
+      if (!name) return;
+      state.homeContentTab = element.dataset.wikiHomeContentTab || 'profile';
+      state.homeSurfaceTab = 'raw';
+      state.selected = '';
+      state.soloComboOpen = false;
+      renderHome();
+      void loadHomeInfo(name);
+    }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-solo-new]').forEach((element) => element.addEventListener('click', () => {
+      const name = element.dataset.wikiName || state.homeMenuName;
+      state.homeMenuName = name;
+      beginSoloCombo(name);
+    }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-solo-preview]').forEach((element) => element.addEventListener('click', () => {
+      const name = element.dataset.wikiName || state.homeMenuName;
+      const previewId = element.dataset.wikiHomeSoloPreview || '';
+      const previewSkills = (state.info.get(name)?.skills || []).slice(0, 3).map((skill, index) => ({ instanceId: `preview-${index}`, title: clean(skill.name) || `${t('skills')} ${index + 1}` }));
+      const combo = soloCombosFor(name).find((item) => String(item.id) === String(previewId)) || soloCombosFor(name).find((item) => item.name === previewId) || (previewId === '__wiki-preview-solo__' ? { id: previewId, name: '单人流程预览', nodes: previewSkills } : null);
+      if (!combo) return;
+      state.homeFlowPreview = { kind: 'solo', name, combo };
+      renderHome();
+    }));
+    const openWikiCommunityChart = (element) => {
+      const id = element.dataset.wikiHomeCommunity || element.dataset.wikiHomeCommunityDownload || '';
+      const chart = state.soloComboCommunity.find((item) => String(item.id) === id);
+      if (!chart) return;
+      window.dispatchEvent(new CustomEvent('wwcombo-open-chart', { detail: { chart } }));
+    };
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-community]').forEach((element) => {
+      element.addEventListener('click', (event) => {
+        if (event.target.closest('a, button')) return;
+        openWikiCommunityChart(element);
+      });
+      element.addEventListener('keydown', (event) => {
+        if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('a, button')) {
+          event.preventDefault();
+          openWikiCommunityChart(element);
+        }
+      });
+    });
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-community-download]').forEach((element) => element.addEventListener('click', () => openWikiCommunityChart(element)));
+    WIKI_ROOT.querySelectorAll('[data-wiki-home-flow-close]').forEach((element) => element.addEventListener('click', () => {
+      state.homeFlowPreview = null;
+      renderHome();
+    }));
     WIKI_ROOT.querySelectorAll('[data-wiki-form]').forEach((element) => element.addEventListener('click', () => {
       const nextForm = element.dataset.wikiForm || 'normal';
       if (!state.selected || nextForm === currentFormId(state.selected)) return;
-      state.formId = nextForm; state.formIds[state.selected] = nextForm; state.selectedNode = ''; state.profileOpen = false; state.editorHistory = []; state.editorFuture = []; renderDetail(state.selected);
+      state.formId = nextForm; state.formIds[state.selected] = nextForm; state.selectedNode = ''; state.profileOpen = false; state.editorHistory = []; state.editorFuture = []; if (state.homeSurfaceTab === 'tree' && state.homeMenuName === state.selected) renderHome(); else renderDetail(state.selected);
     }));
     WIKI_ROOT.querySelectorAll('[data-wiki-chain]').forEach((element) => element.addEventListener('change', () => {
       if (!state.selected) return;
       const value = Number(element.value);
       state.chainIds[state.selected] = Number.isInteger(value) ? Math.max(0, Math.min(6, value)) : 0;
       state.selectedNode = ''; state.profileOpen = false; state.editorHistory = []; state.editorFuture = [];
-      renderDetail(state.selected);
+      if (state.homeSurfaceTab === 'tree' && state.homeMenuName === state.selected) renderHome(); else renderDetail(state.selected);
     }));
     const applyModeSelection = (element) => {
       if (!state.selected) return;
@@ -7668,7 +7921,7 @@
       if (!specialModesFor(state.selected).some((mode) => mode.id === nextMode)) return;
       state.modeIds[state.selected] = nextMode;
       state.selectedNode = ''; state.profileOpen = false; state.editorHistory = []; state.editorFuture = [];
-      renderDetail(state.selected);
+      if (state.homeSurfaceTab === 'tree' && state.homeMenuName === state.selected) renderHome(); else renderDetail(state.selected);
     };
     WIKI_ROOT.querySelectorAll('select[data-wiki-mode]').forEach((element) => element.addEventListener('change', () => applyModeSelection(element)));
     WIKI_ROOT.querySelectorAll('button[data-wiki-mode]').forEach((element) => element.addEventListener('click', () => applyModeSelection(element)));
@@ -7691,11 +7944,131 @@
       if (rows.length > 1) button.closest('[data-wiki-input-route-row]')?.remove();
     }));
     WIKI_ROOT.querySelectorAll('[data-wiki-editor-form]').forEach((form) => form.addEventListener('submit', (event) => { event.preventDefault(); saveEditorForm(new FormData(form)); }));
-    WIKI_ROOT.querySelectorAll('[data-wiki-editor-toggle]').forEach((element) => element.addEventListener('click', () => { state.editing = !state.editing; renderDetail(state.selected); }));
-    WIKI_ROOT.querySelectorAll('[data-wiki-profile]').forEach((element) => element.addEventListener('click', () => { state.selectedNode = ''; state.profileOpen = true; renderDetail(state.selected); }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-editor-toggle]').forEach((element) => element.addEventListener('click', () => { state.editing = !state.editing; if (state.homeSurfaceTab === 'tree' && state.homeMenuName === state.selected) renderHome(); else renderDetail(state.selected); }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-profile]').forEach((element) => element.addEventListener('click', () => { state.selectedNode = ''; state.profileOpen = false; beginSoloCombo(state.selected); }));
     WIKI_ROOT.querySelectorAll('[data-wiki-overlay-close]').forEach((element) => element.addEventListener('click', () => { state.selectedNode = ''; state.profileOpen = false; renderDetail(state.selected); }));
     WIKI_ROOT.querySelectorAll('[data-wiki-open-announcement]').forEach((element) => element.addEventListener('click', () => { state.announcementOpen = true; renderHome(); }));
     WIKI_ROOT.querySelectorAll('[data-wiki-close-announcement]').forEach((element) => element.addEventListener('click', () => { state.announcementOpen = false; renderHome(); }));
+    WIKI_ROOT.querySelectorAll('[data-solo-tab]').forEach((element) => element.addEventListener('click', () => {
+      state.soloComboTab = element.dataset.soloTab === 'team' ? 'team' : 'solo';
+      renderCurrentWikiSurface(state.selected);
+      if (state.soloComboTab === 'team') void loadSoloCommunityCombos(state.selected || state.homeMenuName);
+    }));
+    WIKI_ROOT.querySelectorAll('[data-solo-action]').forEach((element) => element.addEventListener('click', () => {
+      const action = element.dataset.soloAction || '';
+      const name = element.dataset.wikiName || state.selected || state.homeMenuName || '';
+      if (action === 'close') closeSoloCombo(name);
+      else if (action === 'new') { state.soloComboOpen = true; state.soloComboTab = 'solo'; if (state.info.has(name)) startSoloComboDraft(name); else navigate(name); }
+      else if (action === 'cancel-edit') { state.soloComboEditing = false; state.soloComboDraft = null; state.soloComboSelection = -1; renderCurrentWikiSurface(name); }
+      else if (action === 'save') { state.soloComboSaveConfirm = true; renderCurrentWikiSurface(name); }
+      else if (action === 'save-confirm') {
+        const input = WIKI_ROOT.querySelector('[data-solo-save-name]');
+        void saveSoloCombo(name, input?.value || '');
+      } else if (action === 'save-cancel') { state.soloComboSaveConfirm = false; renderCurrentWikiSurface(name); }
+      else if (action === 'edit') { const combo = soloCombosFor(name).find((item) => item.id === element.dataset.soloId); if (combo) { state.soloComboDraft = { ...copyModel(combo), mode: 'combo', buffs: [] }; state.soloComboEditing = true; state.soloComboEditMode = 'combo'; state.soloComboSelection = -1; state.soloComboHistory = []; state.soloComboFuture = []; renderCurrentWikiSurface(name); } }
+    }));
+    WIKI_ROOT.querySelectorAll('[data-solo-editor-action]').forEach((element) => element.addEventListener('click', () => soloEditorAction(element.dataset.wikiName || state.selected || state.homeMenuName, element.dataset.soloEditorAction || '')));
+    WIKI_ROOT.querySelectorAll('[data-solo-item-index]').forEach((element) => element.addEventListener('click', () => {
+      if (element.dataset.soloDragged === 'true') { element.dataset.soloDragged = ''; return; }
+      state.soloComboSelection = Number(element.dataset.soloItemIndex);
+      renderCurrentWikiSurface(state.selected || state.homeMenuName);
+    }));
+    WIKI_ROOT.querySelectorAll('.community-wiki-solo-item[data-solo-item-index]').forEach((element) => {
+      const name = element.dataset.wikiName || state.selected || state.homeMenuName || '';
+      const index = Number(element.dataset.soloItemIndex);
+      let pressTimer = null;
+      let pointerState = null;
+      const clearPress = () => {
+        if (pressTimer) window.clearTimeout(pressTimer);
+        pressTimer = null;
+      };
+      const clearDropMarkers = () => {
+        element.closest('[data-solo-dropzone]')?.querySelectorAll('.is-drop-before').forEach((item) => item.classList.remove('is-drop-before'));
+      };
+      const finishPointer = (event) => {
+        if (!pointerState || (event?.pointerId != null && event.pointerId !== pointerState.pointerId)) return;
+        const current = pointerState;
+        pointerState = null;
+        clearPress();
+        document.removeEventListener('pointermove', movePointer, true);
+        document.removeEventListener('pointerup', finishPointer, true);
+        document.removeEventListener('pointercancel', finishPointer, true);
+        clearDropMarkers();
+        element.closest('[data-solo-dropzone]')?.classList.remove('is-dragover');
+        element.classList.remove('is-dragging');
+        document.body.classList.remove('wiki-solo-card-dragging');
+        if (!current.dragging) return;
+        element.dataset.soloDragged = 'true';
+        const dropzone = element.closest('[data-solo-dropzone]');
+        const rect = dropzone?.getBoundingClientRect();
+        const inside = Boolean(rect && event && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom);
+        if (!inside) removeSoloComboItemAt(name, index);
+        else moveSoloComboItem(name, index, soloComboInsertionIndex(dropzone, event.clientX, element));
+      };
+      const movePointer = (event) => {
+        if (!pointerState || event.pointerId !== pointerState.pointerId) return;
+        const distance = Math.hypot(event.clientX - pointerState.startX, event.clientY - pointerState.startY);
+        if (!pointerState.dragging && distance > 7) clearPress();
+        if (!pointerState.dragging) return;
+        event.preventDefault();
+        const dropzone = element.closest('[data-solo-dropzone]');
+        const rect = dropzone?.getBoundingClientRect();
+        const inside = Boolean(rect && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom);
+        clearDropMarkers();
+        dropzone?.classList.toggle('is-dragover', inside);
+        if (inside) {
+          const target = [...dropzone.querySelectorAll('.community-wiki-solo-item[data-solo-item-index]')].find((item) => item !== element && event.clientX < item.getBoundingClientRect().left + item.getBoundingClientRect().width / 2);
+          target?.classList.add('is-drop-before');
+        }
+      };
+      element.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0 || event.isPrimary === false) return;
+        clearPress();
+        pointerState = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, dragging: false };
+        pressTimer = window.setTimeout(() => {
+          if (!pointerState) return;
+          pointerState.dragging = true;
+          element.classList.add('is-dragging');
+          document.body.classList.add('wiki-solo-card-dragging');
+        }, 280);
+        document.addEventListener('pointermove', movePointer, true);
+        document.addEventListener('pointerup', finishPointer, true);
+        document.addEventListener('pointercancel', finishPointer, true);
+      });
+      element.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        clearPress();
+        state.soloComboSelection = index;
+        openSoloComboContextMenu(event.clientX, event.clientY, name, index);
+      });
+    });
+    WIKI_ROOT.querySelectorAll('[data-solo-buff-field]').forEach((element) => element.addEventListener('change', () => {
+      const index = Number(element.dataset.soloBuffIndex), field = element.dataset.soloBuffField, item = state.soloComboDraft?.buffs?.[index];
+      if (!item) return;
+      if (field === 'stacks') item.stacks = Math.max(1, Math.min(99, Number(element.value) || 1));
+      else if (field === 'boundTo') item.boundTo = element.value;
+      else item[field] = element.checked;
+    }));
+    WIKI_ROOT.querySelectorAll('[data-solo-dropzone]').forEach((dropzone) => {
+      // The combo editor is nested inside the graph viewport. Keep its wheel
+      // navigation local so it never bubbles into the tree canvas.
+      dropzone.addEventListener('wheel', (event) => {
+        const delta = event.deltaY;
+        if (!delta) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        dropzone.scrollLeft += delta;
+      }, { passive: false });
+      dropzone.addEventListener('dragover', (event) => { event.preventDefault(); if (state.soloNativeDrag) { state.soloNativeDrag.x = event.clientX; state.soloNativeDrag.y = event.clientY; } dropzone.classList.add('is-dragover'); });
+      dropzone.addEventListener('dragleave', () => dropzone.classList.remove('is-dragover'));
+      dropzone.addEventListener('drop', (event) => { event.preventDefault(); dropzone.classList.remove('is-dragover'); const nodeId = event.dataTransfer?.getData('text/wiki-node') || ''; addSoloComboNode(state.selected, nodeId); });
+    });
+    bindSoloPanelInteractions();
     WIKI_ROOT.querySelectorAll('[data-wiki-preview-name]').forEach((element) => element.addEventListener('mouseenter', () => {
       const name = element.dataset.wikiPreviewName || '';
       const portrait = WIKI_ROOT.querySelector('[data-wiki-showcase-portrait]');
@@ -7769,7 +8142,8 @@
     WIKI_ROOT.querySelectorAll('[data-wiki-selector-scroll]').forEach((element) => element.addEventListener('wheel', (event) => {
       if (Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
       event.preventDefault();
-      element.scrollLeft += event.deltaY;
+      if (element.classList.contains('community-wiki-desktop-selector-track')) element.scrollTop += event.deltaY;
+      else element.scrollLeft += event.deltaY;
     }, { passive: false }));
     WIKI_ROOT.querySelectorAll('[data-wiki-selector-scroll]').forEach((element) => {
       requestAnimationFrame(() => {
@@ -7784,13 +8158,48 @@
         if (Math.abs(correction) > 1) element.scrollLeft += correction;
       });
     });
+    WIKI_ROOT.querySelectorAll('[data-wiki-selector-scroll]').forEach((element) => {
+      const key = element.closest('[data-wiki-character-group]')?.dataset.wikiCharacterGroup || '';
+      const saved = key ? Number(state.homeSelectorScrollLeft[key]) : NaN;
+      if (!Number.isFinite(saved)) return;
+      requestAnimationFrame(() => { element.scrollLeft = Math.max(0, saved); });
+    });
     WIKI_ROOT.querySelectorAll('[data-wiki-feedback]').forEach((element) => element.addEventListener('click', () => window.dispatchEvent(new CustomEvent('wwcombo-open-wiki-feedback', { detail: { character: element.dataset.wikiCharacter || state.selected, requestAccess: true } }))));
     WIKI_ROOT.querySelectorAll('[data-wiki-close-menu]').forEach((element) => element.addEventListener('click', closeContextMenu));
     window.lucide?.createIcons();
   }
 
   function bindGraphContent() {
+    // Shorthand names are a permanent second line of each action card. Keep
+    // this in the binding pass so rerendering, zooming, and route switching
+    // all use the same card markup without a separate display mode.
+    const model = currentModel(state.selected), slang = slangForCharacter(state.selected);
+    WIKI_ROOT.querySelectorAll('[data-wiki-graph] [data-wiki-node]').forEach((element) => {
+      const copy = element.querySelector('.community-wiki-graph-node-copy');
+      if (!copy || copy.querySelector('.community-wiki-graph-node-slang')) return;
+      const node = model?.nodes?.find((entry) => entry.id === element.dataset.wikiNode);
+      if (!node) return;
+      const seriesKey = element.dataset.wikiSeries || '';
+      const series = seriesKey ? graphSeriesGroups(model).find((entry) => entry.key === seriesKey) : null;
+      const value = series && element.dataset.wikiSeriesCollapsed === 'true' && element.dataset.wikiSeriesMaster === node.id
+        ? [...new Set(series.members.map((member) => slang[member.node.id] || slang[member.node.title]).filter(Boolean))].join(' / ')
+        : slang[node.id] || slang[node.title] || '';
+      if (!value) return;
+      const label = document.createElement('small');
+      label.className = 'community-wiki-graph-node-slang';
+      label.textContent = value;
+      copy.appendChild(label);
+    });
+    // These controls live inside a draggable graph card. Stop the initial
+    // pointer event at the control itself so the card cannot start a drag
+    // before the control's click handler gets a chance to run.
+    const isolateGraphControlPointer = (element) => {
+      const stopCardPointer = (event) => event.stopPropagation();
+      element.addEventListener('pointerdown', stopCardPointer);
+      element.addEventListener('mousedown', stopCardPointer);
+    };
     WIKI_ROOT.querySelectorAll('[data-wiki-replacement-toggle]').forEach((element) => {
+      isolateGraphControlPointer(element);
       const toggleReplacement = (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -7809,6 +8218,7 @@
       });
     });
     WIKI_ROOT.querySelectorAll('[data-wiki-input-route]').forEach((element) => {
+      isolateGraphControlPointer(element);
       const selectRoute = (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -7844,11 +8254,31 @@
     });
     WIKI_ROOT.querySelectorAll('[data-wiki-graph] [data-wiki-node]').forEach((element) => {
       let seriesClickTimer = 0;
+      let soloClickTimer = 0;
+      let replayingSoloClick = false;
       let lastSeriesClickAt = 0;
       element.addEventListener('click', (event) => {
         if (element.dataset.wikiFormDisabled === 'true' && !state.editing) return;
         if (element.dataset.dragged === 'true') { element.dataset.dragged = ''; return; }
         const nodeId = element.dataset.wikiNode || '';
+        const node = currentModel(state.selected)?.nodes?.find((entry) => entry.id === nodeId);
+        // Do not let the first click of a double-click rebuild the graph.
+        // Single-click behavior is replayed after the double-click window;
+        // a real dblclick cancels it and adds the node immediately.
+        if (state.soloComboOpen && state.soloComboEditing && !replayingSoloClick) {
+          if (soloClickTimer) window.clearTimeout(soloClickTimer);
+          if (event.detail > 1) {
+            soloClickTimer = 0;
+            return;
+          }
+          soloClickTimer = window.setTimeout(() => {
+            soloClickTimer = 0;
+            replayingSoloClick = true;
+            element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            replayingSoloClick = false;
+          }, 220);
+          return;
+        }
         const seriesKey = element.dataset.wikiSeries || '';
         const isSeriesMaster = Boolean(seriesKey && element.dataset.wikiSeriesMaster === nodeId);
         if (isSeriesMaster) {
@@ -7885,11 +8315,26 @@
       });
       element.addEventListener('dblclick', (event) => {
         event.preventDefault();
+        if (soloClickTimer) window.clearTimeout(soloClickTimer);
+        soloClickTimer = 0;
+        const nodeId = element.dataset.wikiNode || '';
+        const node = currentModel(state.selected)?.nodes?.find((entry) => entry.id === nodeId);
+        if (state.soloComboOpen && state.soloComboEditing && node) {
+          const canAdd = state.soloComboEditMode === 'buff' ? node.category === 'buff' : node.category !== 'buff';
+          if (canAdd) {
+            // Double-click is another add gesture in the solo combo palette;
+            // keep it out of the graph detail/series handlers below.
+            event.stopPropagation();
+            addSoloComboNode(state.selected, nodeId);
+            return;
+          }
+        }
         if (element.dataset.wikiFormDisabled === 'true' && !state.editing) return;
         if (seriesClickTimer) window.clearTimeout(seriesClickTimer);
         seriesClickTimer = 0;
-        state.selectedNode = element.dataset.wikiNode || '';
-        renderDetail(state.selected);
+        state.selectedNode = nodeId;
+        if (state.homeSurfaceTab === 'tree' && state.homeMenuName === state.selected) renderHome();
+        else renderDetail(state.selected);
       });
       element.addEventListener('contextmenu', (event) => {
         event.preventDefault();
@@ -7902,6 +8347,54 @@
         }
         openContextMenu(event.clientX, event.clientY, nodeId);
       });
+      if (state.soloComboOpen && state.soloComboEditing) {
+        let soloPointerDrag = null;
+        element.addEventListener('pointerdown', (event) => {
+          if (event.button !== 0) return;
+          event.stopPropagation();
+          soloPointerDrag = { x: event.clientX, y: event.clientY, moved: false, pointerId: event.pointerId };
+          element.setPointerCapture?.(event.pointerId);
+        });
+        element.addEventListener('pointermove', (event) => {
+          if (!soloPointerDrag || soloPointerDrag.pointerId !== event.pointerId) return;
+          if (Math.hypot(event.clientX - soloPointerDrag.x, event.clientY - soloPointerDrag.y) < 7) return;
+          soloPointerDrag.moved = true;
+          element.dataset.dragged = 'true';
+          document.body.classList.add('wiki-solo-dragging');
+          const dropzone = WIKI_ROOT.querySelector('[data-solo-dropzone]');
+          const rect = dropzone?.getBoundingClientRect();
+          const isOverDropzone = Boolean(rect && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom);
+          dropzone?.classList.toggle('is-dragover', isOverDropzone);
+          event.stopPropagation();
+          event.preventDefault();
+        });
+        const finishSoloPointerDrag = (event) => {
+          if (!soloPointerDrag || (event.pointerId != null && soloPointerDrag.pointerId !== event.pointerId)) return;
+          const activeDrag = soloPointerDrag;
+          const wasDragged = activeDrag.moved;
+          const dropzone = WIKI_ROOT.querySelector('[data-solo-dropzone]');
+          const rect = dropzone?.getBoundingClientRect();
+          const isOverDropzone = Boolean(rect && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom);
+          const nodeId = element.dataset.wikiNode || '';
+          soloPointerDrag = null;
+          document.body.classList.remove('wiki-solo-dragging');
+          dropzone?.classList.remove('is-dragover');
+          if (event.pointerId != null) element.releasePointerCapture?.(event.pointerId);
+          if (!wasDragged || !isOverDropzone || !nodeId) return;
+          // Commit once, on drop. The source node is only a palette item and
+          // addSoloComboNode snapshots it, so dragging the same node again is
+          // always a fresh combo item and never mutates the graph model.
+          activeDrag.committed = true;
+          element.dataset.dragged = 'true';
+          event.preventDefault();
+          event.stopPropagation();
+          addSoloComboNode(state.selected, nodeId);
+        };
+        element.addEventListener('pointerup', finishSoloPointerDrag);
+        window.addEventListener('pointerup', finishSoloPointerDrag, true);
+        window.addEventListener('mouseup', finishSoloPointerDrag, true);
+        element.addEventListener('pointercancel', (event) => { soloPointerDrag = null; document.body.classList.remove('wiki-solo-dragging'); WIKI_ROOT.querySelector('[data-solo-dropzone]')?.classList.remove('is-dragover'); event.stopPropagation(); });
+      }
       bindNodeDrag(element);
     });
     WIKI_ROOT.querySelectorAll('[data-wiki-graph-scroll]').forEach((element) => {
@@ -7959,19 +8452,24 @@
   }
 
   function bindGraphViewport(viewport) {
+    const fitSixLanes = () => {
+      if (!viewport.hasAttribute('data-wiki-lock-six-lanes')) return;
+      const frame = viewport.querySelector('[data-wiki-graph-frame]');
+      if (!frame) return;
+      const laneHeight = Number(frame.dataset.laneHeight || 88);
+      applyGraphZoom(viewport, Math.min(1, Math.max(.45, viewport.clientHeight / (laneHeight * 6))));
+      viewport.scrollTop = 0;
+    };
+    requestAnimationFrame(fitSixLanes);
     viewport.addEventListener('wheel', (event) => {
+      // The graph uses the wheel as a horizontal navigator. Do not mutate
+      // graph scale here: changing scale while the user is browsing causes
+      // cards, ports, and edge directions to jump between frames.
+      if (event.ctrlKey) return;
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (!delta) return;
       event.preventDefault();
-      const oldZoom = state.graphZoom;
-      const oldVisualZoom = Math.max(.01, (state.graphCanvasZoom || oldZoom) * (state.graphContentZoom || 1));
-      const nextZoom = Math.max(.45, Math.min(2.8, oldZoom * Math.exp(-event.deltaY * .001)));
-      if (Math.abs(nextZoom - oldZoom) < .001) return;
-      const rect = viewport.getBoundingClientRect();
-      const cursorX = event.clientX - rect.left + viewport.scrollLeft;
-      const cursorY = event.clientY - rect.top + viewport.scrollTop;
-      applyGraphZoom(viewport, nextZoom);
-      const newVisualZoom = Math.max(.01, (state.graphCanvasZoom || nextZoom) * (state.graphContentZoom || 1));
-      viewport.scrollLeft = Math.max(0, cursorX * newVisualZoom / oldVisualZoom - (event.clientX - rect.left));
-      viewport.scrollTop = Math.max(0, cursorY * newVisualZoom / oldVisualZoom - (event.clientY - rect.top));
+      viewport.scrollLeft += delta;
     }, { passive: false });
     let pan = null;
     let blankPointerDown = null;
@@ -7992,7 +8490,7 @@
       return verticalGutter || horizontalGutter || overlayVertical || overlayHorizontal;
     };
     viewport.addEventListener('pointerdown', (event) => {
-      if (event.button !== 0 || event.target.closest('[data-wiki-node]')) return;
+      if (event.button !== 0 || event.target.closest('[data-wiki-node], button, input, select, textarea, [data-solo-dropzone]')) return;
       if (isNativeScrollbarPointer(event)) return;
       const rect = viewport.getBoundingClientRect();
       const horizontalScrollbarSize = Math.max(0, viewport.offsetHeight - viewport.clientHeight);
@@ -8039,19 +8537,47 @@
 
   function renderShowcaseHome(ordered, previewEntry) {
     const portraitFallback = esc(previewEntry.name.slice(0, 1));
-    const cardFor = (entry) => {
+    const cardFor = (entry, withRail = false, directChoice = false) => {
       const rarity = Number(entry.star) >= 5 ? 'rarity-5' : 'rarity-4';
-      return `<button class="community-wiki-character-card ${rarity}" type="button" data-wiki-action="open" data-name="${esc(entry.name)}" data-wiki-preview-name="${esc(entry.name)}" style="--wiki-element:${colorFor(entry.element)};--wiki-rarity:${Number(entry.star) >= 5 ? '#d7ad52' : '#9c76dd'}" aria-label="${esc(entry.name)}">
+      const card = `<button class="community-wiki-character-card ${rarity}" type="button" ${withRail || directChoice ? `data-wiki-home-choice="${esc(entry.name)}"` : `data-wiki-action="open" data-name="${esc(entry.name)}"`} data-wiki-preview-name="${esc(entry.name)}" style="--wiki-element:${colorFor(entry.element)};--wiki-rarity:${Number(entry.star) >= 5 ? '#d7ad52' : '#9c76dd'}" aria-label="${esc(entry.name)}">
         <span class="community-wiki-card-art">${avatar(entry.name, true)}${weaponIcon(entry)}<strong class="community-wiki-card-name">${esc(entry.name)}</strong></span>
       </button>`;
+      return withRail ? `<div class="community-wiki-character-choice ${state.homeMenuName === entry.name ? 'is-open' : ''}" style="--wiki-rarity:${Number(entry.star) >= 5 ? '#d7ad52' : '#9c76dd'}">${card}<span class="community-wiki-character-rail" aria-label="${esc(entry.name)} actions"><button type="button" data-wiki-home-rail="tree" data-wiki-name="${esc(entry.name)}" title="${esc(t('tree'))}"><span class="community-wiki-character-rail-icon-emblem-wrap"><img class="community-wiki-character-rail-icon community-wiki-character-rail-icon-emblem" src="${esc(emblemFor(entry.name))}" alt="" aria-hidden="true" loading="lazy"></span><span>${esc(t('tree'))}</span></button><button type="button" data-wiki-home-rail="combo" data-wiki-name="${esc(entry.name)}" title="${esc(t('combo'))}"><img class="community-wiki-character-rail-icon community-wiki-character-rail-icon-basic" src="${esc(basicAttackIconFor(entry.name))}" alt="" aria-hidden="true" loading="lazy"><span>${esc(t('combo'))}</span></button></span></div>` : card;
     };
     const groupFor = (element) => {
       const members = ordered.filter((entry) => entry.element === element);
+      const withRail = true;
       return `<section class="community-wiki-showcase-group" data-wiki-character-group="${esc(element)}" style="--wiki-element:${colorFor(element)}">
-        <div class="community-wiki-showcase-track" data-wiki-selector-scroll tabindex="0" aria-label="${esc(displayValue(element))}">${members.length ? members.map(cardFor).join('') : `<span class="community-wiki-selector-empty">—</span>`}</div>
+        <div class="community-wiki-showcase-track" data-wiki-selector-scroll tabindex="0" aria-label="${esc(displayValue(element))}">${members.length ? members.map((entry) => cardFor(entry, withRail)).join('') : `<span class="community-wiki-selector-empty">—</span>`}</div>
       </section>`;
     };
-    const mainCard = `<button class="community-wiki-showcase-main-card ${Number(previewEntry.star) >= 5 ? 'rarity-5' : 'rarity-4'}" type="button" data-wiki-action="open" data-name="${esc(previewEntry.name)}" data-wiki-preview-name="${esc(previewEntry.name)}" style="--wiki-element:${esc(colorFor(previewEntry.element))};--wiki-element-bg:url(&quot;${esc(elementBackgroundFor(previewEntry.element))}&quot;)" aria-label="${esc(previewEntry.name)}">
+    const desktopSelector = [...ELEMENTS.slice(1)].map((element) => {
+      const members = ordered.filter((entry) => entry.element === element);
+      return `<section class="community-wiki-desktop-selector-group" data-wiki-character-group="${esc(element)}" style="--wiki-element:${colorFor(element)}"><div class="community-wiki-desktop-selector-label"><img src="${esc(elementIconFor(element))}" alt="" aria-hidden="true"><span>${esc(displayValue(element))}</span><small>${members.length}</small></div><div class="community-wiki-desktop-selector-track" data-wiki-selector-scroll tabindex="0" aria-label="${esc(displayValue(element))}">${members.length ? members.map((entry) => cardFor(entry, false, true)).join('') : '<span class="community-wiki-selector-empty">—</span>'}</div></section>`;
+    }).join('');
+    const activeName = state.homeMenuName;
+    const activeEntry = ordered.find((entry) => entry.name === activeName) || state.characters.find((entry) => entry.name === activeName);
+    const surfaceTab = activeName ? (state.homeSurfaceTab === 'selector' ? 'raw' : state.homeSurfaceTab) : 'selector';
+    const contentTab = HOME_CONTENT_TABS.some(([id]) => id === state.homeContentTab) ? state.homeContentTab : 'profile';
+    const activeInfo = state.info.get(activeName);
+    const isTreeSurface = surfaceTab === 'tree';
+    const railTabs = `<nav class="community-wiki-home-surface-tabs" role="tablist" aria-label="${esc(t('details'))}"><button type="button" data-wiki-home-surface-tab="raw" data-wiki-name="${esc(activeName)}" class="${surfaceTab === 'raw' ? 'active' : ''}" title="${esc(t('homeRaw'))}"><i data-lucide="book-open"></i><span>${esc(t('homeRaw'))}</span></button><button type="button" data-wiki-home-surface-tab="flow" data-wiki-name="${esc(activeName)}" class="${surfaceTab === 'flow' ? 'active' : ''}" title="${esc(t('flow'))}"><i data-lucide="route"></i><span>${esc(t('flow'))}</span></button><button type="button" data-wiki-home-surface-tab="tree" data-wiki-name="${esc(activeName)}" class="${surfaceTab === 'tree' ? 'active' : ''}" title="${esc(t('tree'))}"><i data-lucide="git-branch"></i><span>${esc(t('tree'))}</span></button></nav>`;
+    const contentTabs = HOME_CONTENT_TABS.map(([id, label]) => `<button type="button" class="community-wiki-home-content-tab is-${id} ${surfaceTab === 'raw' && contentTab === id ? 'active' : ''}" data-wiki-home-content-tab="${id}" data-wiki-name="${esc(activeName)}" title="${esc(label)}"><img src="${esc(id === 'profile' ? emblemFor(activeName) : homeSkillIconFor(activeName, id))}" alt="" aria-hidden="true"><span>${esc(label)}</span></button>`).join('');
+    const nonTreeRail = `${railTabs}${surfaceTab === 'raw' ? `<nav class="community-wiki-home-content-tabs" aria-label="角色内容">${contentTabs}</nav>` : ''}`;
+    const treeToolbar = `<div class="community-wiki-home-tree-toolbar" role="toolbar" aria-label="树图工具">${homeTreeControls(activeName, activeEntry, activeInfo)}</div>`;
+    const surfaceLoadingMarkup = state.homeSurfaceLoading && activeName ? `<div class="community-wiki-home-surface-loading-overlay" role="status" aria-live="polite"><div><img class="community-wiki-surface-loading-gif community-wiki-surface-loading-gif-day" src="./assets/wiki-loading-day.gif?v=20260920-gif-mime" alt="" loading="eager"><img class="community-wiki-surface-loading-gif community-wiki-surface-loading-gif-night" src="./assets/wiki-loading-night.gif?v=20260920-gif-mime" alt="" loading="eager"><span>加载中</span></div></div>` : '';
+    const surfaceWaiting = Boolean(state.homeSurfaceLoading && activeName);
+    const surfacePickerMarkup = state.homeSurfaceFullscreen && state.homeCharacterPickerOpen ? homeCharacterPickerMarkup(activeName) : '';
+    const surfaceLeading = homeSurfaceRailLeading(activeName);
+    const surfaceFullscreenButton = homeSurfaceFullscreenButton();
+    const surfaceContent = !activeName
+      ? `<div class="community-wiki-desktop-selector">${desktopSelector}</div>`
+      : `<div class="community-wiki-desktop-surface ${isTreeSurface ? 'is-tree-surface' : ''}" style="--wiki-element:${esc(colorFor(activeEntry?.element))}">
+          ${isTreeSurface
+            ? `<aside class="community-wiki-home-rail is-tree-rail">${surfaceLeading}${surfaceFullscreenButton}${railTabs}${soloComboRailTools(activeName)}</aside><div class="community-wiki-home-tree-main">${treeToolbar}<main class="community-wiki-desktop-surface-content"><div class="community-wiki-desktop-surface-body">${surfaceWaiting ? '<div class="community-wiki-home-surface-loading" aria-hidden="true"></div>' : state.info.has(activeName) ? `<div class="community-wiki-desktop-tree-scroll" data-wiki-graph-scroll data-wiki-lock-six-lanes>${renderGraph(viewModelFor(activeName), colorFor(activeEntry?.element), activeName)}</div>` : `<div class="community-wiki-home-surface-loading"><i data-lucide="loader-circle"></i><span>${esc(t('detailLoading'))}</span></div>`}</div></main></div>`
+            : `<aside class="community-wiki-home-rail">${surfaceLeading}${surfaceFullscreenButton}${nonTreeRail}</aside><main class="community-wiki-desktop-surface-content"><div class="community-wiki-desktop-surface-body">${surfaceWaiting ? '<div class="community-wiki-home-surface-loading" aria-hidden="true"></div>' : surfaceTab === 'raw' ? `<div class="community-wiki-home-raw">${homeContentSurface(activeName, contentTab)}</div>` : flowSurface(activeName)}</div></main>`}
+        </div>`;
+    const mainCard = `<button class="community-wiki-showcase-main-card ${Number(previewEntry.star) >= 5 ? 'rarity-5' : 'rarity-4'}" type="button" data-wiki-home-main data-name="${esc(previewEntry.name)}" data-wiki-preview-name="${esc(previewEntry.name)}" style="--wiki-element:${esc(colorFor(previewEntry.element))};--wiki-element-bg:url(&quot;${esc(elementBackgroundFor(previewEntry.element))}&quot;)" aria-label="${esc(previewEntry.name)}">
       <span class="community-wiki-showcase-main-art"><img class="community-wiki-showcase-main-portrait" data-wiki-showcase-portrait src="${esc(portraitFor(previewEntry.name))}" alt="${esc(previewEntry.name)}" loading="eager"><span class="community-wiki-showcase-main-fallback" data-wiki-showcase-fallback>${portraitFallback}</span></span>
       <span class="community-wiki-showcase-main-info"><img class="community-wiki-showcase-emblem" data-wiki-showcase-emblem src="${esc(emblemFor(previewEntry.name))}" alt="" aria-hidden="true"><span><strong data-wiki-showcase-name>${esc(previewEntry.name)}</strong><span class="community-wiki-showcase-meta" data-wiki-showcase-meta aria-label="${esc(showcaseMetaLabel(previewEntry))}" title="${esc(showcaseMetaLabel(previewEntry))}">${showcaseMetaMarkup(previewEntry)}</span></span></span>
     </button>`;
@@ -8060,12 +8586,16 @@
     renderShell(`<section class="community-wiki-home-toolbar" aria-label="${esc(t('announcement'))}"><div class="community-wiki-home-toolbar-inner"><button class="community-wiki-update-line" type="button" data-wiki-open-announcement><i data-lucide="megaphone" aria-hidden="true"></i><span>${esc(state.announcement?.title || t('noAnnouncement'))}</span><small>${state.announcement?.updatedAt ? esc(new Date(state.announcement.updatedAt).toLocaleDateString(locale())) : ''}</small></button></div></section>
       <section class="community-wiki-showcase-stage" style="--wiki-element:${esc(colorFor(previewEntry.element))}">
         <div class="community-wiki-showcase-layout">
-          <div class="community-wiki-showcase-side community-wiki-showcase-side-left">${leftElements.map(groupFor).join('')}</div>
           <div class="community-wiki-showcase-center">${mainCard}</div>
+          <div class="community-wiki-desktop-character-panel ${activeName ? 'is-open' : ''} ${state.homeSurfaceFullscreen ? 'is-fullscreen' : ''}">${surfaceContent}${surfaceLoadingMarkup}${surfacePickerMarkup}</div>
+          <div class="community-wiki-showcase-side community-wiki-showcase-side-left">${leftElements.map(groupFor).join('')}</div>
           <div class="community-wiki-showcase-side community-wiki-showcase-side-right">${rightElements.map(groupFor).join('')}</div>
         </div>
       </section>
-      ${state.announcementOpen && state.announcement?.body ? `<div class="community-wiki-announcement-modal"><button class="community-wiki-announcement-backdrop" type="button" data-wiki-close-announcement aria-label="${esc(t('closeAnnouncement'))}"></button><section class="community-wiki-announcement-panel" role="dialog" aria-modal="true" aria-labelledby="wikiAnnouncementTitle"><header><div><p class="community-wiki-eyebrow">${esc(t('announcement'))}</p><h2 id="wikiAnnouncementTitle">${esc(state.announcement.title)}</h2></div><button type="button" data-wiki-close-announcement title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><div class="community-wiki-announcement-body">${esc(state.announcement.body)}</div></section></div>` : ''}
+       ${state.announcementOpen && state.announcement?.body ? `<div class="community-wiki-announcement-modal"><button class="community-wiki-announcement-backdrop" type="button" data-wiki-close-announcement aria-label="${esc(t('closeAnnouncement'))}"></button><section class="community-wiki-announcement-panel" role="dialog" aria-modal="true" aria-labelledby="wikiAnnouncementTitle"><header><div><p class="community-wiki-eyebrow">${esc(t('announcement'))}</p><h2 id="wikiAnnouncementTitle">${esc(state.announcement.title)}</h2></div><button type="button" data-wiki-close-announcement title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><div class="community-wiki-announcement-body">${esc(state.announcement.body)}</div></section></div>` : ''}
+       ${soloComboModal(state.homeMenuName)}
+       ${soloComboSaveConfirmModal(state.homeMenuName)}
+       ${homeFlowPreviewModal()}
       ${state.error ? `<div class="community-wiki-error"><i data-lucide="triangle-alert"></i><span>${esc(t('failed'))}</span><button type="button" data-wiki-action="retry">${esc(t('retry'))}</button></div>` : ''}
       ${state.loading ? `<div class="community-wiki-empty"><i data-lucide="loader-circle"></i><strong>${esc(t('loading'))}</strong></div>` : ''}`, false);
   }
@@ -8082,6 +8612,546 @@
     state.hoveredCharacter = state.hoveredCharacter && ordered.some((entry) => entry.name === state.hoveredCharacter) ? state.hoveredCharacter : initial.name;
     const previewEntry = ordered.find((entry) => entry.name === state.hoveredCharacter) || initial;
     renderShowcaseHome(ordered, previewEntry);
+  }
+
+  const COMMUNITY_NAME_ALIASES = { Kashiya: '卡提希娅', 'Xia Kong': '夏空', 'Qian Dao': '千咲', Aidan: '爱弥斯', Dafne: '达妮娅' };
+  function communityNameKey(value) {
+    const raw = String(value || '').trim();
+    return canonicalCharacterName(COMMUNITY_NAME_ALIASES[raw] || raw);
+  }
+  function communityComboIncludes(chart, name) {
+    const values = [chart?.character, chart?.firstCharacter, chart?.longestCharacter, ...(Array.isArray(chart?.characters) ? chart.characters : [])];
+    return values.some((value) => String(value || '').split(/[,/、·]+/u).some((part) => communityNameKey(part) === communityNameKey(name)));
+  }
+
+  function renderRawSkillText(value) {
+    let source = String(value || '').replace(/\r/g, '');
+    let html = esc(source)
+      .replace(/&lt;size=40&gt;([\s\S]*?)&lt;\/size&gt;/giu, '<h4>$1</h4>')
+      .replace(/&lt;color=(?:Title|Header)&gt;([\s\S]*?)&lt;\/color&gt;/giu, '<strong class="raw-title">$1</strong>')
+      .replace(/&lt;color=Highlight&gt;([\s\S]*?)&lt;\/color&gt;/giu, '<mark>$1</mark>')
+      .replace(/&lt;color=([^&]+)&gt;([\s\S]*?)&lt;\/color&gt;/giu, '<span class="raw-color-$1">$2</span>')
+      .replace(/&lt;te\b[^&]*&gt;([\s\S]*?)&lt;\/te&gt;/giu, '<mark>$1</mark>')
+      .replace(/&lt;[^&]*?&gt;/giu, '')
+      .replace(/\n{2,}/g, '</p><p>')
+      .replace(/\n/g, '<br>');
+    return `<p>${html || esc(t('noInfo'))}</p>`;
+  }
+
+  function rawSkillSurface(name) {
+    const info = state.info.get(name);
+    if (!info) return `<div class="community-wiki-home-surface-loading"><i data-lucide="loader-circle"></i><span>${esc(t('detailLoading'))}</span></div>`;
+    const skills = Array.isArray(info.skills) ? info.skills : [];
+    const groups = skills.map((skill, index) => `<article class="community-wiki-home-raw-skill"><header><span>${esc(skill.type || t('skills'))}</span><h3>${esc(clean(skill.name) || `${t('skills')} ${index + 1}`)}</h3></header><div class="community-wiki-home-raw-copy">${renderRawSkillText(skill.desc || skill.description || '')}</div></article>`).join('');
+    return groups || `<div class="community-wiki-home-surface-empty">${esc(t('noInfo'))}</div>`;
+  }
+
+  const HOME_CONTENT_TABS = [
+    ['profile', '简介'], ['normal', '普攻'], ['skill', '共鸣技能'], ['circuit', '共鸣回路'],
+    ['liberation', '共鸣解放'], ['outro', '延奏技能'], ['chain', '共鸣']
+  ];
+  const HOME_SKILL_TYPES = {
+    normal: /(?:常态攻击|普攻|普通攻击|basic\s*attack|normal\s*attack)/iu,
+    skill: /(?:共鸣技能|resonance\s*skill)/iu,
+    circuit: /(?:共鸣回路|回路|resonance\s*circuit|forte\s*circuit)/iu,
+    liberation: /(?:共鸣解放|解放|resonance\s*liberation|ultimate)/iu,
+    intro: /(?:变奏技能|出场技能|intro\s*skill)/iu,
+    outro: /(?:延奏技能|outro\s*skill)/iu
+  };
+  const homeSkillIconFor = (name, kind) => {
+    const icons = tideIconManifestFor(name) || {};
+    const iconKey = kind === 'normal' ? 'basic_attack'
+      : kind === 'skill' ? 'skill'
+      : kind === 'circuit' ? 'circuit'
+      : kind === 'liberation' ? 'liberation'
+      : kind === 'intro' ? 'intro'
+      : kind === 'outro' ? 'outro'
+      : kind === 'chain' ? 'chain_1'
+      : '';
+    return icons[iconKey] || emblemFor(name);
+  };
+
+  function homeProfileSurface(name) {
+    const info = state.info.get(name);
+    if (!info) return `<div class="community-wiki-home-surface-loading"><i data-lucide="loader-circle"></i><span>${esc(t('detailLoading'))}</span></div>`;
+    const entry = state.characters.find((item) => item.name === name) || { name, star: info.rarity || info.star || 0, element: info.element || '', weaponType: info.weaponType || '' };
+    const stats = info.lv90BaseStats || info.baseStats || {};
+    const statRows = [['HP', stats.hp], ['ATK', stats.atk], ['DEF', stats.def], ['谐度破坏增幅', stats.tuneBreakBoost]].filter(([, value]) => value !== undefined && value !== null && String(value) !== '').map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('');
+    const tags = Array.isArray(info.combatTags) ? info.combatTags : Array.isArray(info.roles) ? info.roles : Array.isArray(info.tags) ? info.tags : [];
+    return `<div class="community-wiki-home-profile"><section class="community-wiki-home-profile-intro"><img src="${esc(emblemFor(name))}" alt="" aria-hidden="true"><div><p class="community-wiki-eyebrow">${esc(t('base'))}</p><h2>${esc(name)}</h2><p>${esc(t('api'))}</p></div></section><dl class="community-wiki-home-profile-facts"><div><dt>${esc(t('star'))}</dt><dd>${'★'.repeat(Math.max(1, Math.min(5, Number(entry.star) || Number(info.rarity) || 1)))}</dd></div><div><dt>${esc(t('element'))}</dt><dd style="color:${esc(colorFor(entry.element))}">${esc(displayValue(entry.element || '—'))}</dd></div><div><dt>${esc(t('weapon'))}</dt><dd>${esc(displayValue(entry.weaponType || '—'))}</dd></div></dl><section class="community-wiki-home-profile-stats"><h3>${esc(t('stats'))}</h3>${statRows ? `<dl>${statRows}</dl>` : `<p class="community-wiki-muted">${esc(t('noInfo'))}</p>`}</section>${tags.length ? `<section class="community-wiki-home-profile-tags"><h3>战斗标签</h3><div>${tags.map((tag) => `<span>${esc(clean(tag))}</span>`).join('')}</div></section>` : ''}</div>`;
+  }
+
+  function homeSkillSurface(name, kind) {
+    const info = state.info.get(name);
+    if (!info) return `<div class="community-wiki-home-surface-loading"><i data-lucide="loader-circle"></i><span>${esc(t('detailLoading'))}</span></div>`;
+    const allSkills = Array.isArray(info.skills) ? info.skills : [];
+    const kinds = kind === 'outro' ? ['intro', 'outro'] : [kind];
+    const skills = kinds.flatMap((skillKind) => allSkills
+      .filter((skill) => HOME_SKILL_TYPES[skillKind]?.test(`${skill.type || ''} ${skill.name || ''}`))
+      .map((skill) => ({ skill, skillKind })));
+    if (!skills.length) return `<div class="community-wiki-home-surface-empty">${esc(t('noInfo'))}</div>`;
+    return `<div class="community-wiki-home-skill-list">${skills.map(({ skill, skillKind }, index) => `<article class="community-wiki-home-raw-skill"><header><span>${esc(skill.type || (skillKind === 'intro' ? '变奏技能' : HOME_CONTENT_TABS.find(([id]) => id === skillKind)?.[1]) || t('skills'))}</span><h3>${esc(clean(skill.name) || `${t('skills')} ${index + 1}`)}</h3></header><div class="community-wiki-home-raw-copy">${renderRawSkillText(skill.desc || skill.description || '')}</div></article>`).join('')}</div>`;
+  }
+
+  function homeChainSurface(name) {
+    const info = state.info.get(name);
+    if (!info) return `<div class="community-wiki-home-surface-loading"><i data-lucide="loader-circle"></i><span>${esc(t('detailLoading'))}</span></div>`;
+    const chains = resonanceChainsFor(info);
+    if (!chains.length) return `<div class="community-wiki-home-surface-empty">${esc(t('noInfo'))}</div>`;
+    const icons = tideIconManifestFor(name) || {};
+    return `<div class="community-wiki-home-chain-list">${chains.map((chain, index) => `<article><img src="${esc(icons[`chain_${index + 1}`] || icons.chain_1 || emblemFor(name))}" alt="" aria-hidden="true"><div><span>C${index + 1}</span><h3>${esc(clean(chain.name) || `共鸣链 ${index + 1}`)}</h3><div class="community-wiki-home-raw-copy">${renderRawSkillText(chain.desc || chain.description || '')}</div></div></article>`).join('')}</div>`;
+  }
+
+  function homeContentSurface(name, kind) {
+    if (kind === 'profile') return homeProfileSurface(name);
+    if (kind === 'chain') return homeChainSurface(name);
+    return homeSkillSurface(name, kind);
+  }
+
+  function homeTreeControls(name, entry, info) {
+    const forms = specialFormsFor(name);
+    const modes = specialModesFor(name);
+    const chainCount = resonanceChainsFor(info).length;
+    const activeChain = Math.min(resonanceChainLevel(name), chainCount);
+    const activeForm = forms.some((form) => form.id === currentFormId(name)) ? currentFormId(name) : forms[0]?.id;
+    const activeMode = currentModeId(name);
+    const chain = chainCount ? `<label class="community-wiki-chain-select"><i data-lucide="link-2" aria-hidden="true"></i><span>${esc(t('chain'))}</span><select data-wiki-chain aria-label="${esc(t('chain'))}"><option value="0" ${activeChain === 0 ? 'selected' : ''}>${esc(t('baseChain'))}</option>${Array.from({ length: chainCount }, (_, index) => `<option value="${index + 1}" ${activeChain === index + 1 ? 'selected' : ''}>${esc(format(t('chainLevel'), index + 1))}</option>`).join('')}</select></label>` : '';
+    const form = forms.length > 1 ? `<div class="community-wiki-form-tabs" role="tablist" aria-label="${esc(t('forms'))}">${forms.map((item) => `<button type="button" role="tab" aria-selected="${item.id === activeForm}" data-wiki-form="${esc(item.id)}" class="${item.id === activeForm ? 'active' : ''}" title="${esc(item.description || '')}"><i data-lucide="${item.id === 'blazing' || item.id === 'absolution' ? 'flame' : item.id === 'lion' || item.id === 'mech' ? 'sparkles' : 'circle-dot'}"></i><span>${esc(item.label)}</span></button>`).join('')}</div>` : '';
+    const modeIcon = (mode) => mode.id === 'shock' ? 'waves' : mode.id === 'burst' ? 'zap' : mode.id === 'harmony' ? 'combine' : 'waypoints';
+    const mode = modes.length === 2
+      ? `<div class="community-wiki-mode-toggle" style="--wiki-element:${esc(colorFor(entry?.element))}" role="group" aria-label="${esc(t('mode'))}"><i data-lucide="waypoints" aria-hidden="true"></i><span>${esc(t('mode'))}</span><div class="community-wiki-mode-toggle-buttons">${modes.map((item) => `<button type="button" value="${esc(item.id)}" data-wiki-mode class="${item.id === activeMode ? 'active' : ''}" aria-pressed="${item.id === activeMode}" title="${esc(item.description || item.label)}"><i data-lucide="${modeIcon(item)}" aria-hidden="true"></i><b>${esc(item.label)}</b></button>`).join('')}</div></div>`
+      : modes.length ? `<label class="community-wiki-mode-select" style="--wiki-element:${esc(colorFor(entry?.element))}"><i data-lucide="waypoints" aria-hidden="true"></i><span>${esc(t('mode'))}</span><select data-wiki-mode aria-label="${esc(t('mode'))}">${modes.map((item) => `<option value="${esc(item.id)}" ${item.id === activeMode ? 'selected' : ''}>${esc(item.label)}</option>`).join('')}</select></label>` : '';
+    const newCombo = `<button class="community-wiki-new-combo" type="button" data-solo-action="new" data-wiki-name="${esc(name)}" title="${esc(t('newCombo'))}"><i data-lucide="plus" aria-hidden="true"></i><span>${esc(t('newCombo'))}</span></button>`;
+    const editor = canEditWiki() ? `<button type="button" class="community-wiki-editor-toggle ${state.editing ? 'active' : ''}" data-wiki-editor-toggle><i data-lucide="pencil"></i>${esc(state.editing ? t('editing') : t('edit'))}</button>` : '';
+    return `<div class="community-wiki-home-tree-tools">${newCombo}${editor}<span class="community-wiki-home-tree-tools-spacer" aria-hidden="true"></span>${chain}${mode}${form}</div>`;
+  }
+
+  function soloComboRailTools(name) {
+    if (!state.soloComboOpen || !state.soloComboEditing || !name) return '';
+    const tool = (action, icon, label, extra = '') => `<button type="button" class="community-wiki-solo-rail-tool ${extra}" data-solo-editor-action="${esc(action)}" data-wiki-name="${esc(name)}" title="${esc(label)}" aria-label="${esc(label)}"><i data-lucide="${esc(icon)}"></i></button>`;
+    return `<div class="community-wiki-solo-rail-tools" role="toolbar" aria-label="${esc(t('comboEditor'))}">
+      <span class="community-wiki-solo-rail-mark" aria-hidden="true"><i data-lucide="route"></i></span>
+      ${tool('copy', 'copy', t('copyTool'))}
+      ${tool('cut', 'scissors', t('cutTool'))}
+      ${tool('paste', 'clipboard', t('pasteTool'))}
+      ${tool('undo', 'undo-2', t('undoTool'))}
+      ${tool('redo', 'redo-2', t('redoTool'))}
+      ${tool('remove', 'trash-2', t('remove'), 'is-danger')}
+      <span class="community-wiki-solo-rail-divider" aria-hidden="true"></span>
+      <button type="button" class="community-wiki-solo-rail-tool is-save" data-solo-action="save" data-wiki-name="${esc(name)}" title="${esc(t('saveCombo'))}" aria-label="${esc(t('saveCombo'))}"><i data-lucide="save"></i></button>
+      <button type="button" class="community-wiki-solo-rail-tool is-close" data-solo-action="close" data-wiki-name="${esc(name)}" title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button>
+    </div>`;
+  }
+
+  function soloComboSaveConfirmModal(name) {
+    if (!state.soloComboSaveConfirm || !state.soloComboEditing || !name) return '';
+    const draftName = String(state.soloComboDraft?.name || '').trim();
+    return `<div class="community-wiki-solo-save-modal"><button type="button" class="community-wiki-solo-save-backdrop" data-solo-action="save-cancel" data-wiki-name="${esc(name)}" aria-label="${esc(t('cancel'))}"></button><section class="community-wiki-solo-save-dialog" role="dialog" aria-modal="true" aria-labelledby="wikiSoloSaveTitle" style="--wiki-element:${esc(colorFor(state.characters.find((entry) => entry.name === name)?.element))}"><header><div><i data-lucide="save"></i><div><p class="community-wiki-eyebrow">${esc(t('saveCombo'))}</p><h2 id="wikiSoloSaveTitle">保存连段</h2></div></div><button type="button" data-solo-action="save-cancel" data-wiki-name="${esc(name)}" title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><div class="community-wiki-solo-save-body"><label><span>连段名称</span><input data-solo-save-name value="${esc(draftName)}" placeholder="请输入连段名称" autofocus></label><p>确认保存当前编辑的连段？</p><div class="community-wiki-solo-save-actions"><button type="button" data-solo-action="save-cancel" data-wiki-name="${esc(name)}">取消</button><button type="button" class="primary" data-solo-action="save-confirm" data-wiki-name="${esc(name)}"><i data-lucide="cloud-upload"></i>确认保存</button></div></div></section></div>`;
+  }
+
+  function flowAvatarList(chart) {
+    const values = Array.isArray(chart?.characters) && chart.characters.length
+      ? chart.characters
+      : [chart?.firstCharacter, chart?.longestCharacter].filter(Boolean);
+    return [...new Set(values)].slice(0, 3).map((value) => avatar(String(value))).join('');
+  }
+
+  function flowDateLabel(timestamp) {
+    if (!Number(timestamp)) return '';
+    return new Intl.DateTimeFormat(document.documentElement.lang || 'zh-CN', {
+      year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(new Date(Number(timestamp)));
+  }
+
+  function flowGradeForTags(tags) {
+    const values = Array.isArray(tags) ? tags : [];
+    if (values.includes('冒烟')) return 'SS';
+    if (values.includes('进阶') || values.includes('全局') || values.includes('错轮')) return 'S';
+    if (values.includes('标准')) return 'A';
+    if (values.includes('基础')) return 'B';
+    if (values.includes('轮椅')) return 'C';
+    return '';
+  }
+
+  function flowVideoMarkup(link) {
+    let source = '';
+    try {
+      const url = new URL(String(link || '').trim());
+      if (url.protocol === 'http:' || url.protocol === 'https:') source = url.href;
+    } catch {}
+    if (!source) return '';
+    const hostname = new URL(source).hostname.toLowerCase().replace(/^www\./u, '');
+    const platform = hostname.includes('douyin') ? 'douyin'
+      : hostname === 'bilibili.com' || hostname.endsWith('.bilibili.com') || hostname === 'b23.tv' ? 'bilibili'
+        : 'video';
+    const icon = platform === 'bilibili' ? './assets/bilibili.png' : platform === 'douyin' ? './assets/douyin.png' : '';
+    return `<a class="community-wiki-flow-video ${platform}" href="${esc(source)}" target="_blank" rel="noopener noreferrer" title="视频演示" aria-label="视频演示">${icon ? `<img src="${icon}" alt="">` : '<i data-lucide="video" aria-hidden="true"></i>'}</a>`;
+  }
+
+  function flowSubmitterMarkup(chart) {
+    const submitter = chart?.submitter || {};
+    const nickname = clean(submitter.nickname) || 'Community';
+    const email = clean(submitter.email);
+    const maskedEmail = email.includes('@') && !/^[^@]{2}\*+@/u.test(email)
+      ? `${email.slice(0, 2)}***${email.slice(email.indexOf('@'))}` : email;
+    const profile = clean(submitter.avatar) || nickname;
+    return `<div class="community-wiki-flow-submitter"><span class="community-wiki-flow-submitter-avatar">${avatar(profile)}</span><span class="community-wiki-flow-submitter-copy"><strong>${esc(nickname)}</strong>${submitter.badge || submitter.homepage ? '<em>UP</em>' : ''}<small>${esc(maskedEmail)}</small></span></div>`;
+  }
+
+  function flowSurface(name) {
+    const solo = soloCombosFor(name);
+    const matching = state.soloComboCommunity.filter((chart) => communityComboIncludes(chart, name));
+    const previewCombo = homeSoloPreviewCombo(name);
+    const previewSteps = previewCombo.nodes || [];
+    const soloMarkup = solo.length
+      ? solo.map((combo) => `<button type="button" class="community-wiki-flow-capsule solo" data-wiki-home-solo-preview="${esc(combo.id || combo.name || '')}" data-wiki-name="${esc(name)}"><span class="community-wiki-flow-capsule-icon"><img src="${esc(emblemFor(name))}" alt="${esc(name)}" loading="eager" decoding="async"></span><span><strong>${esc(combo.name || t('soloCombo'))}</strong><small>${esc(format(t('stageCount'), (combo.nodes || []).length))}</small></span></button>`).join('')
+      : isLocalWikiPreview() && previewSteps.length ? `<button type="button" class="community-wiki-flow-capsule solo is-preview" data-wiki-home-solo-preview="${previewCombo.id}" data-wiki-name="${esc(name)}"><span class="community-wiki-flow-capsule-icon"><img src="${esc(emblemFor(name))}" alt="${esc(name)}" loading="eager" decoding="async"></span><span><strong>${esc(previewCombo.name)}</strong><small>${esc(format(t('stageCount'), previewSteps.length))} · ${esc(t('localPreview'))}</small></span></button>` : `<span class="community-wiki-flow-empty">${esc(t('noSoloCombos'))}</span>`;
+    const communityMarkup = matching.length
+      ? matching.map((chart) => {
+        const chartCharacters = Array.isArray(chart.characters) ? chart.characters : [chart.firstCharacter, chart.longestCharacter].filter(Boolean);
+        const lead = state.characters.find((entry) => entry.name === name) || state.characters.find((entry) => chartCharacters.some((value) => communityNameKey(value) === communityNameKey(entry.name)));
+        const tags = Array.isArray(chart.tags) ? chart.tags.filter(Boolean) : [];
+        const date = flowDateLabel(chart.updatedAt);
+        const meta = [date, chart.uploadVersion ? `v${chart.uploadVersion}` : '', format(t('stageCount'), Math.max(1, Number(chart.rounds) || 1))].filter(Boolean).join(' · ');
+        const grade = flowGradeForTags(tags);
+        const tagMarkup = tags.length ? tags.map((tag) => `<span>${esc(tag)}</span>`).join('') : '<span>Community</span>';
+        const downloadCount = Math.max(0, Math.floor(Number(chart.downloadCount) || 0));
+        return `<article class="community-wiki-flow-capsule community" data-wiki-home-community="${esc(chart.id || '')}" style="--wiki-element:${esc(colorFor(lead?.element))}" tabindex="0" role="button" aria-label="${esc(chart.title || 'wwcombo')}"><div class="community-wiki-flow-copy"><strong>${esc(chart.title || 'wwcombo')}</strong><small>${esc(meta)}</small></div><div class="community-wiki-flow-classification"><div class="community-wiki-flow-tags">${tagMarkup}</div>${grade ? `<b class="community-wiki-flow-grade">${esc(grade)}</b>` : ''}${flowVideoMarkup(chart.link)}</div><div class="community-wiki-flow-avatars" aria-label="${esc(chartCharacters.slice(0, 3).join('、'))}">${flowAvatarList(chart)}</div>${flowSubmitterMarkup(chart)}<button type="button" class="community-wiki-flow-download" data-wiki-home-community-download="${esc(chart.id || '')}" aria-label="下载 ${downloadCount} 次"><i data-lucide="download" aria-hidden="true"></i><strong>${downloadCount}</strong></button></article>`;
+      }).join('')
+      : state.soloComboCommunityLoading ? `<span class="community-wiki-flow-empty"><i data-lucide="loader-circle"></i>${esc(t('communityLoading'))}</span>` : `<span class="community-wiki-flow-empty">${esc(t('noCommunityCombos'))}</span>`;
+    return `<div class="community-wiki-home-flow"><section><div class="community-wiki-home-surface-heading"><h3>${esc(t('soloFlow'))}</h3></div><div class="community-wiki-flow-grid">${soloMarkup}</div></section><section><div class="community-wiki-home-surface-heading"><h3>${esc(t('teamFlow'))}</h3></div><div class="community-wiki-flow-strip">${communityMarkup}</div></section></div>`;
+  }
+
+  function homeSoloPreviewCombo(name) {
+    const modelNodes = (currentModel(name)?.nodes || []).filter((node) => node?.category !== 'buff').slice(0, 3);
+    if (modelNodes.length) {
+      return { id: '__wiki-preview-solo__', name: '单人流程预览', nodes: modelNodes.map((node, index) => ({ instanceId: `preview-${index}`, nodeId: node.id, title: node.title, category: node.category, iconAction: node.iconAction || '' })) };
+    }
+    const skills = (state.info.get(name)?.skills || []).slice(0, 3).map((skill, index) => ({ instanceId: `preview-${index}`, title: clean(skill.name) || `${t('skills')} ${index + 1}`, category: 'skill' }));
+    return { id: '__wiki-preview-solo__', name: '单人流程预览', nodes: skills };
+  }
+
+  function homeFlowPreviewModal() {
+    const preview = state.homeFlowPreview;
+    if (!preview) return '';
+    const isSolo = preview.kind === 'solo';
+    const chart = isSolo ? null : preview.chart;
+    const combo = isSolo ? preview.combo : null;
+    const characters = chart ? (Array.isArray(chart.characters) ? chart.characters : [chart.firstCharacter, chart.longestCharacter].filter(Boolean)).slice(0, 3) : [];
+    const rounds = chart ? Math.max(1, Math.min(8, Number(chart.rounds) || 1)) : Math.max(1, (combo?.nodes || []).length);
+    const route = Array.from({ length: rounds }, (_, index) => {
+      const role = chart ? (characters[index % Math.max(1, characters.length)] || '—') : (combo?.nodes?.[index]?.title || combo?.nodes?.[index]?.nodeId || '—');
+      return `<span class="community-wiki-home-flow-round"><small>${chart ? `R${index + 1}` : `${index + 1}`}</small><b>${esc(role)}</b></span>`;
+    }).join('<i data-lucide="arrow-right" aria-hidden="true"></i>');
+    const soloRoute = isSolo ? (combo?.nodes || []).map((item, index) => homeSoloFlowStep(preview.name, item, index)).join('') : '';
+    return `<div class="community-wiki-home-flow-modal"><button type="button" class="community-wiki-home-flow-backdrop" data-wiki-home-flow-close aria-label="${esc(t('close'))}"></button><section class="community-wiki-home-flow-dialog ${isSolo ? 'is-solo-flow' : ''}" role="dialog" aria-modal="true"><header><div><p class="community-wiki-eyebrow">${esc(isSolo ? t('soloFlow') : t('teamFlow'))}</p><h2>${esc(isSolo ? (combo?.name || t('soloCombo')) : (chart.title || 'wwcombo'))}</h2></div><button type="button" data-wiki-home-flow-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><div class="community-wiki-home-flow-dialog-meta">${chart ? `<span>${flowAvatarList(chart)}</span><b>${esc((chart.tags || []).join(' · ') || 'Community')}</b>` : `<span>${avatar(preview.name)}</span><b>${esc(preview.name)}</b>`}<small>${esc(format(t('stageCount'), rounds))}</small></div><div class="community-wiki-home-flow-diagram"><div class="community-wiki-home-flow-route ${isSolo ? 'is-solo-axis' : ''}">${isSolo ? soloRoute : route}</div><small>${esc(isSolo ? '单人连段流程' : (chart.description || '按角色顺序展示社区连段的轮换流程。'))}</small></div></section></div>`;
+  }
+
+  function homeSoloFlowStep(name, item, index) {
+    const node = currentModel(name)?.nodes?.find((entry) => entry.id === item?.nodeId) || { id: item?.nodeId || `preview-${index}`, title: item?.title || item?.nodeId || '招式', category: item?.category || 'other', iconAction: item?.iconAction || '' };
+    const aliases = slangForCharacter(name);
+    const slang = clean(item?.slang || aliases[node.id] || aliases[node.title] || '');
+    const entry = state.characters.find((character) => character.name === name);
+    return `<article class="axis-step community-wiki-home-flow-step" style="--role-color:${esc(colorFor(entry?.element))}"><span class="community-wiki-home-flow-step-icon">${graphNodeIcon(name, node)}</span><span class="community-wiki-home-flow-step-copy"><small>${index + 1}</small><strong>${esc(node.title || '招式')}</strong>${slang ? `<em>${esc(slang)}</em>` : ''}</span></article>`;
+  }
+
+  function homeFlowReady(name) {
+    return Boolean(name && homeInfoReady(name) && state.soloComboLoadState.get(name) === 'ready' && state.soloComboCommunityLoaded);
+  }
+
+  function homeTreeReady(name) {
+    return Boolean(name && homeInfoReady(name) && state.wikiState.has(name));
+  }
+
+  // Keep the tree behind the loading surface until its node art is decoded.
+  // The graph itself is cheap enough to build before the final render, but
+  // lazy image tags otherwise make the user see empty cards first and then
+  // watch every icon arrive one by one.
+  function ensureHomeTreeAssets(name) {
+    if (!name || !homeTreeReady(name)) return Promise.resolve();
+    const pending = state.homeTreeAssetLoadPromises.get(name);
+    if (pending) return pending;
+    const model = viewModelFor(name);
+    const entry = state.characters.find((item) => item.name === name);
+    const sources = [
+      portraitFor(name), emblemFor(name), basicAttackIconFor(name),
+      elementBackgroundFor(entry?.element), elementIconFor(entry?.element),
+      ...(Array.isArray(model?.nodes) ? model.nodes.map((node) => tideIconSource(name, node)) : [])
+    ];
+    const promise = Promise.all([...new Set(sources.filter(Boolean))].map((source) => preloadWikiImage(source, { decode: true })))
+      .then(() => undefined)
+      .finally(() => state.homeTreeAssetLoadPromises.delete(name));
+    state.homeTreeAssetLoadPromises.set(name, promise);
+    return promise;
+  }
+
+  // The API can return the character shell before its skill text is usable.
+  // Keep the surface in its loading state until the original text itself is
+  // available, while still allowing a terminal error to render a real empty
+  // state instead of spinning forever.
+  function homeInfoReady(name) {
+    const info = state.info.get(name);
+    return Boolean(
+      info && (
+        (Array.isArray(info.skills) && info.skills.length > 0)
+        || state.homeInfoLoadState.get(name) === 'error'
+      )
+    );
+  }
+
+  const homeInfoUrl = (name) => `${API_BASE}/api/v2/info/character/${encodeURIComponent(name)}`;
+  const usableHomeInfo = (payload) => Boolean(payload && Array.isArray(payload.skills) && payload.skills.length);
+
+  async function fetchHomeInfoPayload(name) {
+    const url = homeInfoUrl(name);
+    const cached = await readCachedJson(url);
+    if (usableHomeInfo(cached)) {
+      // A cached payload is enough for the first paint. Refresh quietly so the
+      // next visit is current without making this character wait for upstream.
+      void fetchJsonWithTimeout(url, { cache: 'no-cache' }, 12000)
+        .then(async (response) => {
+          if (!response.ok) return;
+          const payload = await response.json();
+          if (!usableHomeInfo(payload)) return;
+          await cacheJsonResponse(url, new Response(JSON.stringify(payload), { headers: { 'content-type': 'application/json' } }));
+          state.info.set(name, payload);
+          state.homeInfoLoadState.set(name, 'ready');
+          if (state.homeMenuName === name) renderCurrentWikiSurface(name);
+        })
+        .catch(() => {});
+      return cached;
+    }
+
+    const response = await fetchJsonWithTimeout(url, { cache: 'no-store' }, 12000);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    if (!usableHomeInfo(payload)) throw new Error('empty-character-skill-data');
+    await cacheJsonResponse(url, new Response(JSON.stringify(payload), { headers: { 'content-type': 'application/json' } }));
+    return payload;
+  }
+
+  function ensureHomeInfo(name) {
+    if (!name || homeInfoReady(name)) return Promise.resolve(state.info.get(name));
+    const pending = state.homeInfoLoadPromises.get(name);
+    if (pending) return pending;
+    const promise = (async () => {
+      try {
+        const payload = await fetchHomeInfoPayload(name);
+        state.info.set(name, payload);
+        state.homeInfoLoadState.set(name, 'ready');
+        return payload;
+      } catch (error) {
+        state.info.set(name, { skills: [], __loadError: String(error?.message || error) });
+        state.homeInfoLoadState.set(name, 'error');
+        return state.info.get(name);
+      } finally {
+        state.homeInfoLoadPromises.delete(name);
+        if (state.homeMenuName === name) renderCurrentWikiSurface(name);
+      }
+    })();
+    state.homeInfoLoadPromises.set(name, promise);
+    return promise;
+  }
+
+  let homeInfoWarmupSequence = 0;
+  function warmHomeInfoCache(sequence) {
+    if (homeInfoWarmupSequence === sequence) return;
+    homeInfoWarmupSequence = sequence;
+    const names = [...new Set([
+      '赞妮',
+      ...state.characters.map((entry) => characterName(entry)).filter(Boolean)
+    ])];
+    const start = async () => {
+      let cursor = 0;
+      const worker = async () => {
+        while (sequence === characterLoadSequence && cursor < names.length) {
+          const name = names[cursor++];
+          try { await ensureHomeInfo(name); } catch {}
+          // Keep the upstream API and the main thread free for actual input.
+          await new Promise((resolve) => window.setTimeout(resolve, 140));
+        }
+      };
+      await Promise.all([worker(), worker()]);
+    };
+    if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(() => { void start(); }, { timeout: 1200 });
+    else window.setTimeout(() => { void start(); }, 260);
+  }
+
+  function ensureHomeWikiState(name) {
+    if (!name || state.wikiState.has(name)) return Promise.resolve();
+    const pending = state.homeWikiLoadPromises.get(name);
+    if (pending) return pending;
+    const promise = loadWikiState(name).finally(() => {
+      state.homeWikiLoadPromises.delete(name);
+      if (state.homeMenuName === name) renderCurrentWikiSurface(name);
+    });
+    state.homeWikiLoadPromises.set(name, promise);
+    return promise;
+  }
+
+  function ensureHomeFlowData(name) {
+    if (!name || homeFlowReady(name)) return Promise.resolve();
+    const pending = state.homeFlowLoadPromises.get(name);
+    if (pending) return pending;
+    const promise = Promise.all([loadSoloCombos(name), loadSoloCommunityCombos(name)]).finally(() => {
+      state.homeFlowLoadPromises.delete(name);
+      if (state.homeMenuName === name) renderCurrentWikiSurface(name);
+    });
+    state.homeFlowLoadPromises.set(name, promise);
+    return promise;
+  }
+
+  function homeLoadsFor(name, tab) {
+    const loads = [];
+    const infoReady = homeInfoReady(name) ? Promise.resolve() : loadHomeInfo(name);
+    if (tab === 'tree') {
+      const wikiReady = homeTreeReady(name) ? Promise.resolve() : ensureHomeWikiState(name);
+      loads.push(Promise.all([infoReady, wikiReady]).then(() => ensureHomeTreeAssets(name)));
+    } else {
+      if (!homeInfoReady(name)) loads.push(infoReady);
+      if (tab === 'flow' && !homeFlowReady(name)) loads.push(infoReady.then(() => ensureHomeFlowData(name)));
+    }
+    return loads;
+  }
+
+  function beginHomeSurfaceLoad(name, tab, token) {
+    // Let the browser paint the loading layer before any cached promise or
+    // graph preparation can synchronously return and replace it.
+    window.setTimeout(() => {
+      if (state.homeSurfaceLoadingSequence !== token) return;
+      const loads = homeLoadsFor(name, tab);
+      Promise.allSettled(loads).then(() => new Promise((resolve) => requestAnimationFrame(resolve))).then(() => {
+        if (state.homeSurfaceLoadingSequence !== token) return;
+        state.homeSurfaceLoading = false;
+        renderHome();
+      });
+    }, 0);
+  }
+
+  async function loadHomeInfo(name) {
+    if (!name) return;
+    await ensureHomeInfo(name);
+    preloadHomeCharacterAssets(name);
+    void ensureHomeWikiState(name);
+    void ensureHomeFlowData(name);
+  }
+
+  function preloadHomeCharacterAssets(name) {
+    const entry = state.characters.find((item) => item.name === name);
+    const model = viewModelFor(name);
+    const manifest = tideIconManifestFor(name) || {};
+    const sources = [portraitFor(name), emblemFor(name), basicAttackIconFor(name), elementBackgroundFor(entry?.element), ...Object.values(manifest)];
+    (model?.nodes || []).forEach((node) => sources.push(tideIconSource(name, node)));
+    [...new Set(sources.filter(Boolean))].forEach((source) => {
+      const image = new Image();
+      image.decoding = 'async';
+      image.src = source;
+    });
+  }
+
+  function soloComboModal(name) {
+    if (!state.soloComboOpen || !name) return '';
+    // While editing, the combo track is mounted into the graph's Buff lane.
+    // The floating shell remains reserved for browsing saved/team combos.
+    if (state.soloComboEditing) return '';
+    const combos = soloCombosFor(name);
+    const draft = state.soloComboDraft;
+    const activeTab = state.soloComboTab === 'team' ? 'team' : 'solo';
+    const currentNodes = new Map((currentModel(name)?.nodes || []).map((node) => [node.id, node]));
+    const editItems = Array.isArray(draft?.nodes) ? draft.nodes : [];
+    const buffItems = Array.isArray(draft?.buffs) ? draft.buffs : [];
+    const itemTitle = (item) => currentNodes.get(item.nodeId)?.title || item.title || item.nodeId || 'Buff';
+    const editItemsMarkup = editItems.map((item, index) => `<button type="button" class="community-wiki-solo-item ${index === state.soloComboSelection ? 'selected' : ''}" data-solo-item-index="${index}"><i data-lucide="${item.category === 'buff' ? 'sparkles' : 'circle-dot'}"></i><span>${esc(itemTitle(item))}</span><small>${esc(categoryLabel(item.category || 'other'))}</small></button>`).join('');
+    const buffItemsMarkup = buffItems.map((item, index) => `<article class="community-wiki-solo-buff ${index === state.soloComboSelection ? 'selected' : ''}" data-solo-item-index="${index}"><strong>${esc(itemTitle(item))}</strong><label><input type="checkbox" data-solo-buff-field="start" data-solo-buff-index="${index}" ${item.start ? 'checked' : ''}>${esc(t('buffStart'))}</label><label><input type="checkbox" data-solo-buff-field="end" data-solo-buff-index="${index}" ${item.end ? 'checked' : ''}>${esc(t('buffEnd'))}</label><label>${esc(t('buffStacks'))}<input type="number" min="1" max="99" data-solo-buff-field="stacks" data-solo-buff-index="${index}" value="${Math.max(1, Number(item.stacks) || 1)}"></label><label><select data-solo-buff-field="boundTo" data-solo-buff-index="${index}"><option value="">${esc(t('bindBuff'))}</option>${editItems.map((node) => `<option value="${esc(node.instanceId)}" ${item.boundTo === node.instanceId ? 'selected' : ''}>${esc(itemTitle(node))}</option>`).join('')}</select></label></article>`).join('');
+    const editContent = state.soloComboEditing
+      ? `<div class="community-wiki-solo-editing"><div class="community-wiki-solo-edit-head"><label><span>${esc(t('comboName'))}</span><input data-solo-name value="${esc(draft?.name || '')}" placeholder="${esc(t('comboName'))}"></label><div class="community-wiki-solo-mode" role="group"><button type="button" data-solo-mode="combo" class="${state.soloComboEditMode === 'combo' ? 'active' : ''}">${esc(t('comboMode'))}</button><button type="button" data-solo-mode="buff" class="${state.soloComboEditMode === 'buff' ? 'active' : ''}">${esc(t('buffMode'))}</button></div></div><div class="community-wiki-solo-dropzone${(state.soloComboEditMode === 'combo' ? editItems.length : buffItems.length) ? ' has-items' : ''}" data-solo-dropzone tabindex="0"><div class="community-wiki-solo-drop-hint"><i data-lucide="mouse-pointer-2"></i><span>${esc(state.soloComboEditMode === 'combo' ? t('dropNodes') : t('bindBuff'))}</span></div>${state.soloComboEditMode === 'combo' ? editItemsMarkup : buffItemsMarkup}</div><div class="community-wiki-solo-edit-actions"><button type="button" class="primary" data-solo-action="save"><i data-lucide="cloud-upload"></i>${esc(t('saveCombo'))}</button><button type="button" data-solo-action="cancel-edit">${esc(t('cancel'))}</button></div></div>`
+      : `<div class="community-wiki-solo-list">${combos.length ? combos.map((combo) => `<article class="community-wiki-solo-saved"><div><strong>${esc(combo.name || t('soloCombo'))}</strong><small>${esc(format(t('stageCount'), (combo.nodes || []).length))}${combo.nodes?.length ? ` · ${esc(combo.nodes.map((item) => item.title || item.nodeId).join(' → '))}` : ''}</small></div><button type="button" data-solo-action="edit" data-solo-id="${esc(combo.id)}" title="${esc(t('edit'))}"><i data-lucide="pencil"></i></button></article>`).join('') : `<div class="community-wiki-solo-empty"><i data-lucide="route"></i><span>${esc(t('noSoloCombos'))}</span></div>`}</div>`;
+    const matching = state.soloComboCommunity.filter((chart) => communityComboIncludes(chart, name));
+    const teamItems = matching.map((chart) => `<article><strong>${esc(chart.title || 'wwcombo')}</strong><small>${esc(chart.submitter?.nickname || 'Community')} · ${esc(format(t('stageCount'), chart.rounds || 1))}</small></article>`).join('');
+    const teamContent = state.soloComboCommunityLoading ? `<div class="community-wiki-solo-empty"><i data-lucide="loader-circle"></i><span>${esc(t('communityLoading'))}</span></div>` : teamItems ? `<div class="community-wiki-community-list">${teamItems}</div>` : `<div class="community-wiki-solo-empty"><i data-lucide="route-off"></i><span>${esc(t('noCommunityCombos'))}</span></div>`;
+    const panelRect = state.soloComboEditing && state.soloComboPanelRect ? state.soloComboPanelRect : null;
+    const panelStyle = panelRect ? ` style="left:${Number(panelRect.x) || 8}px;top:${Number(panelRect.y) || 8}px;right:auto;bottom:auto;width:${Number(panelRect.width) || 720}px;height:${Number(panelRect.height) || 286}px"` : '';
+    const resizeHandle = state.soloComboEditing ? '<span class="community-wiki-solo-panel-resize" data-solo-panel-resize role="separator" aria-label="调整编辑区大小" title="调整编辑区大小"></span>' : '';
+    return `<div class="community-wiki-floating community-wiki-solo-floating ${state.soloComboEditing ? 'is-editing' : ''}"><div class="community-wiki-floating-backdrop" data-solo-action="close"></div><section class="community-wiki-floating-panel community-wiki-solo-panel"${panelStyle} role="dialog" aria-modal="true" aria-labelledby="wikiSoloTitle"><header data-solo-panel-drag><div>${avatar(name)}<div><p class="community-wiki-eyebrow">${esc(t('soloCombo'))}</p><h2 id="wikiSoloTitle">${esc(name)}</h2></div></div><button type="button" data-solo-action="close" title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><nav class="community-wiki-solo-tabs" role="tablist"><button type="button" data-solo-tab="team" class="${activeTab === 'team' ? 'active' : ''}">${esc(t('teamFlow'))}</button><button type="button" data-solo-tab="solo" class="${activeTab === 'solo' ? 'active' : ''}">${esc(t('soloFlow'))}</button></nav><div class="community-wiki-solo-body">${activeTab === 'team' ? teamContent : editContent}</div>${resizeHandle}</section></div>`;
+  }
+
+  function soloComboInline(name) {
+    if (!state.soloComboOpen || !state.soloComboEditing || !name) return '';
+    const draft = state.soloComboDraft;
+    const currentNodes = new Map((currentModel(name)?.nodes || []).map((node) => [node.id, node]));
+    const editItems = Array.isArray(draft?.nodes) ? draft.nodes : [];
+    const itemTitle = (item) => currentNodes.get(item.nodeId)?.title || item.title || item.nodeId || '招式';
+    const editItemsMarkup = editItems.map((item, index) => soloComboInlineItemMarkup(item, index, itemTitle)).join('');
+     const entry = state.characters.find((item) => item.name === name);
+     return `<div class="community-wiki-solo-inline" style="--wiki-element:${esc(colorFor(entry?.element))}" aria-label="${esc(t('comboEditor'))}"><section class="community-wiki-solo-inline-track"><div class="community-wiki-solo-dropzone${editItems.length ? ' has-items' : ''}" data-solo-dropzone tabindex="0"><div class="community-wiki-solo-drop-hint"><i data-lucide="plus"></i><span>${esc(t('dropNodes'))}</span></div>${editItemsMarkup}</div></section></div>`;
+  }
+
+  function soloComboInlineItemMarkup(item, index, itemTitle = (value) => value.title || value.nodeId || '招式') {
+    return `<button type="button" class="community-wiki-solo-item ${index === state.soloComboSelection ? 'selected' : ''}" data-solo-item-index="${index}"><i data-lucide="circle-dot"></i><span>${esc(itemTitle(item))}</span><small>${esc(categoryLabel(item.category || 'other'))}</small></button>`;
+  }
+
+  function refreshSoloComboInline(name) {
+    const dropzone = WIKI_ROOT.querySelector('.community-wiki-solo-inline [data-solo-dropzone]');
+    if (!dropzone || !state.soloComboDraft) return false;
+    const currentNodes = new Map((currentModel(name)?.nodes || []).map((node) => [node.id, node]));
+    const items = Array.isArray(state.soloComboDraft.nodes) ? state.soloComboDraft.nodes : [];
+    const itemTitle = (item) => currentNodes.get(item.nodeId)?.title || item.title || item.nodeId || '招式';
+    dropzone.classList.toggle('has-items', items.length > 0);
+    dropzone.innerHTML = `<div class="community-wiki-solo-drop-hint"><i data-lucide="plus"></i><span>${esc(t('dropNodes'))}</span></div>${items.map((item, index) => soloComboInlineItemMarkup(item, index, itemTitle)).join('')}`;
+    if (dropzone.dataset.soloInlineFastBound !== 'true') {
+      dropzone.addEventListener('click', (event) => {
+        const item = event.target.closest('[data-solo-item-index]');
+        if (!item || item.dataset.soloDragged === 'true') return;
+        state.soloComboSelection = Number(item.dataset.soloItemIndex);
+        dropzone.querySelectorAll('[data-solo-item-index]').forEach((entry) => entry.classList.toggle('selected', entry === item));
+      });
+      dropzone.addEventListener('contextmenu', (event) => {
+        const item = event.target.closest('[data-solo-item-index]');
+        if (!item) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const index = Number(item.dataset.soloItemIndex);
+        state.soloComboSelection = index;
+        openSoloComboContextMenu(event.clientX, event.clientY, name, index);
+      });
+      let fastDrag = null;
+      dropzone.addEventListener('pointerdown', (event) => {
+        const item = event.target.closest('[data-solo-item-index]');
+        if (event.button !== 0 || !item) return;
+        fastDrag = { item, startX: event.clientX, startY: event.clientY, pointerId: event.pointerId, dragging: false };
+        item.setPointerCapture?.(event.pointerId);
+      });
+      dropzone.addEventListener('pointermove', (event) => {
+        if (!fastDrag || fastDrag.pointerId !== event.pointerId) return;
+        if (!fastDrag.dragging && Math.hypot(event.clientX - fastDrag.startX, event.clientY - fastDrag.startY) > 7) {
+          fastDrag.dragging = true;
+          fastDrag.item.classList.add('is-dragging');
+          document.body.classList.add('wiki-solo-card-dragging');
+        }
+        if (!fastDrag.dragging) return;
+        event.preventDefault();
+        dropzone.querySelectorAll('.is-drop-before').forEach((entry) => entry.classList.remove('is-drop-before'));
+        const target = [...dropzone.querySelectorAll('[data-solo-item-index]')].find((entry) => entry !== fastDrag.item && event.clientX < entry.getBoundingClientRect().left + entry.getBoundingClientRect().width / 2);
+        target?.classList.add('is-drop-before');
+      });
+      dropzone.addEventListener('pointerup', (event) => {
+        if (!fastDrag || fastDrag.pointerId !== event.pointerId) return;
+        const drag = fastDrag;
+        fastDrag = null;
+        drag.item.classList.remove('is-dragging');
+        dropzone.querySelectorAll('.is-drop-before').forEach((entry) => entry.classList.remove('is-drop-before'));
+        document.body.classList.remove('wiki-solo-card-dragging');
+        if (!drag.dragging) return;
+        event.preventDefault();
+        const index = Number(drag.item.dataset.soloItemIndex);
+        const rect = dropzone.getBoundingClientRect();
+        if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) removeSoloComboItemAt(name, index);
+        else moveSoloComboItem(name, index, soloComboInsertionIndex(dropzone, event.clientX, drag.item));
+      });
+      dropzone.dataset.soloInlineFastBound = 'true';
+    }
+    window.lucide?.createIcons();
+    return true;
   }
 
   function canEditWiki() {
@@ -8141,11 +9211,12 @@
     }
     if (!isWikiAccountAuthenticated() || state.wikiState.get(name)?.editable !== true) return;
     const formId = formStorageId(name, currentFormId(name));
+    const editorProfile = wikiEditorProfile();
     state.wikiSaveStatus = 'saving';
     try {
       const response = await fetch(`/api/community/wiki/${encodeURIComponent(name)}`, {
         method: 'PUT', credentials: 'include', headers: wikiAuthHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ formId, model })
+        body: JSON.stringify({ formId, model, editorName: editorProfile.name, editorAvatar: editorProfile.avatar, editorHomepage: editorProfile.homepage })
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -8196,6 +9267,463 @@
     try { localStorage.setItem(EDITOR_STORAGE_KEY, JSON.stringify(state.editorStore)); } catch {}
   }
 
+  function soloCombosFor(name) {
+    return state.soloCombosByCharacter.get(name) || [];
+  }
+
+  function readPreviewSoloComboStore() {
+    if (!isLocalWikiPreview()) return {};
+    try {
+      const value = JSON.parse(localStorage.getItem(SOLO_COMBO_PREVIEW_STORAGE_KEY) || '{}');
+      return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    } catch { return {}; }
+  }
+
+  function persistPreviewSoloCombo(name, combos) {
+    if (!isLocalWikiPreview()) return;
+    try {
+      const store = readPreviewSoloComboStore();
+      store[name] = Array.isArray(combos) ? combos.slice(-100) : [];
+      localStorage.setItem(SOLO_COMBO_PREVIEW_STORAGE_KEY, JSON.stringify(store));
+    } catch {}
+  }
+
+  function persistSoloCombo(name, combo) {
+    const current = [...(state.soloCombosByCharacter.get(name) || [])];
+    const index = current.findIndex((item) => item?.id === combo.id);
+    if (index >= 0) current[index] = combo; else current.push(combo);
+    const next = current.slice(-100);
+    state.soloCombosByCharacter.set(name, next);
+    persistPreviewSoloCombo(name, next);
+  }
+
+  function readSlangStore() {
+    try {
+      const value = JSON.parse(localStorage.getItem(SLANG_STORAGE_KEY) || '{}');
+      return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    } catch { return {}; }
+  }
+
+  function slangStageNumber(value) {
+    const text = clean(value);
+    const match = /(?:第\s*)?([1-9]|一|二|三|四|五|六|七|八|九|十)\s*(?:段|stage)/iu.exec(text);
+    if (!match) return 0;
+    const digit = match[1];
+    const words = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+    return Number(words[digit] || digit) || 0;
+  }
+
+  function slangInputKinds(node) {
+    const values = [
+      ...(Array.isArray(node?.input) ? node.input : [node?.input]),
+      ...(Array.isArray(node?.inputRoutes) ? node.inputRoutes.map((route) => route?.input) : [])
+    ].filter(Boolean);
+    return [...new Set(values.map((value) => inputFieldKind(value)).filter(Boolean))];
+  }
+
+  function defaultSlangForCharacter(name) {
+    const model = currentModel(name);
+    const nodes = Array.isArray(model?.nodes) ? model.nodes : [];
+    if (!nodes.length) return {};
+    const forms = specialFormsFor(name);
+    const secondFormId = forms.length > 1 ? String(forms[1]?.id || '') : '';
+    const skillIndexes = new Map();
+    let skillIndex = 0;
+    nodes.forEach((node) => {
+      if (node?.category === 'skill') skillIndexes.set(node.id, ++skillIndex);
+    });
+    const basicIndexes = new Map();
+    const basicCounters = new Map();
+    const aerialIndexes = new Map();
+    const aerialGroups = new Map();
+    const aerialGroupCounters = new Map();
+    nodes.forEach((node) => {
+      if (node?.category !== 'normal') return;
+      const nodeForm = String(node.formId || '');
+      const counterKey = nodeForm || 'shared';
+      const stage = slangStageNumber(`${node.title || ''} ${node.sourceTitle || ''}`);
+      const index = stage || ((basicCounters.set(counterKey, (basicCounters.get(counterKey) || 0) + 1), basicCounters.get(counterKey)));
+      basicIndexes.set(node.id, index);
+    });
+    nodes.forEach((node) => {
+      const actionTitle = clean(`${node?.title || ''} ${node?.sourceTitle || ''}`);
+      const isAerialTitle = /(?:空中攻击|下落攻击|空中重击|aerial\s*attack|plunging\s*attack)/iu.test(actionTitle);
+      const isPlunging = /(?:空中下落攻击|下落攻击|空中重击|aerial\s*plunging|plunging\s*attack)/iu.test(clean([actionTitle, node?.raw, node?.inputCondition, ...(node?.prerequisites || []), ...(node?.effects || []), ...(node?.notes || [])].join(' ')));
+      if (!isAerialTitle || isPlunging) return;
+      const groupKey = String(node?.formId || 'shared');
+      const group = aerialGroups.get(groupKey) || [];
+      group.push({ node, stage: slangStageNumber(actionTitle) });
+      aerialGroups.set(groupKey, group);
+    });
+    aerialGroups.forEach((group) => {
+      const isMultiStage = group.length > 1 || group.some((entry) => entry.stage > 0);
+      if (!isMultiStage) return;
+      group.forEach(({ node, stage }) => {
+        const key = String(node?.formId || 'shared');
+        const index = stage || ((aerialGroupCounters.set(key, (aerialGroupCounters.get(key) || 0) + 1), aerialGroupCounters.get(key)));
+        aerialIndexes.set(node.id, index);
+      });
+    });
+    const aliases = {};
+    let variationIndex = 0;
+    nodes.forEach((node) => {
+      if (!node?.id) return;
+      const actionTitle = clean(`${node.title || ''} ${node.sourceTitle || ''}`);
+      const title = clean(`${actionTitle} ${node.inputCondition || ''} ${(node.prerequisites || []).join(' ')}`);
+      const aerialText = clean([actionTitle, node.raw, node.inputCondition, ...(node.prerequisites || []), ...(node.effects || []), ...(node.notes || [])].join(' '));
+      const isAerialTitle = /(?:空中攻击|下落攻击|空中重击|aerial\s*attack|plunging\s*attack)/iu.test(actionTitle);
+      const isPlunging = isAerialTitle && /(?:空中下落攻击|下落攻击|空中重击|aerial\s*plunging|plunging\s*attack)/iu.test(aerialText);
+      const kinds = slangInputKinds(node);
+      const hold = kinds.some((kind) => /Hold$/u.test(kind)) || /(?:长按|按住|蓄力|持续攻击|hold|keep\s+holding|長押し|길게\s*누르)/iu.test(title);
+      const isSecondForm = Boolean(secondFormId && String(node.formId || '') === secondFormId);
+      const prefix = isSecondForm ? 'A' : 'a';
+      let alias = '';
+      if (/(?:谐度破坏|协度破坏|tune\s*break|special\s*trigger)/iu.test(title) || kinds.includes('special')) alias = '处决';
+      else if (/(?:闪避反击|闪避|dodge|回避)/iu.test(title) || kinds.some((kind) => kind.startsWith('dodge'))) alias = '闪';
+      else if (/(?:跳跃|jump|ジャンプ|점프)/iu.test(title) || kinds.some((kind) => kind.startsWith('jump'))) alias = '跳';
+      else if (isAerialTitle) alias = isPlunging ? '下落a' : aerialIndexes.has(node.id) ? `空a${aerialIndexes.get(node.id)}` : '空a1';
+      else if (/(?:变奏技能|变奏|intro|switch\s*in)/iu.test(actionTitle)) alias = variationIndex++ === 0 ? '变奏' : '强化变奏';
+      else if (/(?:延奏技能|延奏|outro)/iu.test(actionTitle)) alias = '延奏';
+      else if (node.category === 'normal') alias = `${prefix}${basicIndexes.get(node.id) || 1}`;
+      else if (node.category === 'heavy' || kinds.includes('heavy')) alias = isSecondForm ? 'Z' : 'z';
+      else if (node.category === 'skill' || kinds.some((kind) => kind === 'skill' || kind === 'skillHold')) alias = `${isSecondForm ? 'E' : 'e'}${skillIndexes.get(node.id) || 1}`;
+      else if (node.category === 'liberation' || kinds.some((kind) => kind === 'liberation' || kind === 'liberationHold')) alias = 'r';
+      else if (kinds.includes('switch')) alias = '切';
+      else if (kinds.includes('echo') || kinds.includes('echoHold')) alias = isSecondForm ? 'R' : 'r';
+      else if (kinds.includes('tool') || kinds.includes('toolHold')) alias = '工具';
+      const authoredAlias = clean(node.slang).slice(0, 80);
+      if (!alias && !authoredAlias) return;
+      if (hold && alias && !['z', 'Z', '闪', '跳', '处决'].includes(alias)) alias = `长${alias}`;
+      const resolvedAlias = authoredAlias || alias;
+      aliases[node.id] = resolvedAlias;
+      if (node.title) aliases[node.title] = resolvedAlias;
+    });
+    return aliases;
+  }
+
+  function slangForCharacter(name) {
+    const store = readSlangStore();
+    const preset = defaultSlangForCharacter(name);
+    const custom = store[name] && typeof store[name] === 'object' ? store[name] : {};
+    // Node-level values saved through the editor are authoritative. Keep the
+    // legacy local map only as a compatibility fallback for older previews.
+    const authored = {};
+    (currentModel(name)?.nodes || []).forEach((node) => {
+      const value = clean(node?.slang).slice(0, 80);
+      if (!value || !node?.id) return;
+      authored[node.id] = value;
+      if (node.title) authored[node.title] = value;
+    });
+    return { ...preset, ...custom, ...authored };
+  }
+
+  function soloComboNodeSnapshot(name, nodeId) {
+    const node = currentModel(name)?.nodes?.find((item) => item.id === nodeId);
+    if (!node) return null;
+    return { nodeId: node.id, title: node.title, category: node.category, iconAction: node.iconAction || '' };
+  }
+
+  function bindSoloPanelInteractions() {
+    const panel = WIKI_ROOT.querySelector('.community-wiki-solo-floating.is-editing .community-wiki-solo-panel');
+    if (!panel) return;
+    const dragHandle = panel.querySelector('[data-solo-panel-drag]');
+    const resizeHandle = panel.querySelector('[data-solo-panel-resize]');
+    if (!dragHandle || !resizeHandle) return;
+    let interaction = null;
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max));
+    const viewportSize = () => ({
+      width: Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0),
+      height: Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0)
+    });
+    const writeRect = (rect) => {
+      panel.style.left = `${rect.x}px`;
+      panel.style.top = `${rect.y}px`;
+      panel.style.right = 'auto';
+      panel.style.bottom = 'auto';
+      panel.style.width = `${rect.width}px`;
+      panel.style.height = `${rect.height}px`;
+    };
+    const readRect = () => {
+      const rect = panel.getBoundingClientRect();
+      return { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
+    };
+    const finish = (event) => {
+      if (!interaction || (event?.pointerId != null && event.pointerId !== interaction.pointerId)) return;
+      const current = readRect();
+      const viewport = viewportSize();
+      state.soloComboPanelRect = {
+        x: clamp(current.x, 8, Math.max(8, viewport.width - current.width - 8)),
+        y: clamp(current.y, 8, Math.max(8, viewport.height - current.height - 8)),
+        width: current.width,
+        height: current.height
+      };
+      interaction = null;
+      window.removeEventListener('pointermove', move, true);
+      window.removeEventListener('pointerup', finish, true);
+      window.removeEventListener('pointercancel', finish, true);
+    };
+    const move = (event) => {
+      if (!interaction || event.pointerId !== interaction.pointerId) return;
+      const viewport = viewportSize();
+      if (interaction.kind === 'drag') {
+        writeRect({
+          x: clamp(interaction.x + event.clientX - interaction.startX, 8, Math.max(8, viewport.width - interaction.width - 8)),
+          y: clamp(interaction.y + event.clientY - interaction.startY, 8, Math.max(8, viewport.height - interaction.height - 8)),
+          width: interaction.width,
+          height: interaction.height
+        });
+      } else {
+        writeRect({
+          x: interaction.x,
+          y: interaction.y,
+          width: clamp(interaction.width + event.clientX - interaction.startX, 360, Math.max(360, viewport.width - interaction.x - 8)),
+          height: clamp(interaction.height + event.clientY - interaction.startY, 180, Math.max(180, viewport.height - interaction.y - 8))
+        });
+      }
+      event.preventDefault();
+    };
+    const begin = (event, kind) => {
+      if (event.button !== 0) return;
+      if (kind === 'drag' && event.target.closest('button, input, select, textarea')) return;
+      const rect = readRect();
+      interaction = { kind, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, ...rect };
+      event.preventDefault();
+      event.stopPropagation();
+      window.addEventListener('pointermove', move, true);
+      window.addEventListener('pointerup', finish, true);
+      window.addEventListener('pointercancel', finish, true);
+    };
+    dragHandle.addEventListener('pointerdown', (event) => begin(event, 'drag'));
+    resizeHandle.addEventListener('pointerdown', (event) => begin(event, 'resize'));
+  }
+
+  function beginSoloCombo(name) {
+    state.homeMenuName = name || state.homeMenuName;
+    state.soloComboOpen = true;
+    state.soloComboTab = 'solo';
+    state.soloComboEditing = false;
+    state.soloComboEditMode = 'combo';
+    state.soloComboSelection = -1;
+    state.soloComboDraft = null;
+    state.soloComboSaveConfirm = false;
+    renderCurrentWikiSurface(name);
+    void loadSoloCombos(name);
+  }
+
+  function renderCurrentWikiSurface(name = state.selected) {
+    const onHomeCharacterSurface = new URLSearchParams(location.search).get('wiki') === 'home'
+      && name && state.homeMenuName === name;
+    if (onHomeCharacterSurface) renderHome();
+    else if (name && state.selected === name) renderDetail(name);
+    else renderHome();
+  }
+
+  function startSoloComboDraft(name) {
+    state.soloComboEditing = true;
+    state.soloComboEditMode = 'combo';
+    state.soloComboSelection = -1;
+    state.soloComboHistory = [];
+    state.soloComboFuture = [];
+    state.soloComboPanelRect = null;
+    state.soloComboSaveConfirm = false;
+    state.soloComboDraft = { id: `solo-${Date.now().toString(36)}`, name: '', mode: 'combo', nodes: [], buffs: [], createdAt: Date.now(), updatedAt: Date.now() };
+    renderCurrentWikiSurface(name);
+  }
+
+  function snapshotSoloDraft() {
+    return state.soloComboDraft ? copyModel(state.soloComboDraft) : null;
+  }
+
+  function commitSoloDraft(next) {
+    const current = snapshotSoloDraft();
+    if (!current || !next) return;
+    state.soloComboHistory.push(current);
+    state.soloComboHistory = state.soloComboHistory.slice(-50);
+    state.soloComboFuture = [];
+    state.soloComboDraft = next;
+  }
+
+  function soloEditorAction(name, action) {
+    const draft = state.soloComboDraft;
+    if (!draft) return;
+    if (action === 'copy' && state.soloComboSelection >= 0) {
+      const source = state.soloComboEditMode === 'buff' ? draft.buffs?.[state.soloComboSelection] : draft.nodes?.[state.soloComboSelection];
+      state.soloComboClipboard = source ? copyModel(source) : null;
+      return;
+    }
+    if (action === 'paste' && state.soloComboClipboard) {
+      const next = copyModel(draft);
+      const source = copyModel(state.soloComboClipboard);
+      source.instanceId = `${source.nodeId || 'item'}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      if (state.soloComboEditMode === 'buff') next.buffs = [...(next.buffs || []), source]; else next.nodes = [...(next.nodes || []), source];
+      commitSoloDraft(next);
+      state.soloComboSelection = (state.soloComboEditMode === 'buff' ? next.buffs : next.nodes).length - 1;
+    } else if (action === 'cut' && state.soloComboSelection >= 0) {
+      const source = state.soloComboEditMode === 'buff' ? draft.buffs?.[state.soloComboSelection] : draft.nodes?.[state.soloComboSelection];
+      state.soloComboClipboard = source ? copyModel(source) : null;
+      const next = copyModel(draft);
+      if (state.soloComboEditMode === 'buff') next.buffs.splice(state.soloComboSelection, 1); else next.nodes.splice(state.soloComboSelection, 1);
+      commitSoloDraft(next); state.soloComboSelection = -1;
+    } else if (action === 'remove') removeSoloComboSelection(name);
+    else if (action === 'undo' && state.soloComboHistory.length) {
+      const next = state.soloComboHistory.pop(); state.soloComboFuture.push(snapshotSoloDraft()); state.soloComboDraft = next; state.soloComboSelection = -1;
+    } else if (action === 'redo' && state.soloComboFuture.length) {
+      const next = state.soloComboFuture.pop(); state.soloComboHistory.push(snapshotSoloDraft()); state.soloComboDraft = next; state.soloComboSelection = -1;
+    }
+    renderCurrentWikiSurface(name);
+  }
+
+  function closeSoloCombo(name = state.selected) {
+    state.soloComboOpen = false;
+    state.soloComboEditing = false;
+    state.soloComboDraft = null;
+    state.soloComboSelection = -1;
+    state.soloComboSaveConfirm = false;
+    renderCurrentWikiSurface(name);
+  }
+
+  async function saveSoloCombo(name, requestedName = '') {
+    const draft = state.soloComboDraft;
+    if (!draft) return;
+    const combo = { ...draft, mode: 'combo', buffs: [], name: String(requestedName || draft.name || '').trim() || `未命名连段 ${new Date().toLocaleDateString(locale())}`, updatedAt: Date.now() };
+    const profile = wikiEditorProfile();
+    state.soloComboSaveConfirm = false;
+    state.soloComboSaveState = 'saving';
+    renderCurrentWikiSurface(name);
+    try {
+      const response = await fetch(`/api/community/wiki/${encodeURIComponent(name)}/solo-combos`, {
+        method: 'POST', credentials: 'include', headers: wikiAuthHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ combo, editorName: profile.name, editorAvatar: profile.avatar, editorHomepage: profile.homepage })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+      persistSoloCombo(name, data.combo || combo);
+      state.soloComboDraft = data.combo || combo;
+      state.soloComboEditing = false;
+      state.soloComboSelection = -1;
+      state.soloComboSaveState = 'saved';
+    } catch (error) {
+      state.soloComboSaveState = String(error?.message || error);
+    }
+    renderCurrentWikiSurface(name);
+  }
+
+  function addSoloComboNode(name, nodeId) {
+    if (!state.soloComboDraft || !nodeId) return;
+    const snapshot = soloComboNodeSnapshot(name, nodeId);
+    if (!snapshot) return;
+    const next = copyModel(state.soloComboDraft);
+    if (state.soloComboEditMode === 'buff') {
+      if (snapshot.category !== 'buff') return;
+      next.buffs = [...(next.buffs || []), { ...snapshot, start: false, end: false, stacks: 1, instanceId: `${nodeId}-${Date.now().toString(36)}` }];
+      state.soloComboSelection = next.buffs.length - 1;
+    } else {
+      if (snapshot.category === 'buff') return;
+      next.nodes = [...(next.nodes || []), { ...snapshot, instanceId: `${nodeId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}` }];
+      state.soloComboSelection = next.nodes.length - 1;
+    }
+    next.updatedAt = Date.now();
+    commitSoloDraft(next);
+    // Adding from the graph should not rebuild the graph itself. Update the
+    // editor lane in place so a double-click feels immediate, then keep the
+    // lane's horizontal viewport pinned to the newly appended item.
+    if (!refreshSoloComboInline(name)) renderCurrentWikiSurface(name);
+    requestAnimationFrame(() => {
+      const dropzone = WIKI_ROOT.querySelector('.community-wiki-solo-inline [data-solo-dropzone]');
+      if (dropzone) dropzone.scrollLeft = dropzone.scrollWidth;
+    });
+  }
+
+  function removeSoloComboSelection(name) {
+    removeSoloComboItemAt(name, state.soloComboSelection);
+  }
+
+  function soloComboInsertionIndex(dropzone, clientX, source = null) {
+    if (!dropzone) return 0;
+    let index = 0;
+    for (const item of dropzone.querySelectorAll('.community-wiki-solo-item[data-solo-item-index]')) {
+      if (item === source) continue;
+      const rect = item.getBoundingClientRect();
+      if (clientX < rect.left + rect.width / 2) return index;
+      index += 1;
+    }
+    return index;
+  }
+
+  function soloComboDraftItems(draft = state.soloComboDraft) {
+    if (!draft) return [];
+    return state.soloComboEditMode === 'buff' ? (draft.buffs || []) : (draft.nodes || []);
+  }
+
+  function moveSoloComboItem(name, fromIndex, targetIndex) {
+    const draft = state.soloComboDraft;
+    const items = soloComboDraftItems(draft);
+    if (!draft || fromIndex < 0 || fromIndex >= items.length || targetIndex < 0) return;
+    const next = copyModel(draft);
+    const key = state.soloComboEditMode === 'buff' ? 'buffs' : 'nodes';
+    const reordered = [...(next[key] || [])];
+    const [item] = reordered.splice(fromIndex, 1);
+    const insertAt = Math.min(targetIndex, reordered.length);
+    reordered.splice(insertAt, 0, item);
+    next[key] = reordered;
+    next.updatedAt = Date.now();
+    commitSoloDraft(next);
+    state.soloComboSelection = insertAt;
+    renderCurrentWikiSurface(name);
+    requestAnimationFrame(() => {
+      const selected = WIKI_ROOT.querySelector(`[data-solo-item-index="${insertAt}"]`);
+      selected?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+  }
+
+  function removeSoloComboItemAt(name, index) {
+    const draft = state.soloComboDraft;
+    const items = soloComboDraftItems(draft);
+    if (!draft || index < 0 || index >= items.length) return;
+    const next = copyModel(draft);
+    const key = state.soloComboEditMode === 'buff' ? 'buffs' : 'nodes';
+    next[key] = (next[key] || []).filter((_, itemIndex) => itemIndex !== index);
+    next.updatedAt = Date.now();
+    commitSoloDraft(next);
+    state.soloComboSelection = -1;
+    renderCurrentWikiSurface(name);
+  }
+
+  async function loadSoloCommunityCombos(name) {
+    if (state.soloComboCommunityLoading || state.soloComboCommunityLoaded) return;
+    state.soloComboCommunityLoading = true;
+    try {
+      const requestedSource = new URLSearchParams(location.search).get('source')?.trim();
+      const source = requestedSource && !/(^|\/)demo-index\.json(?:$|\?)/iu.test(requestedSource) ? requestedSource : './community-index.json';
+      const response = await fetch(source, { cache: 'no-store' });
+      const data = response.ok ? await response.json() : {};
+      state.soloComboCommunity = Array.isArray(data.charts) ? data.charts : [];
+    } catch { state.soloComboCommunity = []; }
+    state.soloComboCommunityLoading = false;
+    state.soloComboCommunityLoaded = true;
+    renderCurrentWikiSurface(name);
+  }
+
+  async function loadSoloCombos(name, force = false) {
+    if (!name || (!force && state.soloComboLoadState.get(name) === 'ready')) return;
+    state.soloComboLoadState.set(name, 'loading');
+    try {
+      const response = await fetch(`/api/community/wiki/${encodeURIComponent(name)}/solo-combos`, { cache: 'no-store', credentials: 'include', headers: wikiAuthHeaders() });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      const serverCombos = Array.isArray(data.combos) ? data.combos : [];
+      const localCombos = readPreviewSoloComboStore()[name];
+      const merged = [...serverCombos, ...(Array.isArray(localCombos) ? localCombos : [])];
+      const unique = merged.filter((combo, index, all) => combo?.id && all.findIndex((item) => item?.id === combo.id) === index);
+      state.soloCombosByCharacter.set(name, unique.slice(-100));
+      state.soloComboLoadState.set(name, 'ready');
+    } catch {
+      state.soloCombosByCharacter.set(name, []);
+      state.soloComboLoadState.set(name, 'error');
+    }
+    renderCurrentWikiSurface(name);
+  }
+
   function copyModel(model) {
     return JSON.parse(JSON.stringify(model));
   }
@@ -8212,7 +9740,8 @@
     if (/延奏|outro/iu.test(text)) return 'outro';
     if (/变奏|出场|intro|switch\s*in/iu.test(text)) return 'intro';
     if (/解放|resonance\s*liberation|ultimate/iu.test(text)) return hold ? 'liberation_hold' : 'liberation';
-    if (/闪避|跳跃|dodge|jump/iu.test(text)) return 'dodge';
+    if (/跳跃|jump/iu.test(text)) return hold ? 'jump_hold' : 'jump';
+    if (/闪避|dodge/iu.test(text)) return hold ? 'dodge_hold' : 'dodge';
     if (hold && /普攻|basic\s*attack|normal\s*attack/iu.test(text)) return 'heavy_attack';
     if (/重击|heavy\s*attack/iu.test(text)) return 'heavy_attack';
     if (/短按普攻|连续短按普攻|普攻|常态攻击|普通攻击|basic\s*attack|normal\s*attack/iu.test(text)) return 'basic_attack';
@@ -8419,8 +9948,8 @@
       // snapshots. Resolve them explicitly so stale snapshots cannot put
       // Lion Dance actions or Lionheart back into the Normal route.
       if ((/^lingyang-lion(?:-|$)/.test(id) && id !== 'lingyang-lion-frenzy') || /^lingyang-(?:chain-kicks|training)$/.test(id)) return 'lion';
-      if (/^lingyang-(?:entry-boost$|spirit$|aerial$|qishi$|dodge$|skill$|fierce-leap$|liberation$|intro$|harmonic$|outro$)/.test(id)) return 'shared';
-      if (/^lingyang-(?:basic-\d+$|collapse$|heavy$|normal-aerial$)/.test(id)) return 'normal';
+      if (/^lingyang-(?:entry-boost$|spirit$|aerial$|qishi$|skill$|fierce-leap$|liberation$|intro$|harmonic$|outro$)/.test(id)) return 'shared';
+      if (/^lingyang-(?:basic-\d+$|collapse$|heavy$|normal-aerial$|dodge$)/.test(id)) return 'normal';
       if (/行狮|狂态|飞身式|凌云式|狮子奋迅/.test(text)) return /狮子奋迅/.test(text) ? 'shared' : 'lion';
       return sharedCharacter ? 'shared' : '';
     }
@@ -8565,18 +10094,66 @@
     // paragraph instead of giving them their own title. Add those actions to
     // the same shared canvas so persistent dual-form characters do not lose
     // the actual buttons that users need to press.
-    const appendSupplement = ({ id, title, category, input, formId = 'shared', prerequisites = [], effects = [], summary = '' }) => {
+    const appendSupplement = ({ id, title, category, input, formId = 'shared', prerequisites = [], effects = [], summary = '', sourceTitle = title, raw = '' }) => {
       const existing = nodes.find((node) => node.title === title);
       if (existing) return existing;
       const node = {
         id, title, category, tone: category === 'heavy' || category === 'liberation' ? 'result' : category === 'buff' ? 'buff' : 'input',
         input: input ? [input] : [], prerequisites, effects, notes: [], summary: summary || effects[0] || '',
-        raw: '', sourceTitle: title, rawIndexes: [], iconAction: '', formId, formManual: true, categoryManual: true
+        raw, sourceTitle, rawIndexes: [], iconAction: '', formId, formManual: true, categoryManual: true
       };
       node.iconAction = iconActionForNode(node);
       nodes.push(node);
       return node;
     };
+    // Cartethyia's API describes each Basic Attack route as one paragraph
+    // (“up to 4/5 consecutive attacks”), so the generic heading splitter has
+    // no stage titles to build from. Keep the two form routes explicit here:
+    // each stage is a real node with its own form ownership and edge, while
+    // the old aggregate heading is removed from the graph. Automatic series
+    // folding is disabled for these nodes because the user needs to inspect
+    // every attack stage directly.
+    const manualStageSeries = [];
+    if (name === '卡提希娅') {
+      const removeAggregate = (title) => {
+        for (let index = nodes.length - 1; index >= 0; index -= 1) {
+          if (nodes[index].title === title) nodes.splice(index, 1);
+        }
+      };
+      const addBasicStages = ({ prefix, formId: routeForm, displayName, count, aggregateTitle, formLabel }) => {
+        removeAggregate(aggregateTitle);
+        const ids = [];
+        for (let stage = 1; stage <= count; stage += 1) {
+          const titleZh = `${aggregateTitle}第${stage}段`;
+          const titleEn = `Basic Attack: ${displayName} ${stage}`;
+          const previousZh = `${aggregateTitle}第${stage - 1}段`;
+          const isLast = stage === count;
+          const effectsZh = isLast
+            ? `${formLabel}第${stage}段攻击，造成气动伤害；${displayName === '卡提希娅' ? '命中后附加1层风蚀效应并召唤神权剑之影' : '命中目标时获得决意'}`
+            : `${formLabel}第${stage}段攻击，造成气动伤害${displayName === '芙露德莉斯' ? '；命中目标时获得决意' : ''}`;
+          const effectsEn = isLast
+            ? `${displayName} Basic Attack stage ${stage} deals Aero damage; ${displayName === '卡提希娅' ? 'on hit, apply one stack of Windborne and summon a Divine Sword Shadow' : 'on hit, gain Resolve'}`
+            : `${displayName} Basic Attack stage ${stage} deals Aero damage${displayName === '芙露德莉斯' ? '; on hit, gain Resolve' : ''}`;
+          const node = appendSupplement({
+            id: `${prefix}-basic-${stage}`,
+            title: uiText(titleZh, titleEn),
+            category: 'normal',
+            input: uiText('短按普攻', 'Tap Basic Attack'),
+            formId: routeForm,
+            prerequisites: [uiText(
+              stage === 1 ? `处于${formLabel}形态；${aggregateTitle}已拆分为分段路线` : previousZh,
+              stage === 1 ? `In ${displayName} form; ${aggregateTitle} is represented as a staged route` : `After ${titleEn.replace(String(stage), String(stage - 1))}`
+            )],
+            effects: [uiText(effectsZh, effectsEn)],
+            sourceTitle: uiText(aggregateTitle, `Basic Attack: ${displayName}`)
+          });
+          ids.push(node.id);
+        }
+        manualStageSeries.push({ id: `${prefix}-basic-stages`, nodeIds: ids, disabled: true });
+      };
+      addBasicStages({ prefix: 'cartethyia', formId: 'cartethyia', displayName: '卡提希娅', count: 4, aggregateTitle: '普攻·卡提希娅', formLabel: '卡提希娅' });
+      addBasicStages({ prefix: 'fludelis', formId: 'fludelis', displayName: '芙露德莉斯', count: 5, aggregateTitle: '普攻·芙露德莉斯', formLabel: '芙露德莉斯' });
+    }
     if (name === '椿') {
       appendSupplement({ id: 'camellia-bloom-basic', title: '普攻·蔓舞', category: 'normal', input: uiText('短按普攻', 'Tap Basic Attack'), formId: 'bloom', prerequisites: [uiText('处于盛绽状态', 'Bloom State is active')], effects: [uiText('进行最多4段连续攻击；伤害视为普攻伤害', 'Perform up to 4 consecutive attacks; treated as Basic Attack damage')] });
       appendSupplement({ id: 'camellia-bloom-ember', title: '普攻·烬华蔓舞', category: 'normal', input: uiText('盛绽状态下第3段普攻时长按普攻', 'Hold Basic Attack during Bloom after stage 3'), formId: 'bloom', prerequisites: [uiText('普攻·蔓舞第3段', 'Bloom Basic Attack 3')], effects: [uiText('自动施放第4段蔓舞', 'Automatically perform Bloom Basic Attack 4')] });
@@ -8639,6 +10216,9 @@
     const edges = [];
     const addEdge = (from, to, kind = 'derivation') => { if (from && to && from !== to && !edges.some((edge) => edge.from === from && edge.to === to)) edges.push({ from, to, kind }); };
     const byId = new Map(nodes.map((node) => [node.id, node]));
+    manualStageSeries.forEach((series) => {
+      for (let index = 1; index < series.nodeIds.length; index += 1) addEdge(series.nodeIds[index - 1], series.nodeIds[index]);
+    });
     for (let i = 1; i < skillSegments.length; i += 1) {
       const previous = skillSegments[i - 1], current = skillSegments[i];
       if (previous.index !== current.index || previous.segment + 1 !== current.segment) continue;
@@ -8693,7 +10273,14 @@
       addEdge('api:4:1', 'qiushui-mist-drop', 'buff');
       addEdge('qiushui-mist-drop', 'api:1:1', 'buff');
     }
-    return prepareFormModel(name, { version: 4, character: name, nodes, edges, positions: {} }, formId);
+    return prepareFormModel(name, {
+      version: name === '卡提希娅' ? 5 : 4,
+      character: name,
+      nodes,
+      edges,
+      positions: {},
+      seriesGroups: manualStageSeries
+    }, formId);
   }
 
   function sharedNodeSignature(node) {
@@ -8729,6 +10316,7 @@
       return result.sort((leftChange, rightChange) => leftChange.level - rightChange.level).slice(-80);
     };
     const baseRaw = clean(base?.raw), incomingRaw = clean(incoming?.raw);
+    const slang = Object.prototype.hasOwnProperty.call(incoming || {}, 'slang') ? clean(incoming?.slang).slice(0, 80) : clean(base?.slang).slice(0, 80);
     const manualCategory = incoming?.categoryManual === true || base?.categoryManual === true;
     return {
       ...base,
@@ -8769,7 +10357,8 @@
       resonanceLevel: Number.isInteger(Number(incoming?.resonanceLevel)) && Number(incoming.resonanceLevel) > 0
         ? Number(incoming.resonanceLevel)
         : Number(base?.resonanceLevel || 0),
-      resonanceChanges: mergeChanges(base?.resonanceChanges, incoming?.resonanceChanges)
+      resonanceChanges: mergeChanges(base?.resonanceChanges, incoming?.resonanceChanges),
+      slang
     };
   }
 
@@ -8857,10 +10446,48 @@
     }
     const chained = withResonanceChains(name, info, model);
     const result = sharedForms.length ? chained : prepareFormModel(name, chained, formId);
+    const withUniversalMovement = ensureUniversalMovementNodes(result);
     // Normalize hand-authored and API-backed models at the public boundary so
     // callers such as the audit tool and the editor see the same canonical
     // input vocabulary as the rendered graph.
-    return normalizeModelCategories(result);
+    return normalizeModelCategories(withUniversalMovement);
+  }
+
+  function ensureUniversalMovementNodes(model) {
+    if (!model || !Array.isArray(model.nodes)) return model;
+    const nodes = [...model.nodes];
+    const hasUniversal = (kind) => {
+      const aliases = (INPUT_FIELD_LABELS[kind] || []).map(normalizedRelationText);
+      return nodes.some((node) => node?.universalMovement === kind || aliases.includes(normalizedRelationText(node?.title)));
+    };
+    const add = (kind, zh, en) => {
+      if (hasUniversal(kind)) return;
+      const input = uiText(`短按${zh}`, `Tap ${en}`);
+      nodes.push({
+        id: `common:${kind}`,
+        title: uiText(zh, en),
+        category: 'other',
+        tone: 'branch',
+        input: [input],
+        inputRoutes: normalizeInputRoutes(null, [input]),
+        prerequisites: [],
+        effects: [],
+        notes: [],
+        summary: '',
+        sourceTitle: uiText(zh, en),
+        sourceType: 'common-movement',
+        raw: '',
+        rawIndexes: [],
+        iconAction: kind,
+        formId: 'shared',
+        universalMovement: kind,
+        categoryResolved: true,
+        inputResolved: true
+      });
+    };
+    add('jump', '跳跃', 'Jump');
+    add('dodge', '闪避', 'Dodge');
+    return nodes.length === model.nodes.length ? model : { ...model, version: Math.max(4, Number(model.version || 0)), nodes };
   }
 
   function stripPersistentAuxiliaryNodes(model) {
@@ -9048,7 +10675,8 @@
     const missingChainNodes = base.nodes.filter((node) => node?.resonanceLevel && !storedChainIds.has(node.id));
     const storedModeIds = new Set(nodes.filter((node) => node?.modeId === activeMode).map((node) => node.id));
     const missingModeNodes = base.nodes.filter((node) => node?.modeId === activeMode && !storedModeIds.has(node.id));
-    const mergedNodes = [...nodes, ...missingChainNodes, ...missingModeNodes];
+    const missingUniversalNodes = base.nodes.filter((node) => node?.universalMovement && !nodes.some((entry) => entry.id === node.id));
+    const mergedNodes = [...nodes, ...missingChainNodes, ...missingModeNodes, ...missingUniversalNodes];
     const mergedIds = new Set(mergedNodes.map((node) => node.id));
     const storedEdges = Array.isArray(stored.edges) ? stored.edges : base.edges;
     const mergedEdges = [...storedEdges, ...base.edges.filter((edge) => mergedIds.has(edge.from) && mergedIds.has(edge.to) && !storedEdges.some((item) => item.from === edge.from && item.to === edge.to))];
@@ -9146,13 +10774,6 @@
     const configured = Array.isArray(model?.seriesGroups) ? model.seriesGroups : [];
     const nodesById = new Map((model?.nodes || []).map((node) => [node.id, node]));
     const claimed = new Set(), disabledAutomatic = new Set(), customGroups = [];
-    // A multi-stage charge/replacement stack has higher display priority than
-    // the generic same-move stage fold. Otherwise a stage such as Qian Saki's
-    // charged Basic Attack is claimed by the fold first and its replacement
-    // branch becomes invisible in the graph.
-    const replacementMembers = new Set(
-      graphReplacementGroups(model).flatMap((group) => (group.members || []).map((node) => node.id))
-    );
     configured.filter((config) => config?.disabled === true).forEach((config) => {
       (Array.isArray(config.nodeIds) ? config.nodeIds : []).map(String).filter((id) => nodesById.has(id)).forEach((id) => disabledAutomatic.add(id));
     });
@@ -9170,7 +10791,7 @@
     });
     const buckets = new Map();
     (model?.nodes || []).forEach((node, order) => {
-      if (claimed.has(node.id) || disabledAutomatic.has(node.id) || replacementMembers.has(node.id)) return;
+      if (claimed.has(node.id) || disabledAutomatic.has(node.id)) return;
       const segment = graphSegmentInfo(node);
       if (!segment) return;
       const key = [node.category || 'other', node.modeId || '', Number(node.resonanceLevel || 0), segment.baseKey].join('|');
@@ -9383,6 +11004,83 @@
         sourceIds: new Set(group.sourceIds)
       });
     });
+
+    // Dodge Counter is a replacement of a Basic Attack stage, even when the
+    // API only describes the follow-up (for example, "then Basic Attack 3").
+    // Resolve that relationship here instead of treating Dodge Counter as a
+    // separate derivation node. The replaced stage is the stage immediately
+    // before the documented follow-up. Hand-authored nodes without a stage
+    // follow-up use the second Basic Attack slot as the conservative default;
+    // Calcharo's normal Dodge Counter is the known independent move.
+    const stageInfo = (value) => {
+      const text = clean(value);
+      const match = text.match(/^(.*?)(?:第\s*)?([1-9]\d*)\s*(?:段|stage)?$/iu);
+      if (!match || !/(?:普攻|常态|狂态|basic\s*attack|normal\s*attack|frenzy|moon\s*(?:ring|bow)|月(?:环|弓))/iu.test(match[1])) return null;
+      return { family: normalizedRelationText(match[1].replace(/[·・:：\s]+$/gu, '')), stage: Number(match[2]) };
+    };
+    const basicStageInfo = (node) => stageInfo(node?.title) || stageInfo(node?.sourceTitle);
+    const dodgeFollowUp = (node) => {
+      const text = clean([
+        node?.title,
+        node?.sourceTitle,
+        node?.summary,
+        ...(Array.isArray(node?.input) ? node.input : [node?.input]),
+        ...(Array.isArray(node?.prerequisites) ? node.prerequisites : [node?.prerequisites]),
+        ...(Array.isArray(node?.effects) ? node.effects : [node?.effects]),
+        ...(Array.isArray(node?.notes) ? node.notes : [node?.notes])
+      ].filter(Boolean).join('；'));
+      const matches = [...text.matchAll(/((?:普攻|普通攻击|常态攻击|basic\s*attack|normal\s*attack)(?:\s*[·・:：]\s*[^，。；;\n]{0,28})?)\s*(?:第\s*)?([1-9]\d*)\s*(?:段|stage)?/giu)]
+        .map((match) => ({ family: normalizedRelationText(match[1].replace(/[·・:：\s]+$/gu, '')), stage: Number(match[2]), index: match.index || 0 }))
+        .filter((match) => match.stage > 1 && /(?:之后|后|接|衔接|然后|then|follow|after)/iu.test(text.slice(Math.max(0, match.index - 48), match.index)));
+      return matches[0] || null;
+    };
+    const sameForm = (left, right) => {
+      const leftForm = String(left?.formId || ''), rightForm = String(right?.formId || '');
+      // Shared actions are valid in every form. This matters after the
+      // multi-form merge, where a Dodge Counter can be canonicalized as
+      // shared while its concrete Basic Attack stage stays form-specific.
+      return !leftForm || !rightForm || leftForm === 'shared' || rightForm === 'shared' || leftForm === rightForm;
+    };
+    const directFollowUp = (node) => {
+      const targets = (model?.edges || [])
+        .filter((edge) => edge?.from === node?.id && edge.kind !== 'buff' && edge.kind !== 'replacement')
+        .map((edge) => actionNodes.find((candidate) => candidate.id === edge.to))
+        .filter((candidate) => candidate?.category === 'normal')
+        .map((candidate) => ({ node: candidate, info: basicStageInfo(candidate) }))
+        .filter((entry) => entry.info)
+        .sort((left, right) => left.info.stage - right.info.stage);
+      return targets[0] || null;
+    };
+    const dodgeStageOverride = (node) => {
+      // The override stores the documented follow-up stage, which is one
+      // stage after the Basic Attack stage occupied by Dodge Counter.
+      if (model?.character === '凌阳' && node?.id === 'lingyang-dodge') return 3;
+      if (model?.character === '凌阳' && node?.id === 'lingyang-lion-dodge') return 2;
+      // Most character data only says “tap Basic Attack” for Dodge Counter.
+      // In that form, it occupies the second Basic Attack slot. Explicit
+      // follow-up prose and authored outgoing edges always take precedence.
+      return 3;
+    };
+    const authoredReplacementMemberIds = new Set([...authoredGroups.values()].flatMap((group) => group.members.map((node) => node.id)));
+    actionNodes.filter((node) => /(?:闪避反击|dodge\s*counter)/iu.test(clean(node.title)) && !authoredReplacementMemberIds.has(node.id)).forEach((dodge) => {
+      if (model?.character === '卡卡罗' && /normal-dodge/iu.test(String(dodge.id || ''))) return;
+      const followUp = dodgeFollowUp(dodge);
+      const edgeFollowUp = directFollowUp(dodge);
+      const targetStage = Math.max(1, (followUp?.stage || edgeFollowUp?.info?.stage || dodgeStageOverride(dodge)) - 1);
+      const candidates = actionNodes.filter((node) => node.category === 'normal' && node.id !== dodge.id && sameForm(node, dodge));
+      const base = candidates.find((node) => {
+        const info = basicStageInfo(node);
+        if (!info || info.stage !== targetStage) return false;
+        const family = followUp?.family || edgeFollowUp?.info?.family || '';
+        return !family || info.family === family || info.family.includes(family) || family.includes(info.family);
+      }) || candidates.find((node) => basicStageInfo(node)?.stage === targetStage);
+      if (!base) return;
+      const key = `replacement:${base.id}`;
+      const group = grouped.get(key) || { key, baseId: base.id, members: [base], sourceIds: new Set() };
+      if (!group.members.some((node) => node.id === dodge.id)) group.members.push(dodge);
+      grouped.set(key, group);
+    });
+
     pairs.forEach(({ base, replacement, sourceIds }) => {
       const key = `replacement:${base.id}`;
       const group = grouped.get(key) || { key, baseId: base.id, members: [base], sourceIds: new Set() };
@@ -9436,17 +11134,19 @@
   }
 
   function graphLayout(model, name) {
-    const nodeHeight = 50, columnGap = 18, laneHeight = 88, labelWidth = 82, leftPad = 16;
+    const nodeHeight = 50, columnGap = 18, laneHeight = 88, soloEditorLaneHeight = 88, labelWidth = 82, leftPad = 16;
     // Collapsed series members sit directly behind the master card. The master
     // card's blue offset shadow is the only stack cue, so member cards do not
     // leak visible edges into the canvas.
     const stackStepX = 0, stackStepY = 0, rightPad = 64;
     const nodes = [], positions = { ...(model.positions || {}) }, memberToVisible = new Map();
-    const groups = graphSeriesGroups(model);
+    const allSeriesGroups = graphSeriesGroups(model);
+    const replacementPreviewGroups = graphReplacementGroups(model);
+    const groups = allSeriesGroups;
     const seriesByKey = new Map(groups.map((group) => [group.key, group]));
     const seriesByNode = new Map();
     groups.forEach((group) => group.memberIds.forEach((id) => seriesByNode.set(id, group)));
-    const replacementGroups = graphReplacementGroups(model).filter((group) => group.members.every((node) => !seriesByNode.has(node.id)));
+    const replacementGroups = replacementPreviewGroups;
     const replacementByKey = new Map(replacementGroups.map((group) => [group.key, group]));
     const replacementByNode = new Map();
     replacementGroups.forEach((group) => group.members.forEach((node) => replacementByNode.set(node.id, group)));
@@ -9457,7 +11157,11 @@
       const replacementActiveId = options.replacementActiveId || '';
       const entry = { node, x, y, logicalX: x, logicalY: y, renderX, renderY, width, series: group, seriesIndex, collapsed, isMaster, replacement, replacementIndex: options.replacementIndex ?? -1, replacementActive: options.replacementActive === true };
       nodes.push(entry);
-      memberToVisible.set(node.id, replacement ? replacementActiveId : group && collapsed ? group.masterId : node.id);
+      // Once a stage series is collapsed, every replacement variant inside
+      // it must resolve to the visible series master. Otherwise its hidden
+      // card remains an SVG endpoint and a line can leak out from behind the
+      // collected card.
+      memberToVisible.set(node.id, group && collapsed ? group.masterId : replacement ? replacementActiveId : node.id);
       maxRight = Math.max(maxRight, renderX + width);
       const stackOffsetY = group && collapsed ? Math.min(seriesIndex, Math.max(0, group.members.length - 1)) * stackStepY : 0;
       maxBottom = Math.max(maxBottom, renderY + nodeHeight + stackOffsetY + (replacement ? 10 : 0));
@@ -9468,19 +11172,26 @@
       // Form variants share one horizontal lane. The form switch controls
       // availability and styling; it does not create an extra row.
       const laneTop = laneCursor;
-      laneLayouts.push({ category, top: laneTop, height: laneHeight });
+      const currentLaneHeight = state.soloComboOpen && state.soloComboEditing && category === 'buff' ? soloEditorLaneHeight : laneHeight;
+      laneLayouts.push({ category, top: laneTop, height: currentLaneHeight });
       let cursorX = labelWidth + leftPad;
       const items = [], addedGroups = new Set(), addedReplacementGroups = new Set();
       laneNodes.forEach((node) => {
+        const group = seriesByNode.get(node.id);
+        if (group) {
+          if (!addedGroups.has(group.key)) { items.push({ group }); addedGroups.add(group.key); }
+          return;
+        }
         const replacementGroup = replacementByNode.get(node.id);
+        // A replacement group whose base is part of a stage series is
+        // rendered at that stage by the series item. Do not append it again at
+        // the position where the replacement node happens to occur in data.
+        if (replacementGroup && seriesByNode.has(replacementGroup.baseId)) return;
         if (replacementGroup) {
           if (!addedReplacementGroups.has(replacementGroup.key)) { items.push({ replacementGroup }); addedReplacementGroups.add(replacementGroup.key); }
           return;
         }
-        const group = seriesByNode.get(node.id);
-        if (group) {
-          if (!addedGroups.has(group.key)) { items.push({ group }); addedGroups.add(group.key); }
-        } else items.push({ node });
+        items.push({ node });
       });
       items.forEach((item) => {
         if (item.replacementGroup) {
@@ -9503,7 +11214,7 @@
             addEntry(member, memberSaved?.x ?? anchorX, memberSaved?.y ?? anchorY, groupWidth, null, replacementIndex, !isActive, renderX, renderY, isActive, { replacementGroup: group, replacementIndex, replacementActive: isActive, replacementActiveId: activeMember.id });
           });
           cursorX = anchorX + groupWidth + 15 + columnGap;
-          maxBottom = Math.max(maxBottom, laneTop + laneHeight + 10);
+          maxBottom = Math.max(maxBottom, laneTop + currentLaneHeight + 10);
           return;
         }
         if (!item.group) {
@@ -9525,8 +11236,26 @@
             const node = member.node, width = graphNodeWidth(node, name), saved = graphPoint(positions[node.id]);
             const relativeSavedX = masterSaved && saved ? Math.max(0, saved.x - masterSaved.x) : 0;
             const x = seriesIndex === 0 ? anchorX : Math.max(memberCursor, anchorX + relativeSavedX);
-            addEntry(node, x, anchorY, width, group, seriesIndex, false, x, anchorY, seriesIndex === 0);
-            memberCursor = x + width + columnGap;
+            const replacementGroup = replacementByNode.get(node.id);
+            if (!replacementGroup) {
+              addEntry(node, x, anchorY, width, group, seriesIndex, false, x, anchorY, seriesIndex === 0);
+              memberCursor = x + width + columnGap;
+              return;
+            }
+            const activeIndex = graphReplacementActiveIndex(replacementGroup);
+            const replacementWidth = Math.max(...replacementGroup.members.map((replacementNode) => graphNodeWidth(replacementNode, name)));
+            replacementGroup.members.forEach((replacementNode, replacementIndex) => {
+              const replacementSaved = graphPoint(positions[replacementNode.id]);
+              const isActive = replacementIndex === activeIndex;
+              const replacementX = isActive ? x : x + 15;
+              addEntry(replacementNode, replacementSaved?.x ?? x, replacementSaved?.y ?? anchorY, replacementWidth, group, seriesIndex, false, replacementX, anchorY, seriesIndex === 0 && isActive, {
+                replacementGroup,
+                replacementIndex,
+                replacementActive: isActive,
+                replacementActiveId: replacementGroup.members[activeIndex]?.id || replacementNode.id
+              });
+            });
+            memberCursor = x + replacementWidth + 15 + columnGap;
           });
           cursorX = memberCursor;
         } else {
@@ -9543,14 +11272,30 @@
             const offsetX = Math.min(seriesIndex, stackDepth) * stackStepX;
             const offsetY = Math.min(seriesIndex, stackDepth) * stackStepY;
             const renderX = anchorX + offsetX, renderY = anchorY + offsetY;
-            addEntry(node, logicalX, logicalY, width, group, seriesIndex, true, renderX, renderY, seriesIndex === 0);
-            occupiedRight = Math.max(occupiedRight, renderX + width);
+            const replacementGroup = replacementByNode.get(node.id);
+            if (!replacementGroup) {
+              addEntry(node, logicalX, logicalY, width, group, seriesIndex, true, renderX, renderY, seriesIndex === 0);
+              occupiedRight = Math.max(occupiedRight, renderX + width);
+              return;
+            }
+            const activeIndex = graphReplacementActiveIndex(replacementGroup);
+            replacementGroup.members.forEach((replacementNode, replacementIndex) => {
+              const replacementSaved = graphPoint(positions[replacementNode.id]);
+              const isActive = replacementIndex === activeIndex;
+              addEntry(replacementNode, replacementSaved?.x ?? logicalX, replacementSaved?.y ?? logicalY, width, group, seriesIndex, true, renderX + (isActive ? 0 : 15), renderY, seriesIndex === 0 && isActive, {
+                replacementGroup,
+                replacementIndex,
+                replacementActive: isActive,
+                replacementActiveId: replacementGroup.members[activeIndex]?.id || replacementNode.id
+              });
+            });
+            occupiedRight = Math.max(occupiedRight, renderX + width + 15);
           });
           cursorX = occupiedRight + columnGap;
         }
-        maxBottom = Math.max(maxBottom, laneTop + laneHeight);
+        maxBottom = Math.max(maxBottom, laneTop + currentLaneHeight);
       });
-      laneCursor += laneHeight;
+      laneCursor += currentLaneHeight;
     });
     maxBottom = Math.max(maxBottom, laneCursor);
     return {
@@ -9573,7 +11318,7 @@
 
   function graphNodeIcon(name, node) {
     const source = tideIconSource(name, node);
-    return source ? `<img class="community-wiki-graph-node-tide" src="${esc(source)}" alt="" loading="lazy" onerror="this.remove();this.nextElementSibling.style.opacity='1'"><span class="community-wiki-graph-node-fallback">${nodeIcon(node.category)}</span>` : nodeIcon(node.category);
+    return source ? `<img class="community-wiki-graph-node-tide" src="${esc(source)}" alt="" loading="eager" onerror="this.remove();this.nextElementSibling.style.opacity='1'"><span class="community-wiki-graph-node-fallback">${nodeIcon(node.category)}</span>` : nodeIcon(node.category);
   }
 
   function inputRouteKey(name, node) {
@@ -9652,7 +11397,6 @@
 
   function inputRoutesForNode(node, name = state.selected) {
     const routes = normalizeInputRoutes(node?.inputRoutes, node?.input);
-    if (!REVIEWED_WIKI_CHARACTERS.has(name)) return routes.length > 1 ? routes : [];
     const grouped = groupedInputRoutes(routes);
     return grouped.length > 1 ? grouped : [];
   }
@@ -10266,7 +12010,12 @@
     const chainLevel = Number(node.resonanceLevel || 0);
     const resonanceModified = !node.resonance && Array.isArray(node.resonanceChanges) && node.resonanceChanges.length > 0;
     const seriesCountLabel = series ? format(t('seriesCount'), series.memberIds.length) : '';
+    const slang = slangForCharacter(name);
+    const slangTitle = slang[node.id] || slang[node.title] || '';
     const displayTitle = series && collapsed && isMaster ? series.baseTitle : node.title;
+    const displaySlang = series && collapsed && isMaster
+      ? [...new Set(series.members.map((member) => slang[member.node.id] || slang[member.node.title]).filter(Boolean))].join(' / ')
+      : slangTitle;
     const seriesLabel = series ? `${series.baseTitle} · ${seriesCountLabel}` : node.title;
     const classes = [
       'community-wiki-graph-node',
@@ -10311,7 +12060,13 @@
         `<span class="community-wiki-graph-port community-wiki-graph-port-${side} community-wiki-graph-port-edge-top" aria-hidden="true"></span>`,
         `<span class="community-wiki-graph-port community-wiki-graph-port-${side} community-wiki-graph-port-edge-bottom" aria-hidden="true"></span>`
       ].join('')).join('');
-      return `<button class="${classes}" type="button" data-wiki-node="${esc(node.id)}" data-wiki-node-form="${esc(node.formId || 'shared')}" data-wiki-form-disabled="${formDisabled ? 'true' : 'false'}" data-node-x="${renderX}" data-node-y="${renderY}" data-node-logical-x="${x}" data-node-logical-y="${y}"${seriesAttrs}${replacementAttrs}${hiddenStackAttrs} aria-disabled="${formDisabled ? 'true' : 'false'}" aria-label="${esc(title)}${replacementLabel}" title="${esc(title)}" style="--wiki-element:${esc(elementColor)};--wiki-form-accent:${esc(nodeFormAccent)};--wiki-node-width:${width}px;--wiki-node-scale:${contentZoom};--wiki-input-stack-space:${inputStackSpace}px;--wiki-series-index:${seriesIndex};z-index:${replacement ? (replacementActive ? 24 : 18) : stackZ};transform:translate(${renderX}px,${renderY}px) scale(var(--wiki-node-scale, 1))">${portMarkup}<span class="community-wiki-graph-node-icon">${routes.length > 1 ? routeIcons : graphNodeIcon(name, node)}</span><span class="community-wiki-graph-node-copy"><strong>${transitionLabel}${airborne}${esc(displayTitle)}</strong></span>${node.resonance ? `<i class="community-wiki-graph-node-chain">C${chainLevel}</i>` : node.effects?.length ? '<i class="community-wiki-graph-node-mark">◆</i>' : ''}${resonanceModified ? `<i class="community-wiki-graph-node-resonance-mark" data-lucide="git-branch" aria-label="${esc(t('resonanceChanges'))}" title="${esc(t('resonanceChanges'))}"></i>` : ''}${node.rawIndexes?.length > 1 ? `<em>${node.rawIndexes.length}</em>` : ''}${series && collapsed && isMaster ? `<span class="community-wiki-graph-series-indicator" aria-hidden="true">${esc(series.memberIds.length)}</span>` : ''}${replacementToggle}${state.editing && canEditWiki() ? '<i class="community-wiki-graph-node-grip" data-lucide="move"></i>' : ''}</button>`;
+      // Pointer drag is deliberately used instead of native HTML dragging:
+      // native dragend can fire after a rerender and commit the same source
+      // node a second time.
+      const soloDragAttr = '';
+      const soloSourceAttr = state.soloComboOpen && state.soloComboEditing ? ' data-solo-source="true"' : '';
+      const soloAddHint = state.soloComboOpen && state.soloComboEditing ? ' · 点击加入编辑区，也可拖入下方投放区' : '';
+      return `<button class="${classes}" type="button" data-wiki-node="${esc(node.id)}" data-wiki-node-form="${esc(node.formId || 'shared')}" data-wiki-form-disabled="${formDisabled ? 'true' : 'false'}" data-node-x="${renderX}" data-node-y="${renderY}" data-node-logical-x="${x}" data-node-logical-y="${y}"${soloDragAttr}${soloSourceAttr}${seriesAttrs}${replacementAttrs}${hiddenStackAttrs} aria-disabled="${formDisabled ? 'true' : 'false'}" aria-label="${esc(title)}${replacementLabel}${esc(soloAddHint)}" title="${esc(title)}${esc(soloAddHint)}" style="--wiki-element:${esc(elementColor)};--wiki-form-accent:${esc(nodeFormAccent)};--wiki-node-width:${width}px;--wiki-node-scale:${contentZoom};--wiki-input-stack-space:${inputStackSpace}px;--wiki-series-index:${seriesIndex};z-index:${replacement ? (replacementActive ? 24 : 18) : stackZ};transform:translate(${renderX}px,${renderY}px) scale(var(--wiki-node-scale, 1))">${portMarkup}<span class="community-wiki-graph-node-icon">${routes.length > 1 ? routeIcons : graphNodeIcon(name, node)}</span><span class="community-wiki-graph-node-copy"><strong>${transitionLabel}${airborne}${esc(displayTitle)}</strong></span>${node.resonance ? `<i class="community-wiki-graph-node-chain">C${chainLevel}</i>` : node.effects?.length ? '<i class="community-wiki-graph-node-mark">◆</i>' : ''}${resonanceModified ? `<i class="community-wiki-graph-node-resonance-mark" data-lucide="git-branch" aria-label="${esc(t('resonanceChanges'))}" title="${esc(t('resonanceChanges'))}"></i>` : ''}${node.rawIndexes?.length > 1 ? `<em>${node.rawIndexes.length}</em>` : ''}${series && collapsed && isMaster ? `<span class="community-wiki-graph-series-indicator" aria-hidden="true">${esc(series.memberIds.length)}</span>` : ''}${replacementToggle}${state.editing && canEditWiki() ? '<i class="community-wiki-graph-node-grip" data-lucide="move"></i>' : ''}</button>`;
   }
 
   function renderGraph(model, elementColor, name) {
@@ -10320,7 +12075,11 @@
     const byId = new Map(layout.nodes.map((entry) => [entry.node.id, entry]));
     const levels = relatedNodeLevels(model, state.selectedNode, name);
     const triggerBuffs = directTriggerBuffIds(model, state.selectedNode);
-    const lanes = layout.lanes.map(({ category, top, height }) => `<div class="community-wiki-graph-lane ${category}" style="top:${top}px;height:${height}px"><span class="community-wiki-graph-lane-label"><b>${esc(categoryLabel(category))}</b></span></div>`).join('');
+    const soloEditorActive = state.soloComboOpen && state.soloComboEditing;
+    const lanes = layout.lanes.map(({ category, top, height }) => {
+      if (soloEditorActive && category === 'buff') return `<div class="community-wiki-graph-lane ${category} is-solo-editor" style="top:${top}px;height:${height}px">${soloComboInline(name)}</div>`;
+      return `<div class="community-wiki-graph-lane ${category}" style="top:${top}px;height:${height}px"><span class="community-wiki-graph-lane-label"><b>${esc(categoryLabel(category))}</b></span></div>`;
+    }).join('');
     const visibleEdges = new Map();
     (model.edges || []).forEach((edge) => {
       // Buff relations still participate in related-node highlighting, but
@@ -10388,7 +12147,7 @@
       if (left.series?.key !== right.series?.key) return 0;
       if (!left.collapsed || !right.collapsed) return 0;
       return left.isMaster ? 1 : right.isMaster ? -1 : left.seriesIndex - right.seriesIndex;
-    }).map((entry) => renderGraphNode(entry, elementColor, name, levels, triggerBuffs, contentZoom)).join('');
+    }).filter((entry) => !(soloEditorActive && entry.node.category === 'buff')).map((entry) => renderGraphNode(entry, elementColor, name, levels, triggerBuffs, contentZoom)).join('');
     const zoom = Number(state.graphCanvasZoom || state.graphZoom) || 1;
     return `<div class="community-wiki-graph-frame" data-wiki-graph-frame data-base-width="${layout.width}" data-base-height="${layout.height}" data-lane-height="${layout.laneHeight}" style="--wiki-lane-height:${layout.laneHeight * zoom}px;width:${layout.width * zoom}px;height:${layout.height * zoom}px"><div class="community-wiki-graph" data-wiki-graph style="--wiki-element:${esc(elementColor)};width:${layout.width}px;height:${layout.height}px;transform:scale(${zoom})">${lanes}<div class="community-wiki-graph-content" data-wiki-graph-content data-content-zoom="${contentZoom}" style="transform:scale(1)"><svg class="community-wiki-graph-lines" width="${layout.width}" height="${layout.height}" viewBox="0 0 ${layout.width} ${layout.height}" aria-hidden="true"><defs><marker id="wiki-edge-bidirectional" viewBox="-7 -5 14 10" markerWidth="14" markerHeight="10" refX="0" refY="0" orient="auto" markerUnits="userSpaceOnUse"><path d="M -6 -4 L 0 0 L -6 4 M 6 -4 L 0 0 L 6 4" fill="none" stroke="var(--wiki-element, #d7ad52)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></marker></defs>${lines}</svg>${nodes || `<div class="community-wiki-empty"><strong>${esc(t('noInfo'))}</strong></div>`}</div></div></div>`;
   }
@@ -10463,7 +12222,7 @@
   }
 
   function editorForm(node, model) {
-    const current = node || { id: 'new', title: '', category: state.editorDraftCategory || 'normal', tone: 'input', input: [], inputCondition: '', inputRoutes: [], airborneTag: '', prerequisites: [], effects: [], notes: [], resonanceLevel: 0, modeId: '', formId: currentFormId(state.selected) };
+    const current = node || { id: 'new', title: '', slang: '', category: state.editorDraftCategory || 'normal', tone: 'input', input: [], inputCondition: '', inputRoutes: [], airborneTag: '', prerequisites: [], effects: [], notes: [], resonanceLevel: 0, modeId: '', formId: currentFormId(state.selected) };
     const related = new Set((model.edges || []).flatMap((edge) => edge.from === current.id ? [edge.to] : edge.to === current.id ? [edge.from] : []));
     const options = model.nodes.filter((entry) => entry.id !== current.id).map((entry) => `<option value="${esc(entry.id)}" ${related.has(entry.id) ? 'selected' : ''}>${esc(categoryLabel(entry.category))} · ${esc(entry.title)}</option>`).join('');
     const selectedChain = Number(current.resonanceLevel || 0);
@@ -10491,8 +12250,9 @@
       ? model.nodes.filter((entry) => entry.category !== 'buff' && entry.category === current.category && (entry.modeId || '') === (current.modeId || '') && (entry.formId || '') === (current.formId || '') && Number(entry.resonanceLevel || 0) === Number(current.resonanceLevel || 0)).sort((left, right) => model.nodes.indexOf(left) - model.nodes.indexOf(right))
       : [];
     const seriesEditor = seriesCandidates.length > 1 ? `<fieldset class="community-wiki-editor-series"><legend><i data-lucide="layers-2"></i>${esc(t('seriesSettings'))}</legend><input type="hidden" name="seriesEditor" value="1"><label><span>${esc(t('seriesName'))}</span><input name="seriesName" value="${esc(series?.baseTitle || '')}" placeholder="${esc(current.title)}"></label><label><span>${esc(t('seriesMembers'))}</span><select name="seriesNodeIds" multiple size="${Math.min(7, Math.max(3, seriesCandidates.length))}">${seriesCandidates.map((entry) => `<option value="${esc(entry.id)}" ${(series?.memberIds || []).includes(entry.id) ? 'selected' : ''}>${esc(entry.title)}</option>`).join('')}</select></label><small>${esc(t('seriesHint'))}</small><div class="community-wiki-editor-series-actions"><button type="submit" class="primary"><i data-lucide="layers"></i>${esc(t('seriesSave'))}</button>${series ? `<button type="button" data-wiki-editor-action="remove-series" data-wiki-node="${esc(current.id)}"><i data-lucide="layers-2"></i>${esc(t('seriesRemove'))}</button>` : ''}</div></fieldset>` : '';
-     const airborneOptions = [['', t('airborneNone')], ['only', t('airborneOnly')], ['available', t('airborneAvailable')], ['ascend', t('airborneAscend')]].map(([value, label]) => `<option value="${value}" ${current.airborneTag === value ? 'selected' : ''}>${esc(label)}</option>`).join('');
-      return `<form class="community-wiki-editor-form" data-wiki-editor-form><input type="hidden" name="nodeId" value="${esc(current.id)}"><label><span>${esc(t('name'))}</span><input name="title" value="${esc(current.title)}" required></label><label><span>${esc(t('category'))}</span><select name="category">${CATEGORY_ORDER.map((category) => `<option value="${category}" ${current.category === category ? 'selected' : ''}>${esc(categoryLabel(category))}</option>`).join('')}</select></label><label class="community-wiki-editor-chain"><span>${esc(t('chain'))}</span><select name="resonanceLevel">${chainOptions}</select></label>${formOptions}${modeOptions}<label class="community-wiki-editor-airborne"><span>${esc(t('airborne'))}</span><select name="airborneTag">${airborneOptions}</select></label><label><span>${esc(t('connect'))}</span><select name="relatedIds" multiple size="5">${options}</select></label>${current.category === 'buff' ? '' : `<label><span>${esc(t('inputClass'))}</span><select name="input" multiple size="5">${INPUT_FIELD_ORDER.filter((kind) => kind !== 'special' || allowSpecial).map((kind) => `<option value="${esc(inputFieldLabel(kind))}" ${current.input.some((value) => inputFieldKind(value) === kind) ? 'selected' : ''}>${esc(inputFieldLabel(kind))}</option>`).join('')}</select></label><label><span>${esc(t('inputCondition'))}</span><textarea name="inputCondition" rows="2">${esc(current.inputCondition || '')}</textarea><small>${esc(t('inputConditionHint'))}</small></label>`}${routeField}${textarea('prerequisites', t('prerequisites'), current.prerequisites)}${textarea('effects', t('effects'), current.effects)}${textarea('notes', t('notes'), current.notes)}${seriesEditor}<div class="community-wiki-editor-actions"><button class="primary" type="submit"><i data-lucide="save"></i>${esc(t('save'))}</button><button type="button" data-wiki-editor-action="cancel"><i data-lucide="x"></i>${esc(t('cancel'))}</button>${current.id !== 'new' ? `<button class="danger" type="button" data-wiki-editor-action="delete" data-wiki-node="${esc(current.id)}"><i data-lucide="trash-2"></i>${esc(t('delete'))}</button>` : ''}</div></form>`;
+    const airborneOptions = [['', t('airborneNone')], ['only', t('airborneOnly')], ['available', t('airborneAvailable')], ['ascend', t('airborneAscend')]].map(([value, label]) => `<option value="${value}" ${current.airborneTag === value ? 'selected' : ''}>${esc(label)}</option>`).join('');
+    const presetSlang = defaultSlangForCharacter(state.selected)[current.id] || '';
+      return `<form class="community-wiki-editor-form" data-wiki-editor-form><input type="hidden" name="nodeId" value="${esc(current.id)}"><label><span>${esc(t('name'))}</span><input name="title" value="${esc(current.title)}" required></label><label class="community-wiki-editor-slang"><span>${esc(t('slangName'))}</span><input name="slangName" value="${esc(current.slang || '')}" placeholder="${esc(presetSlang ? `${t('slangPreset')}：${presetSlang}` : t('slangPreset'))}"></label><label><span>${esc(t('category'))}</span><select name="category">${CATEGORY_ORDER.map((category) => `<option value="${category}" ${current.category === category ? 'selected' : ''}>${esc(categoryLabel(category))}</option>`).join('')}</select></label><label class="community-wiki-editor-chain"><span>${esc(t('chain'))}</span><select name="resonanceLevel">${chainOptions}</select></label>${formOptions}${modeOptions}<label class="community-wiki-editor-airborne"><span>${esc(t('airborne'))}</span><select name="airborneTag">${airborneOptions}</select></label><label><span>${esc(t('connect'))}</span><select name="relatedIds" multiple size="5">${options}</select></label>${current.category === 'buff' ? '' : `<label><span>${esc(t('inputClass'))}</span><select name="input" multiple size="5">${INPUT_FIELD_ORDER.filter((kind) => kind !== 'special' || allowSpecial).map((kind) => `<option value="${esc(inputFieldLabel(kind))}" ${current.input.some((value) => inputFieldKind(value) === kind) ? 'selected' : ''}>${esc(inputFieldLabel(kind))}</option>`).join('')}</select></label><label><span>${esc(t('inputCondition'))}</span><textarea name="inputCondition" rows="2">${esc(current.inputCondition || '')}</textarea><small>${esc(t('inputConditionHint'))}</small></label>`}${routeField}${textarea('prerequisites', t('prerequisites'), current.prerequisites)}${textarea('effects', t('effects'), current.effects)}${textarea('notes', t('notes'), current.notes)}${seriesEditor}<div class="community-wiki-editor-actions"><button class="primary" type="submit"><i data-lucide="save"></i>${esc(t('save'))}</button><button type="button" data-wiki-editor-action="cancel"><i data-lucide="x"></i>${esc(t('cancel'))}</button>${current.id !== 'new' ? `<button class="danger" type="button" data-wiki-editor-action="delete" data-wiki-node="${esc(current.id)}"><i data-lucide="trash-2"></i>${esc(t('delete'))}</button>` : ''}</div></form>`;
   }
 
   function currentFormId(name = state.selected) {
@@ -10573,7 +12333,7 @@
     const inputRoutes = category === 'buff' ? [] : normalizeInputRoutes(routeInputs, input, { allowSpecial });
     const airborneTag = String(formData.get('airborneTag') || '');
     const transitionKind = String(formData.get('transitionKind') || '');
-    const node = { id, title: String(formData.get('title') || '').trim(), category, categoryManual: true, tone: resonanceLevel > 0 ? 'resonance-chain' : modeId ? 'mode-buff' : 'input', modeId, formId, formManual: availableForms.length > 1, input: inputRoutes.length ? inputRoutes.map((route) => route.input) : input, inputCondition, inputRoutes, airborneTag: ['only', 'available', 'ascend'].includes(airborneTag) ? airborneTag : '', airborneTagManual: true, transitionKind: ['switch', 'transform', 'exit'].includes(transitionKind) ? transitionKind : '', transitionKindManual: true, prerequisites: splitEditorValues(formData.get('prerequisites')), effects: splitEditorValues(formData.get('effects')), notes: splitEditorValues(formData.get('notes')), summary: '', raw: '', rawIndexes: [], resonance: resonanceLevel > 0, resonanceLevel: Number.isInteger(resonanceLevel) ? Math.max(0, Math.min(6, resonanceLevel)) : 0, iconAction: '' };
+    const node = { id, title: String(formData.get('title') || '').trim(), slang: clean(formData.get('slangName')).slice(0, 80), category, categoryManual: true, tone: resonanceLevel > 0 ? 'resonance-chain' : modeId ? 'mode-buff' : 'input', modeId, formId, formManual: availableForms.length > 1, input: inputRoutes.length ? inputRoutes.map((route) => route.input) : input, inputCondition, inputRoutes, airborneTag: ['only', 'available', 'ascend'].includes(airborneTag) ? airborneTag : '', airborneTagManual: true, transitionKind: ['switch', 'transform', 'exit'].includes(transitionKind) ? transitionKind : '', transitionKindManual: true, prerequisites: splitEditorValues(formData.get('prerequisites')), effects: splitEditorValues(formData.get('effects')), notes: splitEditorValues(formData.get('notes')), summary: '', raw: '', rawIndexes: [], resonance: resonanceLevel > 0, resonanceLevel: Number.isInteger(resonanceLevel) ? Math.max(0, Math.min(6, resonanceLevel)) : 0, iconAction: '' };
     node.iconAction = iconActionForNode(node);
     if (!node.title) return;
     const next = copyModel(model);
@@ -10587,7 +12347,7 @@
     } else {
       const index = next.nodes.findIndex((entry) => entry.id === id);
       if (index < 0) return;
-       next.nodes[index] = { ...next.nodes[index], title: node.title, category: node.category, categoryManual: true, tone: node.tone, modeId: node.modeId, formId: node.formId, formManual: node.formManual, input: node.input, inputCondition: node.inputCondition, inputRoutes: node.inputRoutes, airborneTag: node.airborneTag, airborneTagManual: true, transitionKind: node.transitionKind, transitionKindManual: true, prerequisites: node.prerequisites, effects: node.effects, notes: node.notes, resonance: node.resonance, resonanceLevel: node.resonanceLevel, iconAction: node.iconAction, id };
+       next.nodes[index] = { ...next.nodes[index], title: node.title, slang: node.slang, category: node.category, categoryManual: true, tone: node.tone, modeId: node.modeId, formId: node.formId, formManual: node.formManual, input: node.input, inputCondition: node.inputCondition, inputRoutes: node.inputRoutes, airborneTag: node.airborneTag, airborneTagManual: true, transitionKind: node.transitionKind, transitionKindManual: true, prerequisites: node.prerequisites, effects: node.effects, notes: node.notes, resonance: node.resonance, resonanceLevel: node.resonanceLevel, iconAction: node.iconAction, id };
        next.edges = next.edges.filter((edge) => edge.from !== id && edge.to !== id);
        formData.getAll('relatedIds').map(String).filter((relatedId) => relatedId && relatedId !== id).forEach((relatedId) => next.edges.push({ from: relatedId, to: id, kind: node.category === 'buff' ? 'buff' : 'derivation' }));
        node.inputRoutes.flatMap((route) => route.fromIds).filter((fromId) => fromId && fromId !== id).forEach((fromId) => next.edges.push({ from: fromId, to: id, kind: 'derivation' }));
@@ -10633,6 +12393,32 @@
     WIKI_ROOT.appendChild(menu);
     menu.querySelectorAll('[data-wiki-editor-action]').forEach((element) => element.addEventListener('click', () => handleEditorAction(element.dataset.wikiEditorAction || '', element.dataset.wikiNode || nodeId || '')));
     menu.querySelector('[data-wiki-close-menu]')?.addEventListener('click', closeContextMenu);
+    state.contextDismiss = (event) => {
+      if (!menu.contains(event.target)) closeContextMenu();
+    };
+    setTimeout(() => document.addEventListener('pointerdown', state.contextDismiss), 0);
+  }
+
+  function openSoloComboContextMenu(x, y, name, index) {
+    closeContextMenu();
+    const draft = state.soloComboDraft;
+    const items = soloComboDraftItems(draft);
+    const selected = items[index];
+    if (!draft || !selected) return;
+    const selectedTitle = selected.title || selected.nodeId || 'Buff';
+    const menu = document.createElement('div');
+    menu.className = 'community-wiki-context-menu community-wiki-solo-context-menu';
+    menu.style.left = `${Math.max(8, Math.min(x, window.innerWidth - 238))}px`;
+    menu.style.top = `${Math.max(8, Math.min(y, window.innerHeight - 250))}px`;
+    menu.innerHTML = `<strong>${esc(selectedTitle)}</strong><button data-solo-context-action="copy">⧉ ${esc(t('copyTool'))}</button><button data-solo-context-action="cut">✂ ${esc(t('cutTool'))}</button><button data-solo-context-action="paste" ${state.soloComboClipboard ? '' : 'disabled'}>⧉ ${esc(t('pasteTool'))}</button><button data-solo-context-action="remove">× ${esc(t('delete'))}</button><hr><button data-solo-context-action="undo" ${state.soloComboHistory.length ? '' : 'disabled'}>↶ ${esc(t('undoTool'))}</button><button data-solo-context-action="redo" ${state.soloComboFuture.length ? '' : 'disabled'}>↷ ${esc(t('redoTool'))}</button>`;
+    WIKI_ROOT.appendChild(menu);
+    menu.querySelectorAll('[data-solo-context-action]').forEach((button) => button.addEventListener('click', () => {
+      const action = button.dataset.soloContextAction || '';
+      closeContextMenu();
+      if (button.disabled) return;
+      state.soloComboSelection = index;
+      soloEditorAction(name, action);
+    }));
     state.contextDismiss = (event) => {
       if (!menu.contains(event.target)) closeContextMenu();
     };
@@ -10832,6 +12618,10 @@
     const onGlobalPointerCancel = (event) => finishDrag(event);
     element.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
+      // Input-route icons are interactive controls inside the card. In edit
+      // mode they must switch the route before the card-level drag handler
+      // gets a chance to prevent the click.
+      if (event.target.closest('[data-wiki-input-route], [data-wiki-replacement-toggle]')) return;
       const graph = element.closest('[data-wiki-graph]');
       const viewport = graph?.closest('[data-wiki-graph-scroll]');
       const seriesKey = element.dataset.wikiSeries || '';
@@ -10898,13 +12688,28 @@
     const activeChain = Math.min(resonanceChainLevel(name), chainCount);
     state.chainIds[name] = activeChain;
     const activity = state.wikiState.get(name)?.editActivity || {};
-    const recentEditors = Array.isArray(activity.recentEditors) ? activity.recentEditors.filter(Boolean).slice(0, 2) : [];
-    const participants = Array.isArray(activity.participants) ? activity.participants.filter(Boolean) : [];
+    const normalizeEditor = (value) => {
+      if (value && typeof value === 'object') {
+        return { name: clean(value.name || value.nickname || value.editorName) || '维护端', avatar: clean(value.avatar || value.editorAvatar).slice(0, 80) };
+      }
+      return { name: clean(value) || '维护端', avatar: '' };
+    };
+    const recentEditors = (Array.isArray(activity.recentEditors) ? activity.recentEditors : []).map(normalizeEditor).filter((editor) => editor.name).slice(0, 3);
+    const participants = (Array.isArray(activity.participants) ? activity.participants : []).map(normalizeEditor).filter((editor, index, list) => editor.name && list.findIndex((item) => item.name === editor.name) === index);
+    const previewEditors = recentEditors.length ? recentEditors : participants.slice(0, 3);
     const participantCount = Number.isFinite(Number(activity.participantCount)) ? Number(activity.participantCount) : participants.length;
     const totalEdits = Number.isFinite(Number(activity.totalEdits)) ? Number(activity.totalEdits) : 0;
-    const activitySummary = recentEditors.length ? recentEditors.map((editor) => esc(editor)).join(' · ') : esc(t('editActivityEmpty'));
+    const editorAvatar = (editor, large = false) => {
+      const source = editor.avatar && iconFor(editor.avatar);
+      return source
+        ? `<img class="community-wiki-edit-avatar${large ? ' large' : ''}" src="${esc(source)}" alt="${esc(editor.name)}" loading="lazy">`
+        : `<span class="community-wiki-edit-avatar fallback${large ? ' large' : ''}" aria-hidden="true">${esc(Array.from(editor.name)[0] || '?')}</span>`;
+    };
+    const activitySummary = previewEditors.length
+      ? `<span class="community-wiki-edit-activity-avatars" aria-label="${esc(previewEditors.map((editor) => editor.name).join('、'))}">${previewEditors.map((editor) => editorAvatar(editor)).join('')}</span>`
+      : `<span class="community-wiki-edit-activity-empty-label">${esc(t('editActivityEmpty'))}</span>`;
     const activityPanel = participants.length
-      ? `<div class="community-wiki-edit-activity-panel"><div class="community-wiki-edit-activity-stats"><strong>${esc(format(t('editParticipants'), participantCount))}</strong><span>${esc(format(t('editRecords'), totalEdits))}</span></div><div class="community-wiki-edit-activity-heading">${esc(t('editAll'))}</div><ul class="community-wiki-edit-activity-list">${participants.map((editor) => `<li>${esc(editor)}</li>`).join('')}</ul></div>`
+      ? `<div class="community-wiki-edit-activity-panel"><div class="community-wiki-edit-activity-stats"><strong>${esc(format(t('editParticipants'), participantCount))}</strong><span>${esc(format(t('editRecords'), totalEdits))}</span></div><div class="community-wiki-edit-activity-heading">${esc(t('editAll'))}</div><ul class="community-wiki-edit-activity-list">${participants.map((editor) => `<li>${editorAvatar(editor, true)}<span>${esc(editor.name)}</span></li>`).join('')}</ul></div>`
       : `<div class="community-wiki-edit-activity-panel is-empty"><span>${esc(t('editActivityEmpty'))}</span></div>`;
     const editActivity = `<details class="community-wiki-edit-activity"><summary title="${esc(t('editActivityHint'))}"><span class="community-wiki-edit-activity-title"><i data-lucide="history" aria-hidden="true"></i><b>${esc(t('editActivity'))}</b></span><span class="community-wiki-edit-activity-users">${activitySummary}</span><i class="community-wiki-edit-activity-chevron" data-lucide="chevron-down" aria-hidden="true"></i></summary>${activityPanel}</details>`;
     const chainSelector = chainCount ? `<label class="community-wiki-chain-select"><i data-lucide="link-2" aria-hidden="true"></i><span>${esc(t('chain'))}</span><select data-wiki-chain aria-label="${esc(t('chain'))}"><option value="0" ${activeChain === 0 ? 'selected' : ''}>${esc(t('baseChain'))}</option>${Array.from({ length: chainCount }, (_, index) => { const level = index + 1; return `<option value="${level}" ${activeChain === level ? 'selected' : ''}>${esc(format(t('chainLevel'), level))}</option>`; }).join('')}</select></label>` : '';
@@ -10912,6 +12717,7 @@
     const modeSelector = modes.length === 2
       ? `<div class="community-wiki-mode-toggle" style="--wiki-element:${esc(colorFor(entry.element))}" role="group" aria-label="${esc(t('mode'))}"><i data-lucide="waypoints" aria-hidden="true"></i><span>${esc(t('mode'))}</span><div class="community-wiki-mode-toggle-buttons">${modes.map((mode) => `<button type="button" value="${esc(mode.id)}" data-wiki-mode class="${mode.id === activeMode ? 'active' : ''}" aria-pressed="${mode.id === activeMode}" title="${esc(mode.description || mode.label)}"><i data-lucide="${modeIcon(mode)}" aria-hidden="true"></i><b>${esc(mode.label)}</b></button>`).join('')}</div></div>`
       : modes.length ? `<label class="community-wiki-mode-select" style="--wiki-element:${esc(colorFor(entry.element))}"><i data-lucide="waypoints" aria-hidden="true"></i><span>${esc(t('mode'))}</span><select data-wiki-mode aria-label="${esc(t('mode'))}">${modes.map((mode) => `<option value="${esc(mode.id)}" ${mode.id === activeMode ? 'selected' : ''}>${esc(mode.label)}</option>`).join('')}</select></label>` : '';
+    const newComboButton = `<button class="community-wiki-new-combo" type="button" data-solo-action="new" data-wiki-name="${esc(name)}" title="${esc(t('newCombo'))}"><i data-lucide="plus" aria-hidden="true"></i><span>${esc(t('newCombo'))}</span></button>`;
     const editorButton = canEditWiki()
       ? `<button class="community-wiki-editor-toggle ${state.editing ? 'active' : ''}" type="button" data-wiki-editor-toggle><i data-lucide="pencil"></i>${esc(state.editing ? t('editing') : t('edit'))}<small>${esc(isLocalWikiPreview() ? t('localEdit') : state.wikiSaveStatus === 'saving' ? t('saving') : state.wikiSaveStatus === 'error' ? t('saveFailed') : state.wikiSaveStatus === 'saved' ? t('saved') : t('readonly'))}</small></button>`
       : isWikiLocked(name)
@@ -10921,7 +12727,7 @@
     const profileModal = state.profileOpen ? `<div class="community-wiki-floating"><div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-profile-modal" role="dialog" aria-modal="true"><header><div>${avatar(name)}<div><p class="community-wiki-eyebrow">${esc(t('base'))}</p><h2>${esc(name)}</h2></div></div><button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><div class="community-wiki-floating-body"><dl><div><dt>${esc(t('star'))}</dt><dd>${'★'.repeat(Math.max(1, Math.min(5, entry.star)))}</dd></div><div><dt>${esc(t('element'))}</dt><dd style="color:${colorFor(entry.element)}">${esc(displayValue(entry.element || '—'))}</dd></div><div><dt>${esc(t('weapon'))}</dt><dd>${esc(displayValue(entry.weaponType || '—'))}</dd></div><div><dt>HP</dt><dd>${esc(stats.hp || '—')}</dd></div><div><dt>ATK</dt><dd>${esc(stats.atk || '—')}</dd></div><div><dt>DEF</dt><dd>${esc(stats.def || '—')}</dd></div></dl></div></section></div>` : '';
     const nodeModal = !state.profileOpen && (selected || state.selectedNode === 'new') ? `<div class="community-wiki-floating"><div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-node-modal" role="dialog" aria-modal="true"><header><div><i data-lucide="git-branch"></i><strong>${esc(state.editing && canEditWiki() ? t('editorTitle') : t('selectedNode'))}</strong></div><button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header>${panel}</section></div>` : '';
     const formTabs = forms.length > 1 ? `<div class="community-wiki-form-tabs" role="tablist" aria-label="${esc(t('forms'))}">${forms.map((form) => `<button type="button" role="tab" aria-selected="${form.id === activeForm}" class="${form.id === activeForm ? 'active' : ''}" data-wiki-form="${esc(form.id)}" title="${esc(form.description || '')}"><i data-lucide="${form.id === 'blazing' || form.id === 'absolution' ? 'flame' : form.id === 'lion' || form.id === 'mech' ? 'sparkles' : 'circle-dot'}"></i><span>${esc(form.label)}</span></button>`).join('')}</div>` : '';
-      renderShell(`<div class="community-wiki-detail-layout community-wiki-tree-layout"><section class="community-wiki-tree"><div class="community-wiki-section-heading"><div class="community-wiki-tree-heading-main"><button class="community-wiki-back compact" type="button" data-wiki-action="home" title="${esc(t('back'))}" aria-label="${esc(t('back'))}"><i data-lucide="arrow-left"></i></button><button class="community-wiki-profile-compact" type="button" data-wiki-profile title="${esc(t('base'))}">${avatar(name)}<span><strong>${esc(name)}</strong><small>${esc(displayValue(entry.element || '—'))} · ${esc(displayValue(entry.weaponType || '—'))}</small></span></button><div class="community-wiki-tree-heading-title"><h2>${esc(t('skills'))}</h2>${editActivity}</div></div><div class="community-wiki-tree-actions">${chainSelector}${modeSelector}${formTabs}<button class="community-wiki-refresh" type="button" data-wiki-action="reload" data-name="${esc(name)}" title="${esc(t('retry'))}" aria-label="${esc(t('retry'))}"><i data-lucide="refresh-cw"></i></button>${editorButton}<span class="community-wiki-api-state"><i></i>${esc(format(t('nodeCount'), visibleModel.nodes.length))}</span></div></div><div class="community-wiki-tree-scroll" data-wiki-graph-scroll>${renderGraph(visibleModel, colorFor(entry.element), name)}</div></section></div>${profileModal}${nodeModal}`, true);
+      renderShell(`<div class="community-wiki-detail-layout community-wiki-tree-layout"><section class="community-wiki-tree"><div class="community-wiki-section-heading community-wiki-tree-toolbar"><div class="community-wiki-tree-actions">${newComboButton}${editorButton}<span class="community-wiki-tree-toolbar-spacer" aria-hidden="true"></span>${chainSelector}${modeSelector}${formTabs}</div></div><div class="community-wiki-tree-scroll" data-wiki-graph-scroll data-wiki-lock-six-lanes>${renderGraph(visibleModel, colorFor(entry.element), name)}</div></section></div>${profileModal}${nodeModal}${state.soloComboEditing ? '' : soloComboModal(name)}${soloComboSaveConfirmModal(name)}`, true);
   }
 
   function openSkill(key) {
@@ -10941,6 +12747,7 @@
 
   let characterLoadSequence = 0;
   let supportRenderFrame = 0;
+  let homeBootstrapSequence = 0;
   const scheduleHomeRender = (sequence) => {
     if (sequence !== characterLoadSequence || state.selected || supportRenderFrame) return;
     supportRenderFrame = requestAnimationFrame(() => {
@@ -10950,13 +12757,15 @@
   };
   async function hydrateCharacterSupportData(sequence) {
     const readJson = async (url, options = {}) => {
+      if (options.cacheable) {
+        const { cacheable, ...requestOptions } = options;
+        return readCachedJsonOrFetch(url, requestOptions);
+      }
       const response = await fetchJsonWithTimeout(url, options);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.json();
     };
     const tasks = [
-      [readJson(ICON_MANIFEST_URL, { cache: 'force-cache' }), (value) => { state.icons = iconMap(value); }],
-      [readJson(TIDE_ICON_MANIFEST_URL, { cache: 'force-cache' }), (value) => { state.tideIcons = tideIconMap(value); }],
       [readJson('/api/community/wiki-locks', { cache: 'no-store' }), (value) => { applyWikiLocks(value); }],
       [readJson('/api/community/wiki-announcement', { cache: 'no-store' }), (value) => { state.announcement = value; }]
     ];
@@ -10970,34 +12779,84 @@
         console.warn('[wiki] support data unavailable', error);
       }
     };
-    window.setTimeout(() => {
-      if (sequence === characterLoadSequence) void preloadWikiVisuals(state.characters, '赞妮');
-    }, 900);
     await Promise.all(tasks.map(applyTask));
     if (sequence !== characterLoadSequence) return;
-    await loadCharacterBasePresets();
+  }
+
+  async function prepareHomeSurface(sequence) {
+    if (sequence !== characterLoadSequence || homeBootstrapSequence === sequence) return;
+    homeBootstrapSequence = sequence;
+    const readSupportJson = async (url) => {
+      try { return await readCachedJsonOrFetch(url, { cache: 'force-cache' }); }
+      catch (error) { console.warn('[wiki] home support data unavailable', url, error); return null; }
+    };
+    const [iconPayload, tidePayload] = await Promise.all([
+      readSupportJson(ICON_MANIFEST_URL),
+      readSupportJson(TIDE_ICON_MANIFEST_URL)
+    ]);
     if (sequence !== characterLoadSequence) return;
-    void preloadWikiVisuals(state.characters, '赞妮');
+    if (iconPayload) state.icons = iconMap(iconPayload);
+    if (tidePayload) state.tideIcons = tideIconMap(tidePayload);
+    // Wait only for visuals the home surface actually needs: all small
+    // selector assets plus the default card's portrait. Detail/tree assets
+    // are intentionally handled after boot.
+    await preloadHomeSurface(state.characters, '赞妮');
+    if (sequence !== characterLoadSequence) return;
+    renderHome();
+    finishWikiBoot();
   }
 
   async function loadCharacters() {
     const sequence = ++characterLoadSequence;
+    homeBootstrapSequence = 0;
     state.loading = true;
     renderHome();
+    let supportStarted = false;
+    const startSupport = () => {
+      if (supportStarted || sequence !== characterLoadSequence) return;
+      supportStarted = true;
+      // Start the remaining portrait/tree asset warm-up immediately after the
+      // home surface is visible. It must not wait for locks or announcements.
+      void preloadWikiVisuals(state.characters, '赞妮');
+      void loadCharacterBasePresets().catch((error) => console.warn('[wiki] background base preset warm-up failed', error));
+      // Skill text is independent from the tree/flow payloads. Warm it in the
+      // background so opening a second character can use the cache instantly.
+      warmHomeInfoCache(sequence);
+      void hydrateCharacterSupportData(sequence).catch((error) => console.warn('[wiki] support data unavailable', error));
+    };
+    const cachedCharacters = normalizeCharacters(await readCachedJson(CHARACTER_LIST_URL));
+    if (cachedCharacters.length && sequence === characterLoadSequence) {
+      state.characters = cachedCharacters;
+      state.error = '';
+      state.loading = false;
+      renderHome();
+      void prepareHomeSurface(sequence).then(startSupport).catch((error) => {
+        console.warn('[wiki] home bootstrap failed', error);
+        if (sequence === characterLoadSequence) { renderHome(); finishWikiBoot(); startSupport(); }
+      });
+    }
     try {
       const characterResponse = await fetchJsonWithTimeout(CHARACTER_LIST_URL, { cache: 'no-store' });
       if (!characterResponse.ok) throw new Error(`HTTP ${characterResponse.status}`);
-      state.characters = normalizeCharacters(await characterResponse.json());
+      const payload = await characterResponse.json();
+      await cacheJsonResponse(CHARACTER_LIST_URL, new Response(JSON.stringify(payload), { headers: { 'content-type': 'application/json' } }));
+      state.characters = normalizeCharacters(payload);
       if (!state.characters.length) throw new Error('empty-character-list');
       state.error = ''; state.loading = false;
       renderHome();
-      finishWikiBoot();
-      void hydrateCharacterSupportData(sequence).catch((error) => console.warn('[wiki] support data unavailable', error));
+      void prepareHomeSurface(sequence).then(startSupport).catch((error) => {
+        console.warn('[wiki] home bootstrap failed', error);
+        if (sequence === characterLoadSequence) { renderHome(); finishWikiBoot(); startSupport(); }
+      });
     } catch (error) {
       if (sequence !== characterLoadSequence) return;
+      if (state.characters.length) return;
       state.characters = FALLBACK_CHARACTERS; state.error = String(error?.message || error); state.loading = false;
       renderHome();
-      finishWikiBoot();
+      void prepareHomeSurface(sequence).then(startSupport).catch((error) => {
+        console.warn('[wiki] fallback home bootstrap failed', error);
+        if (sequence === characterLoadSequence) { renderHome(); finishWikiBoot(); startSupport(); }
+      });
     }
   }
 
@@ -11006,9 +12865,8 @@
     state.selected = name; state.detailLoading = true; state.detailError = '';
     renderDetail(name);
     try {
-      const response = await fetch(`${API_BASE}/api/v2/info/character/${encodeURIComponent(name)}`, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      state.info.set(name, await response.json());
+      state.info.set(name, await fetchHomeInfoPayload(name));
+      state.homeInfoLoadState.set(name, 'ready');
       try {
         const wikiResponse = await fetch(`/api/community/wiki/${encodeURIComponent(name)}`, { cache: 'no-store', credentials: 'include', headers: wikiAuthHeaders() });
         if (wikiResponse.ok) applyWikiState(name, await wikiResponse.json());
@@ -11051,6 +12909,7 @@
     state.editorStore = readEditorStore();
     const queryName = new URLSearchParams(location.search).get('wiki')?.trim() || 'home';
     state.selected = queryName === 'home' ? '' : queryName;
+    const initialSelected = state.selected;
     const initial = async () => {
       await loadCharacters();
       // Account loading starts in app.js. Wait for it before the first detail
@@ -11060,22 +12919,37 @@
       if (accountReady && typeof accountReady.then === 'function') {
         await accountReady.catch(() => {});
       }
-      if (state.selected) await loadDetail(state.selected);
+      if (initialSelected && state.selected === initialSelected) await loadDetail(initialSelected);
     };
     window.addEventListener('popstate', () => {
       const next = new URLSearchParams(location.search).get('wiki')?.trim() || 'home';
       state.selected = next === 'home' ? '' : next;
       if (state.selected) void loadDetail(state.selected); else renderHome();
     });
-    window.addEventListener('wwcombo-languagechange', () => { updateWikiNavigation(true); state.selected ? renderDetail(state.selected) : renderHome(); });
+    window.addEventListener('wwcombo-languagechange', () => { updateWikiNavigation(true); renderCurrentWikiSurface(state.selected); });
+    window.addEventListener('keydown', (event) => {
+      if (!state.soloComboOpen || !state.soloComboEditing || !state.soloComboDraft) return;
+      const target = event.target;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
+      const name = state.selected || state.homeMenuName;
+      const modifier = event.ctrlKey || event.metaKey;
+      const key = String(event.key || '').toLowerCase();
+      if (modifier && key === 'c') { event.preventDefault(); soloEditorAction(name, 'copy'); }
+      else if (modifier && key === 'x') { event.preventDefault(); soloEditorAction(name, 'cut'); }
+      else if (modifier && key === 'v') { event.preventDefault(); soloEditorAction(name, 'paste'); }
+      else if (modifier && key === 'z') { event.preventDefault(); soloEditorAction(name, event.shiftKey ? 'redo' : 'undo'); }
+      else if (modifier && key === 'y') { event.preventDefault(); soloEditorAction(name, 'redo'); }
+      else if (key === 'delete' || key === 'backspace') { event.preventDefault(); soloEditorAction(name, 'remove'); }
+    });
     window.addEventListener('wwcombo-account-session', () => {
       if (!canEditWiki()) { state.editing = false; state.selectedNode = ''; }
       if (state.selected) {
-        renderDetail(state.selected);
-        void loadWikiState(state.selected).then(() => {
-          if (state.selected) {
+        const selectedName = state.selected;
+        renderCurrentWikiSurface(selectedName);
+        void loadWikiState(selectedName).then(() => {
+          if (state.selected === selectedName) {
             if (!canEditWiki()) { state.editing = false; state.selectedNode = ''; }
-            renderDetail(state.selected);
+            renderCurrentWikiSurface(selectedName);
           }
         });
       }
