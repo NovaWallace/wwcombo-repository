@@ -1621,7 +1621,11 @@ function uniqueSorted(values) {
 }
 
 function normalizedTags(values) {
-  return [...new Set((Array.isArray(values) ? values : []).filter(Boolean).map((tag) => tag === '全局' ? '错轮' : tag))];
+  return [...new Set((Array.isArray(values) ? values : [])
+    .filter(Boolean)
+    .map((tag) => String(tag).trim())
+    .filter((tag) => tag && !/^community$/iu.test(tag))
+    .map((tag) => tag === '全局' ? '错轮' : tag))];
 }
 
 function chartCharacters(chart) {
@@ -3679,7 +3683,12 @@ function renderLeaderboardCard(user, displayRank = user.rank) {
   // The leaderboard's avatar field stores the selected character name. It is
   // separate from the user's profile avatar and should use the same base-art
   // crop as commission cards.
-  const decorated = Array.isArray(user.characters) ? user.characters[0] : (user.character || user.avatar);
+  // The right-side artwork follows the character selected as the user's
+  // profile avatar. Fall back to a character used in their contributions.
+  const preferredCharacters = [user.avatar, user.character, ...(Array.isArray(user.characters) ? user.characters : [])]
+    .map(canonicalCharacterName)
+    .filter(Boolean);
+  const decorated = preferredCharacters.find((name) => commissionBasePresetFor(name)?.src) || preferredCharacters[0] || '';
   if (decorated) applyBaseDecoration(decoration, { longestCharacter: decorated }, [decorated]);
   card.append(rankNode, identity, metrics, decoration);
   return card;

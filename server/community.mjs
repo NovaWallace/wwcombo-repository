@@ -1980,8 +1980,9 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   }
 
   async function publicLeaderboard() {
-    const [published, downloads, commissions, editLog] = await Promise.all([
+    const [published, owners, downloads, commissions, editLog] = await Promise.all([
       readJson(publishedFile, { charts: [] }),
+      readJson(ownersFile, {}),
       readJson(downloadsFile, {}),
       commissionState(),
       readJson(wikiEditLogFile, { version: 1, items: [] })
@@ -2041,13 +2042,28 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       user.characters = user.characters.slice(0, 8);
     };
 
-    for (const chart of (Array.isArray(published?.charts) ? published.charts : [])) {
-      const comboUser = ensure(chart.submitter || chart, '连段作者');
-      add(chart.submitter || chart, 'combo', 'uploads', 200, '连段作者');
-      addCharacters(comboUser, chart.characters || chart.character);
-      const count = Math.max(0, Number(downloads?.[chart.id] || 0));
+    for (const item of (Array.isArray(published?.charts) ? published.charts : [])) {
+      // published.json stores { fileName, chart }; older records may still
+      // use the summary object directly, so keep that form as a fallback.
+      const chart = record(item?.chart && typeof item.chart === 'object' ? item.chart : item);
+      const comboId = String(chart.id || item?.id || chart.community?.id || '').trim();
+      const owner = record(owners?.[comboId] || owners?.[item?.fileName] || owners?.[chart.community?.id]);
+      const listedSubmitter = chart.submitter || chart.community?.submitter || item?.submitter || {};
+      const listedName = cleanName(listedSubmitter.nickname || listedSubmitter.username || listedSubmitter.name).toLowerCase();
+      const listedEmail = normalizeEmail(listedSubmitter.email);
+      const listedAsUnknown = !listedName && !listedEmail
+        || ['unknown', 'community', '连段作者', '匿名用户', '未命名用户', '未知用户'].includes(listedName)
+        || listedEmail.endsWith('@unknown.invalid');
+      const ownerName = cleanName(owner.nickname || owner.username || owner.name);
+      const submitter = listedAsUnknown && (owner.email || ownerName)
+        ? { ...listedSubmitter, ...owner, ...(ownerName ? { nickname: ownerName, username: ownerName } : {}) }
+        : (Object.keys(listedSubmitter).length ? listedSubmitter : (Object.keys(owner).length ? owner : chart));
+      const comboUser = ensure(submitter, '连段作者');
+      add(submitter, 'combo', 'uploads', 200, '连段作者');
+      addCharacters(comboUser, chart.characters || chart.character || item?.characters || item?.character);
+      const count = Math.max(0, Number(downloads?.[comboId] || 0));
       if (count) {
-        const user = ensure(chart.submitter || chart, '连段作者');
+        const user = comboUser;
         user.combo.downloads += count;
         user.combo.score += count;
         user.score += count;
