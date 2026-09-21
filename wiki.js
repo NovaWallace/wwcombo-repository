@@ -45,6 +45,7 @@
   const ELEMENTS = ['全部', '冷凝', '热熔', '导电', '气动', '衍射', '湮灭'];
   const elementColors = { 冷凝: '#62b9e6', 热熔: '#ef885c', 导电: '#b37be8', 气动: '#6fc88d', 衍射: '#e8c65a', 湮灭: '#e079bf' };
   const WIKI_RESOURCE_CACHE = 'wwcombo-wiki-resources-v3';
+  const WIKI_ANNOUNCEMENT_DISMISSED_KEY = 'wwcombo-wiki-announcement-dismissed-v1';
     const state = {
     characters: [], icons: new Map(), query: '', element: '全部', selected: '',
     info: new Map(), wikiState: new Map(), characterBasePresets: new Map(), loading: true, detailLoading: false, error: '', detailError: '',
@@ -62,6 +63,50 @@
   const wikiNameCollator = new Intl.Collator('zh-u-co-pinyin', { usage: 'sort', sensitivity: 'base', numeric: true });
   const BURST_FORM_CHARACTERS = new Set(['安可', '穗穗', '达妮娅', '嘉贝莉娜', '景燃', '莫宁', '卡卡罗', '漂泊者·导电', '漂泊者·湮灭', '相里要', '忌炎', '清宵', '今汐', '赞妮', '千咲', '坎特蕾拉', '心', '绯雪', '琳奈']);
   const PERSISTENT_FORM_CHARACTERS = new Set(['丽贝卡', '灯灯', '卡提希娅', '尤诺', '凌阳', '爱弥斯', '秧秧·玄翎']);
+
+  function wikiAnnouncementVersion(announcement = state.announcement) {
+    const updatedAt = Number(announcement?.updatedAt || 0);
+    if (Number.isFinite(updatedAt) && updatedAt > 0) return String(updatedAt);
+    return String(announcement?.title || '').trim() + '|' + String(announcement?.body || '').trim();
+  }
+
+  function isWikiAnnouncementDismissed(announcement = state.announcement) {
+    const version = wikiAnnouncementVersion(announcement);
+    if (!version || version === '|') return false;
+    try { return localStorage.getItem(WIKI_ANNOUNCEMENT_DISMISSED_KEY) === version; } catch { return false; }
+  }
+
+  function dismissWikiAnnouncement() {
+    try { localStorage.setItem(WIKI_ANNOUNCEMENT_DISMISSED_KEY, wikiAnnouncementVersion()); } catch {}
+    state.announcementOpen = false;
+    renderHome();
+  }
+
+  function syncWikiAnnouncementDismissControl() {
+    const toolbar = WIKI_ROOT.querySelector('.community-wiki-home-toolbar');
+    if (!toolbar) return;
+    if (isWikiAnnouncementDismissed()) {
+      toolbar.hidden = true;
+      return;
+    }
+    const line = toolbar.querySelector('.community-wiki-update-line');
+    const inner = toolbar.querySelector('.community-wiki-home-toolbar-inner');
+    if (!line || !inner || inner.querySelector('[data-wiki-dismiss-announcement]')) return;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'community-wiki-announcement-dismiss';
+    button.dataset.wikiDismissAnnouncement = '';
+    button.title = t('closeAnnouncement');
+    button.setAttribute('aria-label', t('closeAnnouncement'));
+    button.innerHTML = '<i data-lucide="x" aria-hidden="true"></i>';
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      dismissWikiAnnouncement();
+    });
+    inner.appendChild(button);
+    line.classList.add('has-dismiss');
+    window.lucide?.createIcons();
+  }
 
   const locale = () => String(window.wwcomboI18n?.language || document.documentElement.lang || 'zh-CN');
   const copy = {
@@ -7747,6 +7792,7 @@
       if (key) state.homeSelectorScrollLeft[key] = element.scrollLeft;
     });
     WIKI_ROOT.innerHTML = `<div class="community-wiki-inner${detail ? ' is-detail' : ''}">${content}</div>`;
+    syncWikiAnnouncementDismissControl();
     WIKI_ROOT.querySelectorAll('[data-wiki-action]').forEach((element) => element.addEventListener('click', () => handleAction(element.dataset.wikiAction || '', element.dataset.name || '')));
     WIKI_ROOT.querySelectorAll('[data-wiki-search]').forEach((element) => element.addEventListener('input', () => { state.query = element.value; renderHome(); }));
     WIKI_ROOT.querySelectorAll('[data-wiki-element]').forEach((element) => element.addEventListener('click', () => { state.element = element.dataset.wikiElement || '全部'; renderHome(); }));
@@ -8803,23 +8849,25 @@
     const matching = state.soloComboCommunity.filter((chart) => communityComboIncludes(chart, name));
     const previewCombo = homeSoloPreviewCombo(name);
     const previewSteps = previewCombo.nodes || [];
+    const hasSoloFlow = solo.length > 0 || (isLocalWikiPreview() && previewSteps.length > 0);
     const soloMarkup = solo.length
       ? solo.map((combo) => `<button type="button" class="community-wiki-flow-capsule solo" data-wiki-home-solo-preview="${esc(combo.id || combo.name || '')}" data-wiki-name="${esc(name)}"><span class="community-wiki-flow-capsule-icon"><img src="${esc(emblemFor(name))}" alt="${esc(name)}" loading="eager" decoding="async"></span><span><strong>${esc(combo.name || t('soloCombo'))}</strong><small>${esc(format(t('stageCount'), (combo.nodes || []).length))}</small></span></button>`).join('')
-      : isLocalWikiPreview() && previewSteps.length ? `<button type="button" class="community-wiki-flow-capsule solo is-preview" data-wiki-home-solo-preview="${previewCombo.id}" data-wiki-name="${esc(name)}"><span class="community-wiki-flow-capsule-icon"><img src="${esc(emblemFor(name))}" alt="${esc(name)}" loading="eager" decoding="async"></span><span><strong>${esc(previewCombo.name)}</strong><small>${esc(format(t('stageCount'), previewSteps.length))} · ${esc(t('localPreview'))}</small></span></button>` : `<span class="community-wiki-flow-empty">${esc(t('noSoloCombos'))}</span>`;
+      : hasSoloFlow ? `<button type="button" class="community-wiki-flow-capsule solo is-preview" data-wiki-home-solo-preview="${previewCombo.id}" data-wiki-name="${esc(name)}"><span class="community-wiki-flow-capsule-icon"><img src="${esc(emblemFor(name))}" alt="${esc(name)}" loading="eager" decoding="async"></span><span><strong>${esc(previewCombo.name)}</strong><small>${esc(format(t('stageCount'), previewSteps.length))} · ${esc(t('localPreview'))}</small></span></button>` : '';
+    const soloSection = hasSoloFlow ? `<section><div class="community-wiki-home-surface-heading"><h3>${esc(t('soloFlow'))}</h3></div><div class="community-wiki-flow-grid">${soloMarkup}</div></section>` : '';
     const communityMarkup = matching.length
       ? matching.map((chart) => {
         const chartCharacters = Array.isArray(chart.characters) ? chart.characters : [chart.firstCharacter, chart.longestCharacter].filter(Boolean);
         const lead = state.characters.find((entry) => entry.name === name) || state.characters.find((entry) => chartCharacters.some((value) => communityNameKey(value) === communityNameKey(entry.name)));
-        const tags = Array.isArray(chart.tags) ? chart.tags.filter(Boolean) : [];
+        const tags = Array.isArray(chart.tags) ? chart.tags.filter((tag) => tag && !/^community$/iu.test(String(tag).trim())) : [];
         const date = flowDateLabel(chart.updatedAt);
         const meta = [date, chart.uploadVersion ? `v${chart.uploadVersion}` : '', format(t('stageCount'), Math.max(1, Number(chart.rounds) || 1))].filter(Boolean).join(' · ');
         const grade = flowGradeForTags(tags);
-        const tagMarkup = tags.length ? tags.map((tag) => `<span>${esc(tag)}</span>`).join('') : '<span>Community</span>';
+        const tagMarkup = tags.map((tag) => `<span>${esc(tag)}</span>`).join('');
         const downloadCount = Math.max(0, Math.floor(Number(chart.downloadCount) || 0));
         return `<article class="community-wiki-flow-capsule community" data-wiki-home-community="${esc(chart.id || '')}" style="--wiki-element:${esc(colorFor(lead?.element))}" tabindex="0" role="button" aria-label="${esc(chart.title || 'wwcombo')}"><div class="community-wiki-flow-copy"><strong>${esc(chart.title || 'wwcombo')}</strong><small>${esc(meta)}</small></div><div class="community-wiki-flow-classification"><div class="community-wiki-flow-tags">${tagMarkup}</div>${grade ? `<b class="community-wiki-flow-grade">${esc(grade)}</b>` : ''}${flowVideoMarkup(chart.link)}</div><div class="community-wiki-flow-avatars" aria-label="${esc(chartCharacters.slice(0, 3).join('、'))}">${flowAvatarList(chart)}</div>${flowSubmitterMarkup(chart)}<button type="button" class="community-wiki-flow-download" data-wiki-home-community-download="${esc(chart.id || '')}" aria-label="下载 ${downloadCount} 次"><i data-lucide="download" aria-hidden="true"></i><strong>${downloadCount}</strong></button></article>`;
       }).join('')
       : state.soloComboCommunityLoading ? `<span class="community-wiki-flow-empty"><i data-lucide="loader-circle"></i>${esc(t('communityLoading'))}</span>` : `<span class="community-wiki-flow-empty">${esc(t('noCommunityCombos'))}</span>`;
-    return `<div class="community-wiki-home-flow"><section><div class="community-wiki-home-surface-heading"><h3>${esc(t('soloFlow'))}</h3></div><div class="community-wiki-flow-grid">${soloMarkup}</div></section><section><div class="community-wiki-home-surface-heading"><h3>${esc(t('teamFlow'))}</h3></div><div class="community-wiki-flow-strip">${communityMarkup}</div></section></div>`;
+    return `<div class="community-wiki-home-flow">${soloSection}<section><div class="community-wiki-home-surface-heading"><h3>${esc(t('teamFlow'))}</h3></div><div class="community-wiki-flow-strip">${communityMarkup}</div></section></div>`;
   }
 
   function homeSoloPreviewCombo(name) {
@@ -8844,7 +8892,8 @@
       return `<span class="community-wiki-home-flow-round"><small>${chart ? `R${index + 1}` : `${index + 1}`}</small><b>${esc(role)}</b></span>`;
     }).join('<i data-lucide="arrow-right" aria-hidden="true"></i>');
     const soloRoute = isSolo ? (combo?.nodes || []).map((item, index) => homeSoloFlowStep(preview.name, item, index)).join('') : '';
-    return `<div class="community-wiki-home-flow-modal"><button type="button" class="community-wiki-home-flow-backdrop" data-wiki-home-flow-close aria-label="${esc(t('close'))}"></button><section class="community-wiki-home-flow-dialog ${isSolo ? 'is-solo-flow' : ''}" role="dialog" aria-modal="true"><header><div><p class="community-wiki-eyebrow">${esc(isSolo ? t('soloFlow') : t('teamFlow'))}</p><h2>${esc(isSolo ? (combo?.name || t('soloCombo')) : (chart.title || 'wwcombo'))}</h2></div><button type="button" data-wiki-home-flow-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><div class="community-wiki-home-flow-dialog-meta">${chart ? `<span>${flowAvatarList(chart)}</span><b>${esc((chart.tags || []).join(' · ') || 'Community')}</b>` : `<span>${avatar(preview.name)}</span><b>${esc(preview.name)}</b>`}<small>${esc(format(t('stageCount'), rounds))}</small></div><div class="community-wiki-home-flow-diagram"><div class="community-wiki-home-flow-route ${isSolo ? 'is-solo-axis' : ''}">${isSolo ? soloRoute : route}</div><small>${esc(isSolo ? '单人连段流程' : (chart.description || '按角色顺序展示社区连段的轮换流程。'))}</small></div></section></div>`;
+    const chartTags = Array.isArray(chart?.tags) ? chart.tags.filter((tag) => tag && !/^community$/iu.test(String(tag).trim())) : [];
+    return `<div class="community-wiki-home-flow-modal"><button type="button" class="community-wiki-home-flow-backdrop" data-wiki-home-flow-close aria-label="${esc(t('close'))}"></button><section class="community-wiki-home-flow-dialog ${isSolo ? 'is-solo-flow' : ''}" role="dialog" aria-modal="true"><header><div><p class="community-wiki-eyebrow">${esc(isSolo ? t('soloFlow') : t('teamFlow'))}</p><h2>${esc(isSolo ? (combo?.name || t('soloCombo')) : (chart.title || 'wwcombo'))}</h2></div><button type="button" data-wiki-home-flow-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><div class="community-wiki-home-flow-dialog-meta">${chart ? `<span>${flowAvatarList(chart)}</span>${chartTags.length ? `<b>${esc(chartTags.join(' · '))}</b>` : ''}` : `<span>${avatar(preview.name)}</span><b>${esc(preview.name)}</b>`}<small>${esc(format(t('stageCount'), rounds))}</small></div><div class="community-wiki-home-flow-diagram"><div class="community-wiki-home-flow-route ${isSolo ? 'is-solo-axis' : ''}">${isSolo ? soloRoute : route}</div><small>${esc(isSolo ? '单人连段流程' : (chart.description || '按角色顺序展示社区连段的轮换流程。'))}</small></div></section></div>`;
   }
 
   function homeSoloFlowStep(name, item, index) {

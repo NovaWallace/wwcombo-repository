@@ -11,6 +11,7 @@ const ACCOUNT_TOKEN_STORAGE_KEY = 'wwcombo-community-account-token-v1';
 const AXIS_KEY_SETTINGS_STORAGE_KEY = 'wwcombo-community-axis-key-settings-v1';
 const EMBEDDED_VOTER_TOKEN_STORAGE_KEY = 'wwcombo-community-client-voter-v1';
 const EMBEDDED_IMPORTED_COMBOS_STORAGE_KEY = 'wwcombo-community-client-imports-v1';
+const COMMUNITY_ANNOUNCEMENT_DISMISSED_KEY = 'wwcombo-community-announcement-dismissed-v1';
 const i18n = window.wwcomboI18n;
 if (!i18n) throw new Error('Community i18n runtime is unavailable.');
 const t = (key, values) => i18n.t(key, values);
@@ -293,6 +294,8 @@ const state = {
   leaderboard: [],
   leaderboardRules: null,
   leaderboardLoadState: 'idle',
+  announcement: null,
+  announcementOpen: false,
   view: 'combos',
   theme: document.documentElement.dataset.theme === 'day' ? 'day' : 'night',
   heroMotionEnabled: savedHeroMotionEnabled(),
@@ -477,6 +480,8 @@ const els = {
   leaderboardTab: document.getElementById('leaderboardTabButton'),
   resultsTitle: document.getElementById('resultsTitle'),
   leaderboardMetricHeaders: document.getElementById('leaderboardMetricHeaders'),
+  communityAnnouncementWrap: document.getElementById('communityAnnouncementWrap'),
+  communityAnnouncement: document.getElementById('communityAnnouncement'),
   createCommission: document.getElementById('createCommissionBtn'),
   commissionCreateBackdrop: document.getElementById('commissionCreateBackdrop'),
   commissionCreateForm: document.getElementById('commissionCreateForm'),
@@ -2076,6 +2081,96 @@ function openCharacterPicker() {
   requestAnimationFrame(() => els.characterSearch.focus());
 }
 
+function announcementText(value) {
+  return String(value ?? '').trim();
+}
+
+function escapeAnnouncementText(value) {
+  return announcementText(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function communityAnnouncementVersion(announcement = state.announcement) {
+  const updatedAt = Number(announcement?.updatedAt || 0);
+  if (Number.isFinite(updatedAt) && updatedAt > 0) return String(updatedAt);
+  return `${announcementText(announcement?.title)}|${announcementText(announcement?.body)}`;
+}
+
+function isCommunityAnnouncementDismissed(announcement = state.announcement) {
+  const version = communityAnnouncementVersion(announcement);
+  if (!version || version === '|') return false;
+  try {
+    return localStorage.getItem(COMMUNITY_ANNOUNCEMENT_DISMISSED_KEY) === version;
+  } catch {
+    return false;
+  }
+}
+
+function dismissCommunityAnnouncement() {
+  try { localStorage.setItem(COMMUNITY_ANNOUNCEMENT_DISMISSED_KEY, communityAnnouncementVersion()); } catch {}
+  state.announcementOpen = false;
+  renderCommunityAnnouncement();
+}
+
+function renderCommunityAnnouncement() {
+  if (!els.communityAnnouncementWrap || !els.communityAnnouncement) return;
+  const announcement = state.announcement;
+  const title = announcementText(announcement?.title);
+  const body = announcementText(announcement?.body);
+  const visible = !document.body.classList.contains('wiki-route')
+    && Boolean(title || body)
+    && !isCommunityAnnouncementDismissed(announcement);
+  els.communityAnnouncementWrap.hidden = !visible;
+  if (!visible) {
+    els.communityAnnouncement.replaceChildren();
+    return;
+  }
+  const preview = body.replace(/\s+/gu, ' ');
+  const previewText = preview.length > 150 ? `${preview.slice(0, 150)}…` : preview;
+  els.communityAnnouncement.innerHTML = `
+    <div class="community-announcement-bar">
+      <button class="community-announcement-open" type="button" data-community-open-announcement>
+        <i data-lucide="megaphone" aria-hidden="true"></i>
+        <span class="community-announcement-copy">
+          <strong>${escapeAnnouncementText(title || '最新公告')}</strong>
+          ${previewText ? `<small>${escapeAnnouncementText(previewText)}</small>` : ''}
+        </span>
+        <small class="community-announcement-date">${announcement?.updatedAt ? escapeAnnouncementText(new Date(announcement.updatedAt).toLocaleDateString()) : ''}</small>
+      </button>
+      <button class="community-announcement-dismiss" type="button" data-community-dismiss-announcement title="关闭公告" aria-label="关闭公告">
+        <i data-lucide="x" aria-hidden="true"></i>
+      </button>
+    </div>
+    ${state.announcementOpen && body ? `
+      <div class="community-announcement-modal">
+        <button class="community-announcement-backdrop" type="button" data-community-close-announcement aria-label="关闭公告"></button>
+        <section class="community-announcement-panel" role="dialog" aria-modal="true" aria-labelledby="communityAnnouncementTitle">
+          <header>
+            <div><p class="eyebrow">最新公告</p><h2 id="communityAnnouncementTitle">${escapeAnnouncementText(title || '最新公告')}</h2></div>
+            <button class="community-announcement-modal-close" type="button" data-community-close-announcement title="关闭公告" aria-label="关闭公告"><i data-lucide="x" aria-hidden="true"></i></button>
+          </header>
+          <div class="community-announcement-body">${escapeAnnouncementText(body)}</div>
+        </section>
+      </div>` : ''}`;
+  window.lucide?.createIcons();
+}
+
+async function loadCommunityAnnouncement() {
+  try {
+    const response = await fetch('/api/community/wiki-announcement', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    state.announcement = data && typeof data === 'object' ? data : null;
+  } catch {
+    state.announcement = null;
+  }
+  renderCommunityAnnouncement();
+}
+
 function closeCharacterPicker() {
   els.characterPickerBackdrop.hidden = true;
   els.characterPickerButton.setAttribute('aria-expanded', 'false');
@@ -2122,6 +2217,7 @@ function renderFilters() {
     els.tags.appendChild(button);
   }
   updateSubmissionButton();
+  renderCommunityAnnouncement();
 }
 
 function updateSubmissionButton() {
@@ -3721,7 +3817,7 @@ function renderLeaderboardCard(user, displayRank = user.rank) {
   metrics.append(
     homepageSlot,
     leaderboardMetric('打轴高手', [user.combo?.uploads || 0, user.combo?.downloads || 0], '仇远', '上传 / 下载', { showLabel: false }),
-    leaderboardMetric('果宝特攻', [user.commission?.published || 0, user.commission?.responses || 0, user.commission?.adopted || 0], '菲比', '求助 / 回应 / 采纳', { showLabel: false }),
+    leaderboardMetric('助人为乐', [user.commission?.published || 0, user.commission?.responses || 0, user.commission?.adopted || 0], '菲比', '求助 / 回应 / 采纳', { showLabel: false }),
     leaderboardMetric('人形百科', [user.wiki?.soloCombos || 0, user.wiki?.repairs || 0], '西格莉卡', '流程 / 修正', { showLabel: false })
   );
   const decoration = document.createElement('div'); decoration.className = 'leaderboard-decoration';
@@ -3748,7 +3844,7 @@ function renderLeaderboardRules() {
   title.innerHTML = '<i data-lucide="sparkles" aria-hidden="true"></i><strong>贡献排行</strong><span>按当前公开贡献实时排序</span>';
   const items = [
     ['打轴高手', '连段上传与下载'],
-    ['果宝特攻', '委托发布、回应与采纳'],
+    ['助人为乐', '委托发布、回应与采纳'],
     ['人形百科', '单人连段与 Wiki 修正']
   ];
   const list = document.createElement('div');
@@ -4166,6 +4262,23 @@ els.form.addEventListener('submit', (event) => event.preventDefault());
 els.comboTab?.addEventListener('click', () => setCommunityView('combos'));
 els.commissionTab?.addEventListener('click', () => setCommunityView('commissions'));
 els.leaderboardTab?.addEventListener('click', () => setCommunityView('leaderboard'));
+els.communityAnnouncement?.addEventListener('click', (event) => {
+  if (event.target.closest('[data-community-dismiss-announcement]')) {
+    event.stopPropagation();
+    dismissCommunityAnnouncement();
+    return;
+  }
+  if (event.target.closest('[data-community-close-announcement]')) {
+    event.stopPropagation();
+    state.announcementOpen = false;
+    renderCommunityAnnouncement();
+    return;
+  }
+  if (event.target.closest('[data-community-open-announcement]')) {
+    state.announcementOpen = true;
+    renderCommunityAnnouncement();
+  }
+});
 els.createCommission?.addEventListener('click', openCommissionCreate);
 els.closeCommissionCreate?.addEventListener('click', closeCommissionCreate);
 els.cancelCommissionCreate?.addEventListener('click', closeCommissionCreate);
@@ -4395,6 +4508,7 @@ els.languageSelect.value = i18n.language;
 window.lucide?.createIcons();
 if (!isWikiRoute) {
   initHeroSpine();
+  void loadCommunityAnnouncement();
   loadIndex();
   void loadCommissions();
   void loadLeaderboard();
