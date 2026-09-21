@@ -872,12 +872,48 @@ async function loadAccountSession() {
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
     setAccountSession(body.session || {}, body.token || '');
+    if (state.accountSession.authenticated) {
+      try { await loadAccountProfile(); } catch (error) { console.warn('Community profile unavailable', error); }
+    }
   } catch (error) {
     state.accountLoadState = 'error';
     state.accountSession = { authenticated: false, email: '', roles: [] };
     renderAccountSession();
     postAccountSessionToParent();
     if (isEmbeddedClient) console.warn('Community account session unavailable', error);
+  }
+}
+
+async function loadAccountProfile() {
+  if (!state.accountSession.authenticated) return;
+  const response = await fetch('/api/community/account/profile', { cache: 'no-store', credentials: 'include', headers: accountSessionHeaders() });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+  const profile = body.profile && typeof body.profile === 'object' ? body.profile : {};
+  state.profile = {
+    ...state.profile,
+    username: String(profile.username || state.profile.username || '').trim().slice(0, 40),
+    email: state.accountSession.email,
+    avatar: String(profile.avatar || state.profile.avatar || '').trim().slice(0, 80),
+    homepage: safeProfileHomepage(profile.homepage || state.profile.homepage)
+  };
+  try { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.profile)); } catch {}
+  renderProfile();
+}
+
+async function saveAccountProfile(profile) {
+  if (!state.accountSession.authenticated) return;
+  const response = await fetch('/api/community/account/profile', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json', ...accountSessionHeaders() },
+    credentials: 'include',
+    body: JSON.stringify({ username: profile.username, avatar: profile.avatar, homepage: profile.homepage })
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+  if (body.profile && typeof body.profile === 'object') {
+    state.profile = { ...profile, ...body.profile, email: state.accountSession.email };
+    try { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.profile)); } catch {}
   }
 }
 
@@ -921,6 +957,7 @@ async function verifyAccount() {
     state.profile = { ...state.profile, email };
     try { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.profile)); } catch {}
     setAccountSession(body.session || {}, body.token || '');
+    if (state.profile.username) await saveAccountProfile(state.profile);
     renderProfile();
     if (els.accountCodeInput) els.accountCodeInput.value = '';
   } catch (error) {
@@ -4258,11 +4295,21 @@ els.profileForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const nextProfile = { ...state.profile, username: els.profileUsernameInput.value.trim().slice(0, 40), email: els.profileEmailInput.value.trim().toLowerCase().slice(0, 254), avatar: state.profileDraftAvatar, homepage: safeProfileHomepage(els.profileHomepageInput?.value) };
   const accountChanged = state.accountSession.authenticated && state.accountSession.email !== nextProfile.email;
+  if (state.accountSession.authenticated && !accountChanged) {
+    try {
+      await saveAccountProfile(nextProfile);
+    } catch (error) {
+      els.profileFeedback.textContent = error.message || String(error);
+      els.profileFeedback.className = 'form-feedback error';
+      return;
+    }
+  }
   state.profile = nextProfile;
   try { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state.profile)); } catch {}
   if (accountChanged) await logoutAccount();
   renderProfile();
   if (state.commissionLoadState !== 'idle') void loadCommissions();
+  if (state.view === 'leaderboard') void loadLeaderboard();
   els.profileFeedback.textContent = t('profile.saved');
   els.profileFeedback.className = 'form-feedback success';
   const pendingUploadIntent = state.pendingUploadIntent;

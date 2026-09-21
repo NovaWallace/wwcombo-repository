@@ -1069,6 +1069,21 @@ async function handleCommunityApi(req, res, pathname) {
     sendJson(res, 200, { session, ...(account && clientRequestedToken ? { token: account.token } : {}) }, accountSessionCorsHeaders());
     return;
   }
+  if ((req.method === 'GET' || req.method === 'PUT') && pathname === '/api/community/account/profile') {
+    const account = readAccountSession(req);
+    if (!account) return sendJson(res, 401, { error: '请先登录账号。' });
+    if (req.method === 'GET') {
+      sendJson(res, 200, await community.accountProfile(account.email), { 'cache-control': 'no-store' });
+      return;
+    }
+    try {
+      const profile = await community.saveAccountProfile(account.email, await readJsonBody(req, 4 * 1024));
+      sendJson(res, 200, { profile }, { 'cache-control': 'no-store' });
+    } catch (error) {
+      sendJson(res, Number(error.statusCode || 400), { error: error.message || String(error) });
+    }
+    return;
+  }
   if (req.method === 'POST' && pathname === '/api/community/account/logout') {
     sendJson(res, 200, { ok: true }, { 'set-cookie': accountSessionCookie(req, '', 0) });
     return;
