@@ -8301,6 +8301,7 @@
     WIKI_ROOT.querySelectorAll('[data-wiki-graph] [data-wiki-node]').forEach((element) => {
       let seriesClickTimer = 0;
       let soloClickTimer = 0;
+      let nodeClickTimer = 0;
       let replayingSoloClick = false;
       let lastSeriesClickAt = 0;
       const graphName = state.selected || state.homeMenuName;
@@ -8311,7 +8312,7 @@
         const node = currentModel(graphName)?.nodes?.find((entry) => entry.id === nodeId);
         // Do not let the first click of a double-click rebuild the graph.
         // Single-click behavior is replayed after the double-click window;
-        // a real dblclick cancels it and adds the node immediately.
+        // a real dblclick cancels it and opens the node details immediately.
         if (state.soloComboOpen && state.soloComboEditing && !replayingSoloClick) {
           if (soloClickTimer) window.clearTimeout(soloClickTimer);
           if (event.detail > 1) {
@@ -8357,8 +8358,12 @@
         if (seriesKey && (element.dataset.wikiSeriesCollapsed === 'true' || (element.dataset.wikiSeriesMaster === element.dataset.wikiNode && element.dataset.wikiSeriesCollapsed === 'false'))) {
           return;
         }
-        state.selectedNode = nodeId;
-        refreshGraphCanvas(graphName);
+        if (nodeClickTimer) window.clearTimeout(nodeClickTimer);
+        nodeClickTimer = window.setTimeout(() => {
+          state.selectedNode = nodeId;
+          refreshGraphCanvas(graphName);
+          nodeClickTimer = 0;
+        }, 220);
       });
       element.addEventListener('dblclick', (event) => {
         event.preventDefault();
