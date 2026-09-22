@@ -7992,7 +7992,7 @@
     WIKI_ROOT.querySelectorAll('[data-wiki-editor-form]').forEach((form) => form.addEventListener('submit', (event) => { event.preventDefault(); saveEditorForm(new FormData(form)); }));
     WIKI_ROOT.querySelectorAll('[data-wiki-editor-toggle]').forEach((element) => element.addEventListener('click', () => { state.editing = !state.editing; if (state.homeSurfaceTab === 'tree' && state.homeMenuName === state.selected) renderHome(); else renderDetail(state.selected); }));
     WIKI_ROOT.querySelectorAll('[data-wiki-profile]').forEach((element) => element.addEventListener('click', () => { state.selectedNode = ''; state.profileOpen = false; beginSoloCombo(state.selected); }));
-    WIKI_ROOT.querySelectorAll('[data-wiki-overlay-close]').forEach((element) => element.addEventListener('click', () => { state.selectedNode = ''; state.profileOpen = false; renderDetail(state.selected); }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-overlay-close]').forEach((element) => element.addEventListener('click', () => { state.selectedNode = ''; state.profileOpen = false; renderCurrentWikiSurface(state.selected || state.homeMenuName); }));
     WIKI_ROOT.querySelectorAll('[data-wiki-open-announcement]').forEach((element) => element.addEventListener('click', () => { state.announcementOpen = true; renderHome(); }));
     WIKI_ROOT.querySelectorAll('[data-wiki-close-announcement]').forEach((element) => element.addEventListener('click', () => { state.announcementOpen = false; renderHome(); }));
     WIKI_ROOT.querySelectorAll('[data-solo-tab]').forEach((element) => element.addEventListener('click', () => {
@@ -8100,7 +8100,7 @@
       // The combo editor is nested inside the graph viewport. Keep its wheel
       // navigation local so it never bubbles into the tree canvas.
       dropzone.addEventListener('wheel', (event) => {
-        const delta = event.deltaY;
+        const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
         if (!delta) {
           event.preventDefault();
           event.stopPropagation();
@@ -8303,11 +8303,12 @@
       let soloClickTimer = 0;
       let replayingSoloClick = false;
       let lastSeriesClickAt = 0;
+      const graphName = state.selected || state.homeMenuName;
       element.addEventListener('click', (event) => {
         if (element.dataset.wikiFormDisabled === 'true' && !state.editing) return;
         if (element.dataset.dragged === 'true') { element.dataset.dragged = ''; return; }
         const nodeId = element.dataset.wikiNode || '';
-        const node = currentModel(state.selected)?.nodes?.find((entry) => entry.id === nodeId);
+        const node = currentModel(graphName)?.nodes?.find((entry) => entry.id === nodeId);
         // Do not let the first click of a double-click rebuild the graph.
         // Single-click behavior is replayed after the double-click window;
         // a real dblclick cancels it and adds the node immediately.
@@ -8340,10 +8341,10 @@
           }
           lastSeriesClickAt = now;
           seriesClickTimer = window.setTimeout(() => {
-            const key = graphSeriesStateKey(state.selected, seriesKey);
-            state.expandedGroups[key] = !graphSeriesIsExpanded(state.selected, seriesKey);
+            const key = graphSeriesStateKey(graphName, seriesKey);
+            state.expandedGroups[key] = !graphSeriesIsExpanded(graphName, seriesKey);
             state.selectedNode = '';
-            refreshGraphCanvas(state.selected);
+            refreshGraphCanvas(graphName);
             seriesClickTimer = 0;
           }, 420);
           return;
@@ -8357,30 +8358,18 @@
           return;
         }
         state.selectedNode = nodeId;
-        refreshGraphCanvas(state.selected);
+        refreshGraphCanvas(graphName);
       });
       element.addEventListener('dblclick', (event) => {
         event.preventDefault();
         if (soloClickTimer) window.clearTimeout(soloClickTimer);
         soloClickTimer = 0;
         const nodeId = element.dataset.wikiNode || '';
-        const node = currentModel(state.selected)?.nodes?.find((entry) => entry.id === nodeId);
-        if (state.soloComboOpen && state.soloComboEditing && node) {
-          const canAdd = state.soloComboEditMode === 'buff' ? node.category === 'buff' : node.category !== 'buff';
-          if (canAdd) {
-            // Double-click is another add gesture in the solo combo palette;
-            // keep it out of the graph detail/series handlers below.
-            event.stopPropagation();
-            addSoloComboNode(state.selected, nodeId);
-            return;
-          }
-        }
         if (element.dataset.wikiFormDisabled === 'true' && !state.editing) return;
         if (seriesClickTimer) window.clearTimeout(seriesClickTimer);
         seriesClickTimer = 0;
         state.selectedNode = nodeId;
-        if (state.homeSurfaceTab === 'tree' && state.homeMenuName === state.selected) renderHome();
-        else renderDetail(state.selected);
+        renderCurrentWikiSurface(graphName);
       });
       element.addEventListener('contextmenu', (event) => {
         event.preventDefault();
@@ -8388,7 +8377,7 @@
         if (!state.editing) {
           if (element.dataset.wikiFormDisabled === 'true') return;
           state.selectedNode = nodeId;
-          refreshGraphCanvas(state.selected);
+          refreshGraphCanvas(graphName);
           return;
         }
         openContextMenu(event.clientX, event.clientY, nodeId);
@@ -8434,7 +8423,7 @@
           element.dataset.dragged = 'true';
           event.preventDefault();
           event.stopPropagation();
-          addSoloComboNode(state.selected, nodeId);
+          addSoloComboNode(graphName, nodeId);
         };
         element.addEventListener('pointerup', finishSoloPointerDrag);
         window.addEventListener('pointerup', finishSoloPointerDrag, true);
@@ -8606,6 +8595,9 @@
     const surfaceTab = activeName ? (state.homeSurfaceTab === 'selector' ? 'raw' : state.homeSurfaceTab) : 'selector';
     const contentTab = HOME_CONTENT_TABS.some(([id]) => id === state.homeContentTab) ? state.homeContentTab : 'profile';
     const activeInfo = state.info.get(activeName);
+    const activeModel = activeName && activeInfo ? viewModelFor(activeName) : null;
+    const activeSelectedNode = activeModel?.nodes?.find((node) => node.id === state.selectedNode);
+    const homeNodeModal = activeSelectedNode ? `<div class="community-wiki-floating"><div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-node-modal" role="dialog" aria-modal="true"><header><div><i data-lucide="git-branch"></i><strong>${esc(t('selectedNode'))}</strong></div><button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><div class="community-wiki-node-panel-inner">${nodeDetail(activeSelectedNode, activeName, activeModel)}</div></section></div>` : '';
     const isTreeSurface = surfaceTab === 'tree';
     const railTabs = `<nav class="community-wiki-home-surface-tabs" role="tablist" aria-label="${esc(t('details'))}"><button type="button" data-wiki-home-surface-tab="raw" data-wiki-name="${esc(activeName)}" class="${surfaceTab === 'raw' ? 'active' : ''}" title="${esc(t('homeRaw'))}"><i data-lucide="book-open"></i><span>${esc(t('homeRaw'))}</span></button><button type="button" data-wiki-home-surface-tab="flow" data-wiki-name="${esc(activeName)}" class="${surfaceTab === 'flow' ? 'active' : ''}" title="${esc(t('flow'))}"><i data-lucide="route"></i><span>${esc(t('flow'))}</span></button><button type="button" data-wiki-home-surface-tab="tree" data-wiki-name="${esc(activeName)}" class="${surfaceTab === 'tree' ? 'active' : ''}" title="${esc(t('tree'))}"><i data-lucide="git-branch"></i><span>${esc(t('tree'))}</span></button></nav>`;
     const contentTabs = HOME_CONTENT_TABS.map(([id, label]) => `<button type="button" class="community-wiki-home-content-tab is-${id} ${surfaceTab === 'raw' && contentTab === id ? 'active' : ''}" data-wiki-home-content-tab="${id}" data-wiki-name="${esc(activeName)}" title="${esc(label)}"><img src="${esc(id === 'profile' ? emblemFor(activeName) : homeSkillIconFor(activeName, id))}" alt="" aria-hidden="true"><span>${esc(label)}</span></button>`).join('');
@@ -8642,6 +8634,7 @@
        ${soloComboModal(state.homeMenuName)}
        ${soloComboSaveConfirmModal(state.homeMenuName)}
        ${homeFlowPreviewModal()}
+       ${homeNodeModal}
       ${state.error ? `<div class="community-wiki-error"><i data-lucide="triangle-alert"></i><span>${esc(t('failed'))}</span><button type="button" data-wiki-action="retry">${esc(t('retry'))}</button></div>` : ''}
       ${state.loading ? `<div class="community-wiki-empty"><i data-lucide="loader-circle"></i><strong>${esc(t('loading'))}</strong></div>` : ''}`, false);
   }
@@ -9203,8 +9196,14 @@
     return true;
   }
 
-  function canEditWiki() {
-    return isLocalWikiPreview() || (isWikiAccountAuthenticated() && state.wikiState.get(state.selected)?.editable === true);
+  function canEditWiki(name = state.selected || state.homeMenuName) {
+    if (isLocalWikiPreview()) return true;
+    if (!isWikiAccountAuthenticated()) return false;
+    const wiki = name ? state.wikiState.get(name) : null;
+    // A signed-in account can edit every unlocked Wiki. The public state may
+    // arrive a frame later than the account session, so do not hide the editor
+    // while that request is still pending. The server remains authoritative.
+    return wiki?.lock?.locked !== true && wiki?.editable !== false;
   }
 
   function isLocalWikiPreview() {
@@ -9258,7 +9257,7 @@
       state.wikiSaveStatus = 'saved';
       return;
     }
-    if (!isWikiAccountAuthenticated() || state.wikiState.get(name)?.editable !== true) return;
+    if (!canEditWiki(name)) return;
     const formId = formStorageId(name, currentFormId(name));
     const editorProfile = wikiEditorProfile();
     state.wikiSaveStatus = 'saving';
@@ -9649,6 +9648,11 @@
       persistSoloCombo(name, data.combo || combo);
       state.soloComboDraft = data.combo || combo;
       state.soloComboEditing = false;
+      // Saving from the inline editor must not reopen the legacy floating
+      // combo-search panel. The saved combo is available from the Flow view.
+      state.soloComboOpen = false;
+      state.soloComboTab = 'solo';
+      state.soloComboDraft = null;
       state.soloComboSelection = -1;
       state.soloComboSaveState = 'saved';
     } catch (error) {
@@ -9677,9 +9681,14 @@
     // editor lane in place so a double-click feels immediate, then keep the
     // lane's horizontal viewport pinned to the newly appended item.
     if (!refreshSoloComboInline(name)) renderCurrentWikiSurface(name);
+    scrollSoloComboDropzoneToEnd();
+  }
+
+  function scrollSoloComboDropzoneToEnd() {
     requestAnimationFrame(() => {
       const dropzone = WIKI_ROOT.querySelector('.community-wiki-solo-inline [data-solo-dropzone]');
-      if (dropzone) dropzone.scrollLeft = dropzone.scrollWidth;
+      if (!dropzone) return;
+      dropzone.scrollLeft = Math.max(0, dropzone.scrollWidth - dropzone.clientWidth);
     });
   }
 
@@ -9718,10 +9727,15 @@
     next.updatedAt = Date.now();
     commitSoloDraft(next);
     state.soloComboSelection = insertAt;
-    renderCurrentWikiSurface(name);
+    if (!refreshSoloComboInline(name)) renderCurrentWikiSurface(name);
     requestAnimationFrame(() => {
-      const selected = WIKI_ROOT.querySelector(`[data-solo-item-index="${insertAt}"]`);
-      selected?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      const dropzone = WIKI_ROOT.querySelector('.community-wiki-solo-inline [data-solo-dropzone]');
+      const selected = dropzone?.querySelector(`[data-solo-item-index="${insertAt}"]`);
+      if (!dropzone || !selected) return;
+      const right = selected.offsetLeft + selected.offsetWidth;
+      const left = selected.offsetLeft;
+      if (left < dropzone.scrollLeft) dropzone.scrollLeft = left;
+      else if (right > dropzone.scrollLeft + dropzone.clientWidth) dropzone.scrollLeft = right - dropzone.clientWidth;
     });
   }
 
@@ -9735,7 +9749,7 @@
     next.updatedAt = Date.now();
     commitSoloDraft(next);
     state.soloComboSelection = -1;
-    renderCurrentWikiSurface(name);
+    if (!refreshSoloComboInline(name)) renderCurrentWikiSurface(name);
   }
 
   async function loadSoloCommunityCombos(name) {
