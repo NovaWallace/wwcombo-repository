@@ -1329,8 +1329,10 @@ html[data-theme='day'] body.wiki-route .community-wiki-resonance-change-list p {
 .community-wiki-solo-item .community-wiki-solo-note-badge:hover, .community-wiki-solo-item .community-wiki-solo-note-badge:focus-visible { border-color: var(--wiki-element, var(--gold)); background: var(--surface); color: var(--wiki-element, var(--gold)); outline: 0; }
 .community-wiki-solo-item small { color: var(--muted); font-size: 8px; }
 .community-wiki-solo-item.selected { border-color: var(--wiki-element, var(--gold)); background: color-mix(in srgb, var(--wiki-element, var(--gold)) 12%, var(--surface)); box-shadow: inset 0 -2px 0 var(--wiki-element, var(--gold)); }
+.community-wiki-solo-item.is-primary-selection { outline: 1px solid color-mix(in srgb, var(--wiki-element, var(--gold)) 72%, transparent); outline-offset: 2px; }
 .community-wiki-solo-buff { position: relative; z-index: 1; width: 100%; display: grid; grid-template-columns: minmax(120px, 1fr) auto auto 92px minmax(140px, 1fr); align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid var(--line); border-left: 3px solid #c56fc7; background: var(--surface); }
 .community-wiki-solo-buff.selected { border-color: var(--wiki-element, var(--gold)); }
+.community-wiki-solo-buff.is-primary-selection { outline: 1px solid color-mix(in srgb, var(--wiki-element, var(--gold)) 72%, transparent); outline-offset: 2px; }
 .community-wiki-solo-buff strong { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .community-wiki-solo-buff label { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 9px; }
 .community-wiki-solo-buff input[type='checkbox'] { accent-color: var(--wiki-element, var(--gold)); }

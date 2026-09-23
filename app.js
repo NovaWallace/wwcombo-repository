@@ -3844,7 +3844,7 @@ function renderLeaderboardRules() {
   title.innerHTML = '<i data-lucide="sparkles" aria-hidden="true"></i><strong>贡献排行</strong><span>按当前公开贡献实时排序</span>';
   const items = [
     ['打轴高手', '连段上传与下载'],
-    ['助人为乐', '委托发布、回应与采纳'],
+    ['助人为乐', '委托发布、回应、完成与采纳'],
     ['人形百科', '单人连段与 Wiki 修正']
   ];
   const list = document.createElement('div');

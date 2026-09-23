@@ -58,7 +58,7 @@
     selectedNode: '', profileOpen: false, editing: false, contextMenu: null, clipboard: null,
     editorStore: {}, editorHistory: [], editorFuture: [], contextDismiss: null,
     graphZoom: 1, graphCanvasZoom: 1, graphContentZoom: 1, graphPan: { x: 0, y: 0 }, expandedGroups: {}, replacementStates: {}, inputRouteStates: {}, editorDraftCategory: 'normal', tideIcons: new Map(), formId: 'normal', formIds: {}, chainIds: {}, modeIds: {}, wikiSaveTimers: new Map(), wikiSaveChains: new Map(), wikiSaveStatus: '', announcement: null, announcementOpen: false, hoveredCharacter: '',
-    homeMenuName: '', homeSurfaceTab: 'selector', homeContentTab: 'profile', homeSelectorScrollLeft: {}, homeSurfaceLoading: false, homeSurfaceLoadingSequence: 0, homeSurfaceFullscreen: false, homeCharacterPickerOpen: false, soloComboOpen: false, soloComboTab: 'solo', soloComboEditing: false, soloComboEditMode: 'combo', soloComboDraft: null, soloComboSelection: -1, soloComboClipboard: null, soloComboHistory: [], soloComboFuture: [], soloNativeDrag: null, soloComboCommunity: [], soloComboCommunityLoading: false, soloComboCommunityLoaded: false, soloComboPanelRect: null, soloCombosByCharacter: new Map(), soloComboLoadState: new Map(), soloComboSaveState: '', soloComboSaveConfirm: false, soloComboAnnotating: false, soloComboNoteAnchor: -1, homeFlowPreview: null, homeInfoLoadPromises: new Map(), homeInfoLoadState: new Map(), homeWikiLoadPromises: new Map(), homeFlowLoadPromises: new Map(), homeTreeAssetLoadPromises: new Map()
+    homeMenuName: '', homeSurfaceTab: 'selector', homeContentTab: 'profile', homeSelectorScrollLeft: {}, homeSurfaceLoading: false, homeSurfaceLoadingSequence: 0, homeSurfaceFullscreen: false, homeCharacterPickerOpen: false, soloComboOpen: false, soloComboTab: 'solo', soloComboEditing: false, soloComboEditMode: 'combo', soloComboDraft: null, soloComboSelection: -1, soloComboSelections: [], soloComboClipboard: null, soloComboHistory: [], soloComboFuture: [], soloNativeDrag: null, soloComboCommunity: [], soloComboCommunityLoading: false, soloComboCommunityLoaded: false, soloComboPanelRect: null, soloCombosByCharacter: new Map(), soloComboLoadState: new Map(), soloComboSaveState: '', soloComboSaveConfirm: false, soloComboAnnotating: false, soloComboNoteAnchor: -1, homeFlowPreview: null, homeInfoLoadPromises: new Map(), homeInfoLoadState: new Map(), homeWikiLoadPromises: new Map(), homeFlowLoadPromises: new Map(), homeTreeAssetLoadPromises: new Map()
   };
 
   const EDITOR_STORAGE_KEY = 'wwcombo-community-wiki-editor-v1';
@@ -7797,6 +7797,44 @@
     return `<button type="button" class="community-wiki-home-surface-fullscreen" data-wiki-home-fullscreen title="${state.homeSurfaceFullscreen ? '退出全屏' : '全屏显示'}" aria-label="${state.homeSurfaceFullscreen ? '退出全屏' : '全屏显示'}"><i data-lucide="move"></i></button>`;
   }
 
+  function soloComboSelectedIndices(draft = state.soloComboDraft) {
+    const items = soloComboDraftItems(draft);
+    const selected = Array.isArray(state.soloComboSelections) ? state.soloComboSelections : [];
+    const values = selected.map(Number).filter((index) => Number.isInteger(index) && index >= 0 && index < items.length);
+    const primary = Number(state.soloComboSelection);
+    if (Number.isInteger(primary) && primary >= 0 && primary < items.length) values.push(primary);
+    return [...new Set(values)].sort((left, right) => left - right);
+  }
+
+  function setSoloComboSelection(index, additive = false) {
+    const items = soloComboDraftItems();
+    const numeric = Number(index);
+    if (!Number.isInteger(numeric) || numeric < 0 || numeric >= items.length) return;
+    const selected = new Set(additive ? soloComboSelectedIndices() : []);
+    if (additive && selected.has(numeric)) selected.delete(numeric);
+    else selected.add(numeric);
+    state.soloComboSelections = [...selected].sort((left, right) => left - right);
+    state.soloComboSelection = selected.has(numeric)
+      ? numeric
+      : (state.soloComboSelections.length ? state.soloComboSelections[state.soloComboSelections.length - 1] : -1);
+  }
+
+  function clearSoloComboSelection() {
+    state.soloComboSelection = -1;
+    state.soloComboSelections = [];
+  }
+
+  function syncSoloComboSelectionPresentation(root = WIKI_ROOT) {
+    const selected = new Set(soloComboSelectedIndices());
+    root.querySelectorAll('.community-wiki-solo-item[data-solo-item-index], .community-wiki-solo-buff[data-solo-item-index]').forEach((item) => {
+      const index = Number(item.dataset.soloItemIndex);
+      const isSelected = selected.has(index);
+      item.classList.toggle('selected', isSelected);
+      item.classList.toggle('is-primary-selection', isSelected && index === state.soloComboSelection);
+      item.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+    });
+  }
+
   function bindSoloComboInlineDelegation() {
     if (WIKI_ROOT.dataset.soloInlineDelegationBound === 'true') return;
     WIKI_ROOT.addEventListener('click', (event) => {
@@ -7809,12 +7847,21 @@
         openSoloComboNote(state.selected || state.homeMenuName || '', Number(badge.dataset.soloNoteAnchor));
         return;
       }
+      const noteAnchor = event.target.closest('[data-solo-note-anchor]');
+      if (noteAnchor && !event.target.closest('[data-solo-note-input]')) {
+        event.preventDefault();
+        event.stopPropagation();
+        openSoloComboNote(state.selected || state.homeMenuName || '', Number(noteAnchor.dataset.soloNoteAnchor));
+        return;
+      }
       const item = event.target.closest('.community-wiki-solo-item[data-solo-item-index]');
-      if (!item || item.dataset.soloDragged === 'true') return;
-      state.soloComboSelection = Number(item.dataset.soloItemIndex);
-      inline.querySelectorAll('.community-wiki-solo-item[data-solo-item-index]').forEach((entry) => {
-        entry.classList.toggle('selected', entry === item);
-      });
+      if (!item || event.detail > 1) return;
+      if (item.dataset.soloDragged === 'true') {
+        item.dataset.soloDragged = '';
+        return;
+      }
+      setSoloComboSelection(Number(item.dataset.soloItemIndex), event.ctrlKey || event.metaKey);
+      syncSoloComboSelectionPresentation(inline);
     });
     WIKI_ROOT.addEventListener('dblclick', (event) => {
       const inline = event.target.closest('.community-wiki-solo-inline');
@@ -8061,7 +8108,7 @@
       const name = element.dataset.wikiName || state.selected || state.homeMenuName || '';
       if (action === 'close') closeSoloCombo(name);
       else if (action === 'new') { state.soloComboOpen = true; state.soloComboTab = 'solo'; if (state.info.has(name)) startSoloComboDraft(name); else navigate(name); }
-      else if (action === 'cancel-edit') { state.soloComboEditing = false; state.soloComboAnnotating = false; state.soloComboNoteAnchor = -1; state.soloComboDraft = null; state.soloComboSelection = -1; renderCurrentWikiSurface(name); }
+      else if (action === 'cancel-edit') { state.soloComboEditing = false; state.soloComboAnnotating = false; state.soloComboNoteAnchor = -1; state.soloComboDraft = null; clearSoloComboSelection(); renderCurrentWikiSurface(name); }
       else if (action === 'save') {
         state.soloComboSaveConfirm = true;
         renderCurrentWikiSurface(name);
@@ -8072,7 +8119,7 @@
         const tags = [...WIKI_ROOT.querySelectorAll('[data-solo-save-tag]:checked')].map((element) => element.value).filter(Boolean);
         void saveSoloCombo(name, input?.value || '', { tags, link });
       } else if (action === 'save-cancel') { state.soloComboSaveConfirm = false; renderCurrentWikiSurface(name); }
-      else if (action === 'edit') { const combo = soloCombosFor(name).find((item) => item.id === element.dataset.soloId); if (combo) { state.soloComboDraft = { ...copyModel(combo), mode: 'combo', buffs: [], notes: Array.isArray(combo.notes) ? copyModel(combo.notes) : [] }; state.soloComboEditing = true; state.soloComboAnnotating = false; state.soloComboNoteAnchor = -1; state.soloComboEditMode = 'combo'; state.soloComboSelection = -1; state.soloComboHistory = []; state.soloComboFuture = []; renderCurrentWikiSurface(name); } }
+      else if (action === 'edit') { const combo = soloCombosFor(name).find((item) => item.id === element.dataset.soloId); if (combo) { state.soloComboDraft = { ...copyModel(combo), mode: 'combo', buffs: [], notes: Array.isArray(combo.notes) ? copyModel(combo.notes) : [] }; state.soloComboEditing = true; state.soloComboAnnotating = false; state.soloComboNoteAnchor = -1; state.soloComboEditMode = 'combo'; clearSoloComboSelection(); state.soloComboHistory = []; state.soloComboFuture = []; renderCurrentWikiSurface(name); } }
     }));
     WIKI_ROOT.querySelectorAll('[data-solo-editor-action]').forEach((element) => element.addEventListener('click', () => soloEditorAction(element.dataset.wikiName || state.selected || state.homeMenuName, element.dataset.soloEditorAction || '')));
     WIKI_ROOT.querySelectorAll('[data-solo-item-index]').forEach((element) => element.addEventListener('click', () => {
@@ -8080,24 +8127,8 @@
       // their first click would cancel the browser's subsequent dblclick.
       if (element.closest('.community-wiki-solo-inline')) return;
       if (element.dataset.soloDragged === 'true') { element.dataset.soloDragged = ''; return; }
-      state.soloComboSelection = Number(element.dataset.soloItemIndex);
+      setSoloComboSelection(Number(element.dataset.soloItemIndex));
       renderCurrentWikiSurface(state.selected || state.homeMenuName);
-    }));
-    WIKI_ROOT.querySelectorAll('.community-wiki-solo-inline .community-wiki-solo-item[data-solo-item-index]').forEach((element) => element.addEventListener('dblclick', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      openSoloComboNote(state.selected || state.homeMenuName || '', Number(element.dataset.soloItemIndex));
-    }));
-    WIKI_ROOT.querySelectorAll('[data-solo-note-badge]').forEach((element) => element.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      openSoloComboNote(state.selected || state.homeMenuName || '', Number(element.dataset.soloNoteAnchor));
-    }));
-    WIKI_ROOT.querySelectorAll('[data-solo-note-anchor]').forEach((element) => element.addEventListener('click', (event) => {
-      if (event.target.closest('[data-solo-note-input]')) return;
-      event.preventDefault();
-      event.stopPropagation();
-      openSoloComboNote(state.selected || state.homeMenuName || '', Number(element.dataset.soloNoteAnchor));
     }));
     bindSoloComboNoteInputs(WIKI_ROOT);
     WIKI_ROOT.querySelectorAll('.community-wiki-solo-item[data-solo-item-index]').forEach((element) => {
@@ -8166,7 +8197,7 @@
         event.preventDefault();
         event.stopPropagation();
         clearPress();
-        state.soloComboSelection = index;
+        setSoloComboSelection(index);
         openSoloComboContextMenu(event.clientX, event.clientY, name, index);
       });
     });
@@ -9273,8 +9304,8 @@
     const editItems = Array.isArray(draft?.nodes) ? draft.nodes : [];
     const buffItems = Array.isArray(draft?.buffs) ? draft.buffs : [];
     const itemTitle = (item) => currentNodes.get(item.nodeId)?.title || item.title || item.nodeId || 'Buff';
-    const editItemsMarkup = editItems.map((item, index) => `<button type="button" class="community-wiki-solo-item ${index === state.soloComboSelection ? 'selected' : ''}" data-solo-item-index="${index}"><i data-lucide="${item.category === 'buff' ? 'sparkles' : 'circle-dot'}"></i><span>${esc(itemTitle(item))}</span><small>${esc(categoryLabel(item.category || 'other'))}</small></button>`).join('');
-    const buffItemsMarkup = buffItems.map((item, index) => `<article class="community-wiki-solo-buff ${index === state.soloComboSelection ? 'selected' : ''}" data-solo-item-index="${index}"><strong>${esc(itemTitle(item))}</strong><label><input type="checkbox" data-solo-buff-field="start" data-solo-buff-index="${index}" ${item.start ? 'checked' : ''}>${esc(t('buffStart'))}</label><label><input type="checkbox" data-solo-buff-field="end" data-solo-buff-index="${index}" ${item.end ? 'checked' : ''}>${esc(t('buffEnd'))}</label><label>${esc(t('buffStacks'))}<input type="number" min="1" max="99" data-solo-buff-field="stacks" data-solo-buff-index="${index}" value="${Math.max(1, Number(item.stacks) || 1)}"></label><label><select data-solo-buff-field="boundTo" data-solo-buff-index="${index}"><option value="">${esc(t('bindBuff'))}</option>${editItems.map((node) => `<option value="${esc(node.instanceId)}" ${item.boundTo === node.instanceId ? 'selected' : ''}>${esc(itemTitle(node))}</option>`).join('')}</select></label></article>`).join('');
+    const editItemsMarkup = editItems.map((item, index) => `<button type="button" class="community-wiki-solo-item ${soloComboSelectedIndices().includes(index) ? 'selected' : ''}" aria-selected="${soloComboSelectedIndices().includes(index) ? 'true' : 'false'}" data-solo-item-index="${index}"><i data-lucide="${item.category === 'buff' ? 'sparkles' : 'circle-dot'}"></i><span>${esc(itemTitle(item))}</span><small>${esc(categoryLabel(item.category || 'other'))}</small></button>`).join('');
+    const buffItemsMarkup = buffItems.map((item, index) => `<article class="community-wiki-solo-buff ${soloComboSelectedIndices().includes(index) ? 'selected' : ''}" aria-selected="${soloComboSelectedIndices().includes(index) ? 'true' : 'false'}" data-solo-item-index="${index}"><strong>${esc(itemTitle(item))}</strong><label><input type="checkbox" data-solo-buff-field="start" data-solo-buff-index="${index}" ${item.start ? 'checked' : ''}>${esc(t('buffStart'))}</label><label><input type="checkbox" data-solo-buff-field="end" data-solo-buff-index="${index}" ${item.end ? 'checked' : ''}>${esc(t('buffEnd'))}</label><label>${esc(t('buffStacks'))}<input type="number" min="1" max="99" data-solo-buff-field="stacks" data-solo-buff-index="${index}" value="${Math.max(1, Number(item.stacks) || 1)}"></label><label><select data-solo-buff-field="boundTo" data-solo-buff-index="${index}"><option value="">${esc(t('bindBuff'))}</option>${editItems.map((node) => `<option value="${esc(node.instanceId)}" ${item.boundTo === node.instanceId ? 'selected' : ''}>${esc(itemTitle(node))}</option>`).join('')}</select></label></article>`).join('');
     const editContent = state.soloComboEditing
       ? `<div class="community-wiki-solo-editing"><div class="community-wiki-solo-edit-head"><label><span>${esc(t('comboName'))}</span><input data-solo-name value="${esc(draft?.name || '')}" placeholder="${esc(t('comboName'))}"></label><div class="community-wiki-solo-mode" role="group"><button type="button" data-solo-mode="combo" class="${state.soloComboEditMode === 'combo' ? 'active' : ''}">${esc(t('comboMode'))}</button><button type="button" data-solo-mode="buff" class="${state.soloComboEditMode === 'buff' ? 'active' : ''}">${esc(t('buffMode'))}</button></div></div><div class="community-wiki-solo-dropzone${(state.soloComboEditMode === 'combo' ? editItems.length : buffItems.length) ? ' has-items' : ''}" data-solo-dropzone tabindex="0"><div class="community-wiki-solo-drop-hint"><i data-lucide="mouse-pointer-2"></i><span>${esc(state.soloComboEditMode === 'combo' ? t('dropNodes') : t('bindBuff'))}</span></div>${state.soloComboEditMode === 'combo' ? editItemsMarkup : buffItemsMarkup}</div><div class="community-wiki-solo-edit-actions"><button type="button" class="primary" data-solo-action="save"><i data-lucide="cloud-upload"></i>${esc(t('saveCombo'))}</button><button type="button" data-solo-action="cancel-edit">${esc(t('cancel'))}</button></div></div>`
       : `<div class="community-wiki-solo-list">${combos.length ? combos.map((combo) => `<article class="community-wiki-solo-saved"><div><strong>${esc(combo.name || t('soloCombo'))}</strong><small>${esc(format(t('stageCount'), (combo.nodes || []).length))}${combo.nodes?.length ? ` · ${esc(combo.nodes.map((item) => item.title || item.nodeId).join(' → '))}` : ''}</small></div><button type="button" data-solo-action="edit" data-solo-id="${esc(combo.id)}" title="${esc(t('edit'))}"><i data-lucide="pencil"></i></button></article>`).join('') : `<div class="community-wiki-solo-empty"><i data-lucide="route"></i><span>${esc(t('noSoloCombos'))}</span></div>`}</div>`;
@@ -9320,12 +9351,14 @@
     const formClass = formIndex > 0 ? ` is-form-${formIndex + 1}` : '';
     const noteNumber = soloComboNoteNumber(index);
     const noteBadge = noteNumber ? `<span class="community-wiki-solo-note-badge" data-solo-note-badge data-solo-note-anchor="${index}" role="button" tabindex="0" aria-label="编辑备注 ${noteNumber}">${noteNumber}</span>` : '';
-    return `<button type="button" class="community-wiki-solo-item${formClass} ${index === state.soloComboSelection ? 'selected' : ''}" data-solo-item-index="${index}">${noteBadge}<i data-lucide="circle-dot"></i><span>${esc(itemTitle(item))}</span><small>${esc(categoryLabel(item.category || 'other'))}</small></button>`;
+    const selected = soloComboSelectedIndices().includes(index);
+    return `<button type="button" class="community-wiki-solo-item${formClass} ${selected ? 'selected' : ''}" aria-selected="${selected ? 'true' : 'false'}" data-solo-item-index="${index}">${noteBadge}<i data-lucide="circle-dot"></i><span>${esc(itemTitle(item))}</span><small>${esc(categoryLabel(item.category || 'other'))}</small></button>`;
   }
 
   function refreshSoloComboInline(name) {
     const dropzone = WIKI_ROOT.querySelector('.community-wiki-solo-inline [data-solo-dropzone]');
     if (!dropzone || !state.soloComboDraft) return false;
+    const scrollLeft = dropzone.scrollLeft;
     const currentNodes = new Map((currentModel(name)?.nodes || []).map((node) => [node.id, node]));
     const items = Array.isArray(state.soloComboDraft.nodes) ? state.soloComboDraft.nodes : [];
     const itemTitle = (item) => currentNodes.get(item.nodeId)?.title || item.title || item.nodeId || '招式';
@@ -9333,38 +9366,19 @@
     const editItemsMarkup = items.map((item, index) => `${soloComboInlineItemMarkup(item, index, itemTitle)}${soloComboInlineNoteMarkup(index)}${index < items.length - 1 ? `<button type="button" class="community-wiki-solo-note-gap" data-solo-note-anchor="${index + 1}" aria-label="在此处添加备注"><i data-lucide="plus"></i></button>` : ''}`).join('') + (items.length ? soloComboInlineNoteMarkup(items.length) : '');
     const noteHint = state.soloComboAnnotating ? '双击招式或点击卡片之间添加备注' : t('dropNodes');
     dropzone.innerHTML = `<div class="community-wiki-solo-drop-hint"><i data-lucide="${state.soloComboAnnotating ? 'message-square-text' : 'plus'}"></i><span>${esc(noteHint)}</span></div>${editItemsMarkup}`;
+    dropzone.scrollLeft = scrollLeft;
     syncSoloComboEditorViewport(dropzone.closest('[data-wiki-graph-scroll]'));
     positionSoloInlineNoteMarkers(dropzone);
     bindSoloComboNoteInputs(dropzone);
     window.lucide?.createIcons({ root: dropzone });
     if (dropzone.dataset.soloInlineFastBound !== 'true') {
-      dropzone.addEventListener('click', (event) => {
-        const badge = event.target.closest('[data-solo-note-badge]');
-        if (badge) {
-          event.preventDefault();
-          event.stopPropagation();
-          openSoloComboNote(name, Number(badge.dataset.soloNoteAnchor));
-          return;
-        }
-        const item = event.target.closest('[data-solo-item-index]');
-        if (!item || item.dataset.soloDragged === 'true') return;
-        state.soloComboSelection = Number(item.dataset.soloItemIndex);
-        dropzone.querySelectorAll('[data-solo-item-index]').forEach((entry) => entry.classList.toggle('selected', entry === item));
-      });
-      dropzone.addEventListener('dblclick', (event) => {
-        const item = event.target.closest('.community-wiki-solo-item[data-solo-item-index]');
-        if (!item) return;
-        event.preventDefault();
-        event.stopPropagation();
-        openSoloComboNote(name, Number(item.dataset.soloItemIndex));
-      });
       dropzone.addEventListener('contextmenu', (event) => {
         const item = event.target.closest('[data-solo-item-index]');
         if (!item) return;
         event.preventDefault();
         event.stopPropagation();
         const index = Number(item.dataset.soloItemIndex);
-        state.soloComboSelection = index;
+        if (!soloComboSelectedIndices().includes(index)) setSoloComboSelection(index);
         openSoloComboContextMenu(event.clientX, event.clientY, name, index);
       });
       let fastDrag = null;
@@ -9404,6 +9418,9 @@
       dropzone.dataset.soloInlineFastBound = 'true';
     }
     window.lucide?.createIcons({ root: dropzone });
+    requestAnimationFrame(() => {
+      if (dropzone.isConnected) dropzone.scrollLeft = scrollLeft;
+    });
     return true;
   }
 
@@ -9863,7 +9880,7 @@
     state.soloComboAnnotating = false;
     state.soloComboNoteAnchor = -1;
     state.soloComboEditMode = 'combo';
-    state.soloComboSelection = -1;
+    clearSoloComboSelection();
     state.soloComboDraft = null;
     state.soloComboSaveConfirm = false;
     renderCurrentWikiSurface(name);
@@ -9883,7 +9900,7 @@
     state.soloComboAnnotating = false;
     state.soloComboNoteAnchor = -1;
     state.soloComboEditMode = 'combo';
-    state.soloComboSelection = -1;
+    clearSoloComboSelection();
     state.soloComboHistory = [];
     state.soloComboFuture = [];
     state.soloComboPanelRect = null;
@@ -9908,31 +9925,75 @@
   function soloEditorAction(name, action) {
     const draft = state.soloComboDraft;
     if (!draft) return;
-    if (action === 'copy' && state.soloComboSelection >= 0) {
-      const source = state.soloComboEditMode === 'buff' ? draft.buffs?.[state.soloComboSelection] : draft.nodes?.[state.soloComboSelection];
-      state.soloComboClipboard = source ? copyModel(source) : null;
+    const key = state.soloComboEditMode === 'buff' ? 'buffs' : 'nodes';
+    const items = Array.isArray(draft[key]) ? draft[key] : [];
+    const selected = soloComboSelectedIndices(draft);
+    const refresh = () => {
+      if (!refreshSoloComboInline(name)) renderCurrentWikiSurface(name);
+      else syncSoloComboSelectionPresentation(WIKI_ROOT);
+    };
+    if (action === 'copy' && selected.length) {
+      const notes = key === 'nodes' && Array.isArray(draft.notes)
+        ? draft.notes.filter((note) => selected.includes(Number(note?.anchor))).map((note) => ({ ...copyModel(note), anchor: selected.indexOf(Number(note.anchor)) }))
+        : [];
+      state.soloComboClipboard = { items: selected.map((index) => copyModel(items[index])), notes };
       return;
     }
     if (action === 'paste' && state.soloComboClipboard) {
+      const clipboard = state.soloComboClipboard;
+      const sourceItems = Array.isArray(clipboard.items) ? clipboard.items : [clipboard];
+      if (!sourceItems.length) return;
       const next = copyModel(draft);
-      const source = copyModel(state.soloComboClipboard);
-      source.instanceId = `${source.nodeId || 'item'}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-      if (state.soloComboEditMode === 'buff') next.buffs = [...(next.buffs || []), source]; else next.nodes = [...(next.nodes || []), source];
+      const insertAt = state.soloComboSelection >= 0 && state.soloComboSelection < items.length
+        ? state.soloComboSelection + 1
+        : items.length;
+      const pasted = sourceItems.map((item, offset) => ({
+        ...copyModel(item),
+        instanceId: `${item.nodeId || 'item'}-${Date.now().toString(36)}-${offset}-${Math.random().toString(36).slice(2, 6)}`
+      }));
+      next[key] = [...items.slice(0, insertAt), ...pasted, ...items.slice(insertAt)];
+      if (key === 'nodes') {
+        const count = pasted.length;
+        next.notes = (Array.isArray(next.notes) ? next.notes : []).map((note) => {
+          const anchor = Number(note?.anchor);
+          return Number.isInteger(anchor) && anchor >= insertAt ? { ...note, anchor: anchor + count } : note;
+        });
+        const copiedNotes = Array.isArray(clipboard.notes) ? clipboard.notes : [];
+        next.notes.push(...copiedNotes.map((note) => ({ ...copyModel(note), id: `note-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, anchor: insertAt + Number(note.anchor) })));
+      }
+      next.updatedAt = Date.now();
       commitSoloDraft(next);
-      state.soloComboSelection = (state.soloComboEditMode === 'buff' ? next.buffs : next.nodes).length - 1;
-    } else if (action === 'cut' && state.soloComboSelection >= 0) {
-      const source = state.soloComboEditMode === 'buff' ? draft.buffs?.[state.soloComboSelection] : draft.nodes?.[state.soloComboSelection];
-      state.soloComboClipboard = source ? copyModel(source) : null;
-      const next = copyModel(draft);
-      if (state.soloComboEditMode === 'buff') next.buffs.splice(state.soloComboSelection, 1); else next.nodes.splice(state.soloComboSelection, 1);
-      commitSoloDraft(next); state.soloComboSelection = -1;
-    } else if (action === 'remove') removeSoloComboSelection(name);
-    else if (action === 'undo' && state.soloComboHistory.length) {
-      const next = state.soloComboHistory.pop(); state.soloComboFuture.push(snapshotSoloDraft()); state.soloComboDraft = next; state.soloComboSelection = -1;
-    } else if (action === 'redo' && state.soloComboFuture.length) {
-      const next = state.soloComboFuture.pop(); state.soloComboHistory.push(snapshotSoloDraft()); state.soloComboDraft = next; state.soloComboSelection = -1;
+      state.soloComboSelections = pasted.map((_, offset) => insertAt + offset);
+      state.soloComboSelection = state.soloComboSelections[state.soloComboSelections.length - 1];
+      refresh();
+      scrollSoloComboDropzoneToItem(state.soloComboSelection);
+      return;
     }
-    renderCurrentWikiSurface(name);
+    if ((action === 'cut' || action === 'remove') && selected.length) {
+      if (action === 'cut') {
+        const notes = key === 'nodes' && Array.isArray(draft.notes)
+          ? draft.notes.filter((note) => selected.includes(Number(note?.anchor))).map((note) => ({ ...copyModel(note), anchor: selected.indexOf(Number(note.anchor)) }))
+          : [];
+        state.soloComboClipboard = { items: selected.map((index) => copyModel(items[index])), notes };
+      }
+      removeSoloComboItemsAt(name, selected);
+      return;
+    }
+    if (action === 'undo' && state.soloComboHistory.length) {
+      const next = state.soloComboHistory.pop();
+      state.soloComboFuture.push(snapshotSoloDraft());
+      state.soloComboDraft = next;
+      clearSoloComboSelection();
+      refresh();
+      return;
+    }
+    if (action === 'redo' && state.soloComboFuture.length) {
+      const next = state.soloComboFuture.pop();
+      state.soloComboHistory.push(snapshotSoloDraft());
+      state.soloComboDraft = next;
+      clearSoloComboSelection();
+      refresh();
+    }
   }
 
   function soloComboNoteNumber(anchor) {
@@ -10024,10 +10085,20 @@
 
   function openSoloComboNote(name, anchor) {
     if (!state.soloComboDraft || state.soloComboEditMode !== 'combo') return;
+    const dropzone = WIKI_ROOT.querySelector('.community-wiki-solo-inline [data-solo-dropzone]');
+    const scrollLeft = dropzone?.scrollLeft || 0;
     state.soloComboAnnotating = true;
     state.soloComboNoteAnchor = Number(anchor);
     if (!refreshSoloComboInline(name)) renderCurrentWikiSurface(name);
-    requestAnimationFrame(() => WIKI_ROOT.querySelector('[data-solo-note-input]')?.focus());
+    const restore = () => {
+      const nextDropzone = WIKI_ROOT.querySelector('.community-wiki-solo-inline [data-solo-dropzone]');
+      if (nextDropzone) nextDropzone.scrollLeft = scrollLeft;
+      const input = WIKI_ROOT.querySelector('[data-solo-note-input]');
+      input?.focus({ preventScroll: true });
+      if (nextDropzone) nextDropzone.scrollLeft = scrollLeft;
+    };
+    restore();
+    requestAnimationFrame(restore);
   }
 
   function closeSoloCombo(name = state.selected) {
@@ -10036,7 +10107,7 @@
     state.soloComboAnnotating = false;
     state.soloComboNoteAnchor = -1;
     state.soloComboDraft = null;
-    state.soloComboSelection = -1;
+    clearSoloComboSelection();
     state.soloComboSaveConfirm = false;
     renderCurrentWikiSurface(name);
   }
@@ -10074,7 +10145,7 @@
       state.soloComboOpen = false;
       state.soloComboTab = 'solo';
       state.soloComboDraft = null;
-      state.soloComboSelection = -1;
+      clearSoloComboSelection();
       state.soloComboSaveState = 'saved';
     } catch (error) {
       state.soloComboSaveState = String(error?.message || error);
@@ -10132,6 +10203,7 @@
         return Number.isInteger(anchor) && anchor >= insertAt ? { ...note, anchor: anchor + 1 } : note;
       });
     }
+    state.soloComboSelections = [insertAt];
     state.soloComboSelection = insertAt;
     next.updatedAt = Date.now();
     commitSoloDraft(next);
@@ -10164,7 +10236,7 @@
   }
 
   function removeSoloComboSelection(name) {
-    removeSoloComboItemAt(name, state.soloComboSelection);
+    removeSoloComboItemsAt(name, soloComboSelectedIndices());
   }
 
   function soloComboInsertionIndex(dropzone, clientX, source = null) {
@@ -10197,6 +10269,7 @@
     next[key] = reordered;
     next.updatedAt = Date.now();
     commitSoloDraft(next);
+    state.soloComboSelections = [insertAt];
     state.soloComboSelection = insertAt;
     if (!refreshSoloComboInline(name)) renderCurrentWikiSurface(name);
     requestAnimationFrame(() => {
@@ -10211,15 +10284,32 @@
   }
 
   function removeSoloComboItemAt(name, index) {
+    removeSoloComboItemsAt(name, [index]);
+  }
+
+  function removeSoloComboItemsAt(name, indices) {
     const draft = state.soloComboDraft;
     const items = soloComboDraftItems(draft);
-    if (!draft || index < 0 || index >= items.length) return;
+    const removed = [...new Set((Array.isArray(indices) ? indices : [indices]).map(Number))]
+      .filter((index) => Number.isInteger(index) && index >= 0 && index < items.length)
+      .sort((left, right) => left - right);
+    if (!draft || !removed.length) return;
     const next = copyModel(draft);
     const key = state.soloComboEditMode === 'buff' ? 'buffs' : 'nodes';
-    next[key] = (next[key] || []).filter((_, itemIndex) => itemIndex !== index);
+    const removedSet = new Set(removed);
+    next[key] = (next[key] || []).filter((_, itemIndex) => !removedSet.has(itemIndex));
+    if (key === 'nodes') {
+      next.notes = (Array.isArray(next.notes) ? next.notes : []).flatMap((note) => {
+        const anchor = Number(note?.anchor);
+        if (!Number.isInteger(anchor)) return [note];
+        if (anchor < items.length && removedSet.has(anchor)) return [];
+        const shift = removed.filter((index) => index < anchor).length;
+        return [{ ...note, anchor: anchor - shift }];
+      });
+    }
     next.updatedAt = Date.now();
     commitSoloDraft(next);
-    state.soloComboSelection = -1;
+    clearSoloComboSelection();
     if (!refreshSoloComboInline(name)) renderCurrentWikiSurface(name);
   }
 
@@ -13011,7 +13101,7 @@
       const action = button.dataset.soloContextAction || '';
       closeContextMenu();
       if (button.disabled) return;
-      state.soloComboSelection = index;
+      if (!soloComboSelectedIndices().includes(index)) setSoloComboSelection(index);
       soloEditorAction(name, action);
     }));
     state.contextDismiss = (event) => {
@@ -13515,6 +13605,7 @@
         await accountReady.catch(() => {});
       }
       if (initialSelected && state.selected === initialSelected) await loadDetail(initialSelected);
+      else if (!initialSelected) renderHome();
     };
     window.addEventListener('popstate', () => {
       const next = new URLSearchParams(location.search).get('wiki')?.trim() || 'home';
@@ -13547,7 +13638,7 @@
             renderCurrentWikiSurface(selectedName);
           }
         });
-      }
+      } else renderHome();
     });
     // Register the session listener before starting the first data load so a
     // fast account response cannot race past the Wiki permission refresh.
