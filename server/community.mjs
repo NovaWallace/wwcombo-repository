@@ -57,10 +57,6 @@ function normalizeEmail(value) {
   return /^[^\s@]+@[^\s@]+$/.test(email) && email.length <= 254 ? email : '';
 }
 
-function cleanProfileText(value, limit) {
-  return String(value || '').trim().slice(0, limit);
-}
-
 function publicEmail(value) {
   const email = normalizeEmail(value);
   if (!email) return '';
@@ -497,7 +493,6 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const queueFile = path.join(root, 'submissions.json');
   const publishedFile = path.join(root, 'published.json');
   const ownersFile = path.join(root, 'owners.json');
-  const accountProfilesFile = path.join(root, 'account-profiles.json');
   const withdrawalsFile = path.join(root, 'withdrawals.json');
   const whitelistFile = path.join(root, 'whitelist.json');
   const accountRolesFile = path.join(root, 'account-roles.json');
@@ -669,35 +664,6 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const normalized = normalizeEmail(email);
     if (!normalized) return [];
     return (await accountRoleMap())[normalized] || [];
-  }
-
-  async function accountProfile(email) {
-    const normalizedEmail = normalizeEmail(email);
-    if (!normalizedEmail) return { username: '', avatar: '', homepage: '' };
-    const profiles = record(await readJson(accountProfilesFile, {}));
-    const profile = record(profiles[normalizedEmail]);
-    return {
-      username: cleanProfileText(profile.username, 40),
-      avatar: cleanProfileText(profile.avatar, 80),
-      homepage: creatorHomepage(profile.homepage)
-    };
-  }
-
-  async function saveAccountProfile(email, value) {
-    const normalizedEmail = normalizeEmail(email);
-    if (!normalizedEmail) throw new Error('账号邮箱无效。');
-    const source = record(value);
-    const profile = {
-      username: cleanProfileText(source.username, 40),
-      avatar: cleanProfileText(source.avatar, 80),
-      homepage: creatorHomepage(source.homepage),
-      updatedAt: Date.now()
-    };
-    if (!profile.username) throw new Error('用户名不能为空。');
-    const profiles = record(await readJson(accountProfilesFile, {}));
-    profiles[normalizedEmail] = profile;
-    await writeJson(accountProfilesFile, profiles);
-    return { username: profile.username, avatar: profile.avatar, homepage: profile.homepage };
   }
 
   async function wikiAdminEmails() {
@@ -2014,10 +1980,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   }
 
   async function publicLeaderboard() {
-    const [published, owners, profiles, downloads, commissions, editLog] = await Promise.all([
+    const [published, downloads, commissions, editLog] = await Promise.all([
       readJson(publishedFile, { charts: [] }),
-      readJson(ownersFile, {}),
-      readJson(accountProfilesFile, {}),
       readJson(downloadsFile, {}),
       commissionState(),
       readJson(wikiEditLogFile, { version: 1, items: [] })
@@ -2034,18 +1998,12 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const identity = (value, fallback = '匿名用户') => {
       const source = record(value);
       const email = normalizeEmail(source.email || source.editorEmail);
-      const profile = record(profiles[email]);
-      const name = cleanName(profile.username || source.nickname || source.username || source.editorName || source.name);
-      const nameKey = name ? `name:${name.toLocaleLowerCase('zh-CN')}` : '';
+      const name = cleanName(source.nickname || source.username || source.editorName || source.name);
       return {
-        // Names are the only stable identity available for older records whose
-        // email values were masked or entered differently across sections.
-        // Prefer them so one contributor does not split into combo/commission rows.
-        key: nameKey || (email ? `email:${email}` : `name:${fallback}`),
+        key: email ? `email:${email}` : `name:${name || fallback}`,
         name: name || (email ? publicEmail(email) : fallback),
-        email,
-        avatar: publicAvatar(profile.avatar || source.avatar || source.editorAvatar),
-        homepage: publicHomepage(profile.homepage || source.homepage || source.creatorHomepage)
+        avatar: publicAvatar(source.avatar || source.editorAvatar),
+        homepage: publicHomepage(source.homepage || source.creatorHomepage)
       };
     };
     const ensure = (value, fallback) => {
@@ -2053,17 +2011,17 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       const current = users.get(person.key) || {
         key: person.key,
         name: person.name,
-        email: person.email ? publicEmail(person.email) : '',
+        email: person.key.startsWith('email:') ? publicEmail(person.key.slice(6)) : '',
         avatar: person.avatar,
         homepage: person.homepage,
         characters: [],
         score: 0,
         combo: { uploads: 0, downloads: 0, score: 0 },
-        commission: { published: 0, responses: 0, adopted: 0, received: 0, score: 0 },
+        commission: { published: 0, responses: 0, adopted: 0, completed: 0, received: 0, score: 0 },
         wiki: { soloCombos: 0, repairs: 0, score: 0 }
       };
       if (person.name !== '匿名用户') current.name = person.name;
-      if (person.email) current.email = publicEmail(person.email);
+      if (person.key.startsWith('email:')) current.email = publicEmail(person.key.slice(6));
       if (person.avatar) current.avatar = person.avatar;
       if (person.homepage) current.homepage = person.homepage;
       users.set(person.key, current);
@@ -2083,28 +2041,13 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       user.characters = user.characters.slice(0, 8);
     };
 
-    for (const item of (Array.isArray(published?.charts) ? published.charts : [])) {
-      // published.json stores { fileName, chart }; older records may still
-      // use the summary object directly, so keep that form as a fallback.
-      const chart = record(item?.chart && typeof item.chart === 'object' ? item.chart : item);
-      const comboId = String(chart.id || item?.id || chart.community?.id || '').trim();
-      const owner = record(owners?.[comboId] || owners?.[item?.fileName] || owners?.[chart.community?.id]);
-      const listedSubmitter = chart.submitter || chart.community?.submitter || item?.submitter || {};
-      const listedName = cleanName(listedSubmitter.nickname || listedSubmitter.username || listedSubmitter.name).toLowerCase();
-      const listedEmail = normalizeEmail(listedSubmitter.email);
-      const listedAsUnknown = !listedName && !listedEmail
-        || ['unknown', 'community', '连段作者', '匿名用户', '未命名用户', '未知用户'].includes(listedName)
-        || listedEmail.endsWith('@unknown.invalid');
-      const ownerName = cleanName(owner.nickname || owner.username || owner.name);
-      const submitter = listedAsUnknown && (owner.email || ownerName)
-        ? { ...listedSubmitter, ...owner, ...(ownerName ? { nickname: ownerName, username: ownerName } : {}) }
-        : (Object.keys(listedSubmitter).length ? listedSubmitter : (Object.keys(owner).length ? owner : chart));
-      const comboUser = ensure(submitter, '连段作者');
-      add(submitter, 'combo', 'uploads', 200, '连段作者');
-      addCharacters(comboUser, chart.characters || chart.character || item?.characters || item?.character);
-      const count = Math.max(0, Number(downloads?.[comboId] || 0));
+    for (const chart of (Array.isArray(published?.charts) ? published.charts : [])) {
+      const comboUser = ensure(chart.submitter || chart, '连段作者');
+      add(chart.submitter || chart, 'combo', 'uploads', 200, '连段作者');
+      addCharacters(comboUser, chart.characters || chart.character);
+      const count = Math.max(0, Number(downloads?.[chart.id] || 0));
       if (count) {
-        const user = comboUser;
+        const user = ensure(chart.submitter || chart, '连段作者');
         user.combo.downloads += count;
         user.combo.score += count;
         user.score += count;
@@ -2122,8 +2065,12 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
         owner.commission.received += 1;
         owner.commission.score += 100;
         owner.score += 100;
-        if (response.status === 'accepted' || response.acceptedAt) {
-          add(response, 'commission', 'adopted', 200, '回应作者');
+        const accepted = response.status === 'accepted' || response.acceptedAt || commission.acceptedResponseId === response.id;
+        if (accepted) {
+          add(response, 'commission', 'adopted', 500, '回应作者');
+          if (commission.status === 'completed') {
+            add(response, 'commission', 'completed', 500, '回应作者');
+          }
           if (!response.autoAdopted && !commission.autoAdopted) {
             const ownerUser = ensure(commission.owner, '委托发布者');
             ownerUser.commission.adopted += 1;
@@ -2163,7 +2110,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     return {
       version: 1,
       updatedAt: Date.now(),
-      rules: { comboUpload: 200, comboDownload: 1, commissionPublish: 100, commissionResponse: 200, commissionAdopted: 200, commissionReceived: 100, commissionActiveAdopt: 100, wikiSoloCombo: 200, wikiRepair: 300 },
+      rules: { comboUpload: 200, comboDownload: 1, commissionPublish: 100, commissionResponse: 200, commissionAdopted: 500, commissionCompleted: 500, commissionReceived: 100, commissionActiveAdopt: 100, wikiSoloCombo: 200, wikiRepair: 300 },
       users: rows
     };
   }
@@ -2225,8 +2172,6 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     setWhitelist: (...args) => serializeMutation(() => setWhitelist(...args)),
     setWikiAdminEmails: (...args) => serializeMutation(() => setWikiAdminEmails(...args)),
     accountRoles,
-    accountProfile,
-    saveAccountProfile: (...args) => serializeMutation(() => saveAccountProfile(...args)),
     sendAccountLoginCode,
     setSmtp: (...args) => serializeMutation(() => setSmtp(...args)),
     setReviewSettings: (...args) => serializeMutation(() => setReviewSettings(...args)),
