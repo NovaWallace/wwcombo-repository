@@ -57,6 +57,10 @@ function normalizeEmail(value) {
   return /^[^\s@]+@[^\s@]+$/.test(email) && email.length <= 254 ? email : '';
 }
 
+function cleanProfileText(value, limit) {
+  return String(value || '').trim().slice(0, limit);
+}
+
 function publicEmail(value) {
   const email = normalizeEmail(value);
   if (!email) return '';
@@ -493,6 +497,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   const queueFile = path.join(root, 'submissions.json');
   const publishedFile = path.join(root, 'published.json');
   const ownersFile = path.join(root, 'owners.json');
+  const accountProfilesFile = path.join(root, 'account-profiles.json');
   const withdrawalsFile = path.join(root, 'withdrawals.json');
   const whitelistFile = path.join(root, 'whitelist.json');
   const accountRolesFile = path.join(root, 'account-roles.json');
@@ -664,6 +669,35 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const normalized = normalizeEmail(email);
     if (!normalized) return [];
     return (await accountRoleMap())[normalized] || [];
+  }
+
+  async function accountProfile(email) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) return { username: '', avatar: '', homepage: '' };
+    const profiles = record(await readJson(accountProfilesFile, {}));
+    const profile = record(profiles[normalizedEmail]);
+    return {
+      username: cleanProfileText(profile.username, 40),
+      avatar: cleanProfileText(profile.avatar, 80),
+      homepage: creatorHomepage(profile.homepage)
+    };
+  }
+
+  async function saveAccountProfile(email, value) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) throw new Error('账号邮箱无效。');
+    const source = record(value);
+    const profile = {
+      username: cleanProfileText(source.username, 40),
+      avatar: cleanProfileText(source.avatar, 80),
+      homepage: creatorHomepage(source.homepage),
+      updatedAt: Date.now()
+    };
+    if (!profile.username) throw new Error('用户名不能为空。');
+    const profiles = record(await readJson(accountProfilesFile, {}));
+    profiles[normalizedEmail] = profile;
+    await writeJson(accountProfilesFile, profiles);
+    return { username: profile.username, avatar: profile.avatar, homepage: profile.homepage };
   }
 
   async function wikiAdminEmails() {
@@ -1980,8 +2014,10 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   }
 
   async function publicLeaderboard() {
-    const [published, downloads, commissions, editLog] = await Promise.all([
+    const [published, owners, profiles, downloads, commissions, editLog] = await Promise.all([
       readJson(publishedFile, { charts: [] }),
+      readJson(ownersFile, {}),
+      readJson(accountProfilesFile, {}),
       readJson(downloadsFile, {}),
       commissionState(),
       readJson(wikiEditLogFile, { version: 1, items: [] })
@@ -1998,12 +2034,17 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     const identity = (value, fallback = '匿名用户') => {
       const source = record(value);
       const email = normalizeEmail(source.email || source.editorEmail);
-      const name = cleanName(source.nickname || source.username || source.editorName || source.name);
+      const profile = record(profiles[email]);
+      const name = cleanName(profile.username || source.nickname || source.username || source.editorName || source.name);
+      const nameKey = name ? `name:${name.toLocaleLowerCase('zh-CN')}` : '';
       return {
-        key: email ? `email:${email}` : `name:${name || fallback}`,
+        // Older records can contain masked or inconsistent emails. Prefer the
+        // saved username so one contributor is merged across all sections.
+        key: nameKey || (email ? `email:${email}` : `name:${fallback}`),
         name: name || (email ? publicEmail(email) : fallback),
-        avatar: publicAvatar(source.avatar || source.editorAvatar),
-        homepage: publicHomepage(source.homepage || source.creatorHomepage)
+        email,
+        avatar: publicAvatar(profile.avatar || source.avatar || source.editorAvatar),
+        homepage: publicHomepage(profile.homepage || source.homepage || source.creatorHomepage)
       };
     };
     const ensure = (value, fallback) => {
@@ -2011,7 +2052,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       const current = users.get(person.key) || {
         key: person.key,
         name: person.name,
-        email: person.key.startsWith('email:') ? publicEmail(person.key.slice(6)) : '',
+        email: person.email ? publicEmail(person.email) : '',
         avatar: person.avatar,
         homepage: person.homepage,
         characters: [],
@@ -2021,7 +2062,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
         wiki: { soloCombos: 0, repairs: 0, score: 0 }
       };
       if (person.name !== '匿名用户') current.name = person.name;
-      if (person.key.startsWith('email:')) current.email = publicEmail(person.key.slice(6));
+      if (person.email) current.email = publicEmail(person.email);
       if (person.avatar) current.avatar = person.avatar;
       if (person.homepage) current.homepage = person.homepage;
       users.set(person.key, current);
@@ -2041,13 +2082,28 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       user.characters = user.characters.slice(0, 8);
     };
 
-    for (const chart of (Array.isArray(published?.charts) ? published.charts : [])) {
-      const comboUser = ensure(chart.submitter || chart, '连段作者');
-      add(chart.submitter || chart, 'combo', 'uploads', 200, '连段作者');
-      addCharacters(comboUser, chart.characters || chart.character);
-      const count = Math.max(0, Number(downloads?.[chart.id] || 0));
+    for (const item of (Array.isArray(published?.charts) ? published.charts : [])) {
+      // published.json stores { fileName, chart }; older records may still
+      // use the summary object directly, so keep that form as a fallback.
+      const chart = record(item?.chart && typeof item.chart === 'object' ? item.chart : item);
+      const comboId = String(chart.id || item?.id || chart.community?.id || '').trim();
+      const owner = record(owners?.[comboId] || owners?.[item?.fileName] || owners?.[chart.community?.id]);
+      const listedSubmitter = chart.submitter || chart.community?.submitter || item?.submitter || {};
+      const listedName = cleanName(listedSubmitter.nickname || listedSubmitter.username || listedSubmitter.name).toLowerCase();
+      const listedEmail = normalizeEmail(listedSubmitter.email);
+      const listedAsUnknown = !listedName && !listedEmail
+        || ['unknown', 'community', '连段作者', '匿名用户', '未命名用户', '未知用户'].includes(listedName)
+        || listedEmail.endsWith('@unknown.invalid');
+      const ownerName = cleanName(owner.nickname || owner.username || owner.name);
+      const submitter = listedAsUnknown && (owner.email || ownerName)
+        ? { ...listedSubmitter, ...owner, ...(ownerName ? { nickname: ownerName, username: ownerName } : {}) }
+        : (Object.keys(listedSubmitter).length ? listedSubmitter : (Object.keys(owner).length ? owner : chart));
+      const comboUser = ensure(submitter, '连段作者');
+      add(submitter, 'combo', 'uploads', 200, '连段作者');
+      addCharacters(comboUser, chart.characters || chart.character || item?.characters || item?.character);
+      const count = Math.max(0, Number(downloads?.[comboId] || 0));
       if (count) {
-        const user = ensure(chart.submitter || chart, '连段作者');
+        const user = comboUser;
         user.combo.downloads += count;
         user.combo.score += count;
         user.score += count;
@@ -2172,6 +2228,8 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     setWhitelist: (...args) => serializeMutation(() => setWhitelist(...args)),
     setWikiAdminEmails: (...args) => serializeMutation(() => setWikiAdminEmails(...args)),
     accountRoles,
+    accountProfile,
+    saveAccountProfile: (...args) => serializeMutation(() => saveAccountProfile(...args)),
     sendAccountLoginCode,
     setSmtp: (...args) => serializeMutation(() => setSmtp(...args)),
     setReviewSettings: (...args) => serializeMutation(() => setReviewSettings(...args)),
