@@ -2040,8 +2040,9 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
   }
 
   async function publicLeaderboard() {
-    const [published, downloads, commissions, editLog] = await Promise.all([
+    const [published, owners, downloads, commissions, editLog] = await Promise.all([
       readJson(publishedFile, { charts: [] }),
+      readJson(ownersFile, {}),
       readJson(downloadsFile, {}),
       commissionState(),
       readJson(wikiEditLogFile, { version: 1, items: [] })
@@ -2102,12 +2103,18 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     };
 
     for (const chart of (Array.isArray(published?.charts) ? published.charts : [])) {
-      const comboUser = ensure(chart.submitter || chart, '连段作者');
-      add(chart.submitter || chart, 'combo', 'uploads', 200, '连段作者');
+      // Older published charts keep their real owner in the private owners
+      // index rather than in the public package. Merge that record before
+      // building the leaderboard so legacy uploads join the same person as
+      // commissions and Wiki edits instead of becoming "连段作者".
+      const owner = record(owners?.[chart.id]);
+      const contributor = { ...record(chart.submitter), ...owner };
+      const comboUser = ensure(contributor.email || contributor.username || contributor.nickname ? contributor : chart, '连段作者');
+      add(contributor.email || contributor.username || contributor.nickname ? contributor : chart, 'combo', 'uploads', 200, '连段作者');
       addCharacters(comboUser, chart.characters || chart.character);
       const count = Math.max(0, Number(downloads?.[chart.id] || 0));
       if (count) {
-        const user = ensure(chart.submitter || chart, '连段作者');
+        const user = ensure(contributor.email || contributor.username || contributor.nickname ? contributor : chart, '连段作者');
         user.combo.downloads += count;
         user.combo.score += count;
         user.score += count;
