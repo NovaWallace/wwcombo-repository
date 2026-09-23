@@ -2056,10 +2056,30 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
         return /^https?:$/i.test(url.protocol) && /(bilibili\.com|b23\.tv|douyin\.com)$/i.test(url.hostname.replace(/^www\./i, '')) ? url.href.slice(0, 300) : '';
       } catch { return ''; }
     };
+    const placeholderNames = new Set(['unknown', 'community', '连段作者', '匿名用户', '未命名用户', '未知用户']);
+    const normalizedName = (value) => cleanName(value).toLocaleLowerCase('zh-CN');
+    const isPlaceholderEmail = (value) => normalizeEmail(value).endsWith('@unknown.invalid');
+    const usableEmail = (value) => {
+      const email = normalizeEmail(value);
+      return email && !isPlaceholderEmail(email) ? email : '';
+    };
+    const usableName = (...values) => {
+      for (const value of values) {
+        const name = cleanName(value);
+        if (name && !placeholderNames.has(normalizedName(name))) return name;
+      }
+      return '';
+    };
+    const hasKnownIdentity = (value) => {
+      const source = record(value);
+      const email = usableEmail(source.email || source.editorEmail);
+      const name = usableName(source.nickname, source.username, source.editorName, source.name);
+      return Boolean(email || (name && !placeholderNames.has(name)));
+    };
     const identity = (value, fallback = '匿名用户') => {
       const source = record(value);
-      const email = normalizeEmail(source.email || source.editorEmail);
-      const name = cleanName(source.nickname || source.username || source.editorName || source.name);
+      const email = usableEmail(source.email || source.editorEmail);
+      const name = usableName(source.nickname, source.username, source.editorName, source.name);
       return {
         key: email ? `email:${email}` : `name:${name || fallback}`,
         name: name || (email ? publicEmail(email) : fallback),
@@ -2102,22 +2122,93 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       user.characters = user.characters.slice(0, 8);
     };
 
-    for (const chart of (Array.isArray(published?.charts) ? published.charts : [])) {
-      // Older published charts keep their real owner in the private owners
-      // index rather than in the public package. Merge that record before
-      // building the leaderboard so legacy uploads join the same person as
-      // commissions and Wiki edits instead of becoming "连段作者".
-      const owner = record(owners?.[chart.id]);
-      const contributor = { ...record(chart.submitter), ...owner };
-      const comboUser = ensure(contributor.email || contributor.username || contributor.nickname ? contributor : chart, '连段作者');
-      add(contributor.email || contributor.username || contributor.nickname ? contributor : chart, 'combo', 'uploads', 200, '连段作者');
-      addCharacters(comboUser, chart.characters || chart.character);
-      const count = Math.max(0, Number(downloads?.[chart.id] || 0));
+    // Owners have existed in several server-side shapes. Build one lookup
+    // from every stable alias so old uploads can recover their real author
+    // even when the public chart only contains the anonymous submitter.
+    const ownerLookup = new Map();
+    const ownerLookupKey = (value) => {
+      let key = String(value || '').trim();
+      try { key = decodeURIComponent(key); } catch {}
+      return key.toLocaleLowerCase('zh-CN');
+    };
+    const ownerEntries = Array.isArray(owners)
+      ? owners.map((value, index) => [value?.id || value?.comboId || index, value])
+      : Object.entries(record(owners));
+    for (const [key, value] of ownerEntries) {
+      const owner = record(value);
+      const aliases = [
+        key,
+        owner.id,
+        owner.comboId,
+        owner.chartId,
+        owner.communityId,
+        owner.file,
+        owner.fileName,
+        owner.filename,
+        owner.sourceFile,
+        owner.storedFile,
+        owner.submissionId
+      ];
+      for (const alias of aliases) {
+        const normalized = ownerLookupKey(alias);
+        if (normalized) ownerLookup.set(normalized, owner);
+      }
+    }
+    const ownerFor = (item, chart, comboId) => {
+      const candidates = [
+        comboId,
+        item?.id,
+        item?.fileName,
+        item?.filename,
+        chart?.id,
+        chart?.community?.id,
+        chart?.community?.fileName,
+        chart?.community?.sourceFile
+      ];
+      for (const candidate of candidates) {
+        const direct = record(owners?.[candidate]);
+        if (Object.keys(direct).length) return direct;
+        const indexed = ownerLookup.get(ownerLookupKey(candidate));
+        if (indexed) return indexed;
+      }
+      return {};
+    };
+
+    for (const item of (Array.isArray(published?.charts) ? published.charts : [])) {
+      // Published data has two shapes: newer records are the chart itself,
+      // while legacy records wrap it as { fileName, chart }. Normalize before
+      // reading the id, owner, characters, or submitter.
+      const chart = record(item?.chart && typeof item.chart === 'object' ? item.chart : item);
+      const comboId = String(chart.id || item?.id || chart.community?.id || '').trim();
+      const owner = ownerFor(item, chart, comboId);
+      const listedSubmitter = record(chart.submitter || chart.community?.submitter || item?.submitter);
+      const listedName = usableName(listedSubmitter.nickname, listedSubmitter.username, listedSubmitter.name);
+      const listedEmail = usableEmail(listedSubmitter.email);
+      const listedAsUnknown = !listedName && !listedEmail;
+      const ownerName = usableName(owner.nickname, owner.username, owner.name);
+      const ownerEmail = usableEmail(owner.email || owner.editorEmail);
+      const submitter = ownerEmail || ownerName
+        ? { ...listedSubmitter, ...owner, ...(ownerName ? { nickname: ownerName, username: ownerName } : {}) }
+        : (Object.keys(listedSubmitter).length ? listedSubmitter : (Object.keys(owner).length ? owner : chart));
+      if ((ownerEmail || ownerName) && !ownerName && listedAsUnknown) {
+        delete submitter.nickname;
+        delete submitter.username;
+        delete submitter.name;
+      }
+
+      // A missing uploader is not a real contributor. Do not turn it into a
+      // synthetic top-ranked user just because the upload record exists.
+      if (!hasKnownIdentity(submitter)) continue;
+
+      const comboUser = ensure(submitter, '连段作者');
+      add(submitter, 'combo', 'uploads', 200, '连段作者');
+      addCharacters(comboUser, chart.characters || chart.character || item?.characters || item?.character);
+      const downloadKeys = [...new Set([comboId, item?.fileName, chart.community?.id].map((value) => String(value || '').trim()).filter(Boolean))];
+      const count = Math.max(0, downloadKeys.reduce((total, key) => total + Number(downloads?.[key] || 0), 0));
       if (count) {
-        const user = ensure(contributor.email || contributor.username || contributor.nickname ? contributor : chart, '连段作者');
-        user.combo.downloads += count;
-        user.combo.score += count;
-        user.score += count;
+        comboUser.combo.downloads += count;
+        comboUser.combo.score += count;
+        comboUser.score += count;
       }
     }
     for (const commission of (Array.isArray(commissions?.commissions) ? commissions.commissions : [])) {
