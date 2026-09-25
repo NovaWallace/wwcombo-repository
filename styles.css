@@ -3725,7 +3725,8 @@ html:not([data-theme='day']) .leaderboard-metric-headers small { color: #aeb8ba;
   .community-wiki-home-character-picker-item small { color: var(--wiki-rarity); font-size: 8px; font-weight: 900; }
   html[data-theme='day'] body.wiki-route .community-wiki-desktop-character-panel.is-fullscreen { background: rgba(244,248,247,.96); }
   html[data-theme='day'] body.wiki-route .community-wiki-home-surface-fullscreen,
-  html[data-theme='day'] body.wiki-route .community-wiki-home-surface-character { border-color: rgba(20,31,36,.16); background: rgba(255,255,255,.5); color: #172126; }
+html[data-theme='day'] body.wiki-route .community-wiki-home-surface-character { border-color: rgba(20,31,36,.16); background: rgba(255,255,255,.5); color: #172126; }
+
   html[data-theme='day'] body.wiki-route .community-wiki-home-character-picker { border-color: rgba(20,31,36,.18); background: rgba(247,250,250,.98); color: #172126; box-shadow: 12px 14px 38px rgba(24,35,38,.2); }
   html[data-theme='day'] body.wiki-route .community-wiki-home-character-picker-head { border-bottom-color: rgba(20,31,36,.13); background: rgba(255,255,255,.56); }
   html[data-theme='day'] body.wiki-route .community-wiki-home-character-picker-group + .community-wiki-home-character-picker-group { border-top-color: rgba(20,31,36,.13); }
