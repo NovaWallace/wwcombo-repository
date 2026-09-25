@@ -3499,19 +3499,18 @@ html:not([data-theme='day']) .leaderboard-metric-headers small { color: #aeb8ba;
   .community-wiki-solo-rail-tool.is-save { color: var(--wiki-element, var(--accent)); border-color: color-mix(in srgb, var(--wiki-element, var(--accent)) 55%, rgba(255,255,255,.12)); }
   .community-wiki-solo-rail-divider { height: 1px; margin: 2px 0; background: rgba(255,255,255,.14); }
   html[data-theme='day'] body.wiki-route .community-wiki-home-tree-toolbar { border-bottom-color: rgba(20,31,36,.15); background: rgba(255,255,255,.5); }
-  /* Tree mode uses the same light rail as raw/flow mode. Keep the controls
-     dark on that rail so the icons remain legible in the day preview. */
-  .community-wiki-desktop-surface.is-tree-surface .community-wiki-home-rail { background: rgba(255,255,255,.82); border-right-color: rgba(20,31,36,.16); color: #172126; }
-  .community-wiki-desktop-surface.is-tree-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button,
-  .community-wiki-desktop-surface.is-tree-surface .community-wiki-home-rail .community-wiki-home-surface-back { border-color: rgba(20,31,36,.16); background: rgba(255,255,255,.62); color: #172126; }
-  .community-wiki-desktop-surface.is-tree-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button { border-left-color: var(--wiki-element, var(--accent)); }
-  .community-wiki-desktop-surface.is-tree-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button svg,
-  .community-wiki-desktop-surface.is-tree-surface .community-wiki-home-rail .community-wiki-home-surface-back svg,
-  .community-wiki-desktop-surface.is-tree-surface .community-wiki-solo-rail-tool svg { color: #172126; }
-  .community-wiki-desktop-surface.is-tree-surface .community-wiki-solo-rail-tool { border-color: rgba(20,31,36,.16); background: rgba(255,255,255,.62); color: #172126; }
-  .community-wiki-desktop-surface.is-tree-surface .community-wiki-solo-rail-tool:hover,
-  .community-wiki-desktop-surface.is-tree-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button:hover,
-  .community-wiki-desktop-surface.is-tree-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button.active { background: color-mix(in srgb, var(--wiki-element, var(--accent)) 24%, rgba(255,255,255,.82)); color: #172126; }
+  /* Keep the rail identical across raw, flow, and tree surfaces. */
+  .community-wiki-desktop-surface .community-wiki-home-rail { background: rgba(255,255,255,.82); border-right-color: rgba(20,31,36,.16); color: #172126; }
+  .community-wiki-desktop-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button,
+  .community-wiki-desktop-surface .community-wiki-home-rail .community-wiki-home-surface-back { border-color: rgba(20,31,36,.16); background: rgba(255,255,255,.62); color: #172126; }
+  .community-wiki-desktop-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button { border-left-color: var(--wiki-element, var(--accent)); }
+  .community-wiki-desktop-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button svg,
+  .community-wiki-desktop-surface .community-wiki-home-rail .community-wiki-home-surface-back svg,
+  .community-wiki-desktop-surface .community-wiki-solo-rail-tool svg { color: #172126; }
+  .community-wiki-desktop-surface .community-wiki-solo-rail-tool { border-color: rgba(20,31,36,.16); background: rgba(255,255,255,.62); color: #172126; }
+  .community-wiki-desktop-surface .community-wiki-solo-rail-tool:hover,
+  .community-wiki-desktop-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button:hover,
+  .community-wiki-desktop-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button.active { background: color-mix(in srgb, var(--wiki-element, var(--accent)) 24%, rgba(255,255,255,.82)); color: #172126; }
 
   .community-wiki-home-flow { padding: 15px 18px 26px; gap: 18px; }
   .community-wiki-home-surface-heading { margin-bottom: 8px; }
