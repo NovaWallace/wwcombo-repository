@@ -1407,7 +1407,6 @@ html[data-theme='day'] body.wiki-route .community-wiki-resonance-change-list p {
 .community-wiki-solo-inline .community-wiki-solo-dropzone.has-items .community-wiki-solo-drop-hint { opacity: .16; }
 .community-wiki-solo-inline.is-annotating .community-wiki-solo-dropzone.has-items .community-wiki-solo-drop-hint { inset: auto 8px 8px auto; width: auto; height: 24px; padding: 3px 8px; gap: 5px; border: 1px solid var(--line-soft); border-radius: 999px; background: color-mix(in srgb, var(--surface) 88%, var(--wiki-element, var(--gold))); color: var(--muted-strong); font-size: 9px; font-weight: 750; line-height: 1; opacity: .9; z-index: 6; }
 .community-wiki-solo-inline.is-annotating .community-wiki-solo-dropzone.has-items .community-wiki-solo-drop-hint svg { width: 12px; height: 12px; }
-.community-wiki-solo-inline.is-annotating .community-wiki-solo-dropzone { align-items: flex-start; padding-top: 16px; }
 .community-wiki-solo-inline .community-wiki-solo-item { width: auto; min-width: 126px; max-width: 200px; min-height: 45px; flex: 0 0 auto; }
 .community-wiki-solo-inline .community-wiki-solo-item span { overflow: hidden; overflow-wrap: normal; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25; }
 .community-wiki-solo-inline .community-wiki-solo-item.is-form-2 { border-color: #72b7e5; background: color-mix(in srgb, #72b7e5 18%, var(--surface-raised)); }
@@ -3500,19 +3499,6 @@ html:not([data-theme='day']) .leaderboard-metric-headers small { color: #aeb8ba;
   .community-wiki-solo-rail-tool.is-save { color: var(--wiki-element, var(--accent)); border-color: color-mix(in srgb, var(--wiki-element, var(--accent)) 55%, rgba(255,255,255,.12)); }
   .community-wiki-solo-rail-divider { height: 1px; margin: 2px 0; background: rgba(255,255,255,.14); }
   html[data-theme='day'] body.wiki-route .community-wiki-home-tree-toolbar { border-bottom-color: rgba(20,31,36,.15); background: rgba(255,255,255,.5); }
-  /* Keep the rail identical across raw, flow, and tree surfaces. */
-  .community-wiki-desktop-surface .community-wiki-home-rail { background: rgba(255,255,255,.82); border-right-color: rgba(20,31,36,.16); color: #172126; }
-  .community-wiki-desktop-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button,
-  .community-wiki-desktop-surface .community-wiki-home-rail .community-wiki-home-surface-back { border-color: rgba(20,31,36,.16); background: rgba(255,255,255,.62); color: #172126; }
-  .community-wiki-desktop-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button { border-left-color: var(--wiki-element, var(--accent)); }
-  .community-wiki-desktop-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button svg,
-  .community-wiki-desktop-surface .community-wiki-home-rail .community-wiki-home-surface-back svg,
-  .community-wiki-desktop-surface .community-wiki-solo-rail-tool svg { color: #172126; }
-  .community-wiki-desktop-surface .community-wiki-solo-rail-tool { border-color: rgba(20,31,36,.16); background: rgba(255,255,255,.62); color: #172126; }
-  .community-wiki-desktop-surface .community-wiki-solo-rail-tool:hover,
-  .community-wiki-desktop-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button:hover,
-  .community-wiki-desktop-surface .community-wiki-home-rail .community-wiki-home-surface-tabs button.active { background: color-mix(in srgb, var(--wiki-element, var(--accent)) 24%, rgba(255,255,255,.82)); color: #172126; }
-
   .community-wiki-home-flow { padding: 15px 18px 26px; gap: 18px; }
   .community-wiki-home-surface-heading { margin-bottom: 8px; }
   .community-wiki-home-surface-heading h3 { font-size: 13px; letter-spacing: .02em; }
