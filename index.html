@@ -211,9 +211,14 @@
       <section class="results-band" aria-labelledby="resultsTitle">
         <div class="content-width">
           <div class="results-head">
-            <div>
+            <div class="results-summary">
               <h2 id="resultsTitle" data-i18n="results.title">社区连段</h2>
-              <p id="resultCount">0 个结果</p>
+              <div class="results-count-line">
+                <p id="resultCount">0 个结果</p>
+                <button id="leaderboardRulesButton" class="leaderboard-rules-trigger" type="button" title="查看果力积分规则" aria-label="查看果力积分规则" aria-haspopup="dialog" hidden>
+                  <i data-lucide="circle-help" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
             <div id="leaderboardMetricHeaders" class="leaderboard-metric-headers" aria-label="果力排行指标" hidden>
               <span class="leaderboard-metric-header-spacer" aria-hidden="true"></span>
@@ -667,6 +672,22 @@
           <p>你tm这是哪个天堂</p>
         </div>
         <div class="client-download-list" id="clientDownloadList"></div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop leaderboard-rules-backdrop" id="leaderboardRulesBackdrop" hidden>
+      <section class="leaderboard-rules-dialog" role="dialog" aria-modal="true" aria-labelledby="leaderboardRulesTitle">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">POWER RULES</p>
+            <h2 id="leaderboardRulesTitle">果力积分规则</h2>
+            <p>果力仅用于贡献排名，不在排行榜公开具体总分。</p>
+          </div>
+          <button class="icon-button" id="closeLeaderboardRulesButton" type="button" title="关闭" aria-label="关闭果力积分规则">
+            <i data-lucide="x" aria-hidden="true"></i>
+          </button>
+        </header>
+        <div class="leaderboard-rules-body" id="leaderboardRulesBody"></div>
       </section>
     </div>
 

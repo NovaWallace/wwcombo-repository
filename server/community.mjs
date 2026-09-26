@@ -2102,17 +2102,45 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       user.characters = user.characters.slice(0, 8);
     };
 
-    for (const chart of (Array.isArray(published?.charts) ? published.charts : [])) {
+    const publishedEntries = (Array.isArray(published?.charts) ? published.charts : []).map((value, index) => {
+      const source = record(value);
+      const nested = record(source.chart);
+      const chart = Object.keys(nested).length ? nested : source;
+      const id = String(chart.id || source.id || '').trim();
+      const owner = record(owners?.[id]);
+      const publishedAt = [owner.publishedAt, source.publishedAt, chart.publishedAt, chart.createdAt, chart.updatedAt]
+        .map(Number)
+        .find((time) => Number.isFinite(time) && time > 0) || Number.MAX_SAFE_INTEGER;
+      const team = [...new Set(characterNames(chart.characters || chart.character)
+        .map(canonicalCharacterName)
+        .filter((name) => name && !/^unknown$/i.test(name)))]
+        .sort((left, right) => left.localeCompare(right, 'zh-CN'));
+      return { chart, id, owner, publishedAt, index, teamKey: team.join('\u001f') };
+    });
+    const firstUploadByTeam = new Map();
+    for (const entry of publishedEntries) {
+      if (!entry.teamKey) continue;
+      const current = firstUploadByTeam.get(entry.teamKey);
+      if (!current || entry.publishedAt < current.publishedAt || (entry.publishedAt === current.publishedAt && entry.index < current.index)) {
+        firstUploadByTeam.set(entry.teamKey, entry);
+      }
+    }
+
+    for (const entry of publishedEntries) {
+      const { chart, id, owner } = entry;
       // Older published charts keep their real owner in the private owners
       // index rather than in the public package. Merge that record before
       // building the leaderboard so legacy uploads join the same person as
       // commissions and Wiki edits instead of becoming "连段作者".
-      const owner = record(owners?.[chart.id]);
       const contributor = { ...record(chart.submitter), ...owner };
       const comboUser = ensure(contributor.email || contributor.username || contributor.nickname ? contributor : chart, '连段作者');
       add(contributor.email || contributor.username || contributor.nickname ? contributor : chart, 'combo', 'uploads', 200, '连段作者');
       addCharacters(comboUser, chart.characters || chart.character);
-      const count = Math.max(0, Number(downloads?.[chart.id] || 0));
+      if (entry.teamKey && firstUploadByTeam.get(entry.teamKey) === entry) {
+        comboUser.combo.score += 500;
+        comboUser.score += 500;
+      }
+      const count = Math.max(0, Number(downloads?.[id] || 0));
       if (count) {
         const user = ensure(contributor.email || contributor.username || contributor.nickname ? contributor : chart, '连段作者');
         user.combo.downloads += count;
@@ -2177,7 +2205,7 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
     return {
       version: 1,
       updatedAt: Date.now(),
-      rules: { comboUpload: 200, comboDownload: 1, commissionPublish: 100, commissionResponse: 200, commissionAdopted: 500, commissionCompleted: 500, commissionReceived: 100, commissionActiveAdopt: 100, wikiSoloCombo: 200, wikiRepair: 300 },
+      rules: { comboUpload: 200, comboFirstTeamUpload: 500, comboDownload: 1, commissionPublish: 100, commissionResponse: 200, commissionAdopted: 500, commissionCompleted: 500, commissionReceived: 100, commissionActiveAdopt: 100, wikiSoloCombo: 200, wikiRepair: 300 },
       users: rows
     };
   }
