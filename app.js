@@ -227,6 +227,12 @@ function keyboardMouseIconSource(code) {
   return gamepadSvgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} 128">${keys}${plus}</svg>`);
 }
 
+function defaultKeyboardMouseIconSource(moveId, code) {
+  const source = window.WWComboInputIcons?.defaultKeyboardMouseIconSource?.(moveId, code);
+  if (!source) return '';
+  return String(source).replace(/^\/combo-assets\/button-icons\//, './assets/button-icons/');
+}
+
 function keyboardMouseIconWidthScale(code) {
   if (window.WWComboInputIcons?.keyboardMouseIconWidthScale) {
     return window.WWComboInputIcons.keyboardMouseIconWidthScale(code);
@@ -479,6 +485,10 @@ const els = {
   commissionTab: document.getElementById('commissionTabButton'),
   leaderboardTab: document.getElementById('leaderboardTabButton'),
   resultsTitle: document.getElementById('resultsTitle'),
+  leaderboardRulesButton: document.getElementById('leaderboardRulesButton'),
+  leaderboardRulesBackdrop: document.getElementById('leaderboardRulesBackdrop'),
+  leaderboardRulesBody: document.getElementById('leaderboardRulesBody'),
+  closeLeaderboardRules: document.getElementById('closeLeaderboardRulesButton'),
   leaderboardMetricHeaders: document.getElementById('leaderboardMetricHeaders'),
   communityAnnouncementWrap: document.getElementById('communityAnnouncementWrap'),
   communityAnnouncement: document.getElementById('communityAnnouncement'),
@@ -690,6 +700,7 @@ function askAppConfirmation(message, options = {}) {
 const sourceUrl = (!isFilePreview && /(^|\/)demo-index\.json(?:$|\?)/i.test(requestedSource))
   ? './community-index.json'
   : requestedSource || (isFilePreview ? './demo-index.json' : './community-index.json');
+const COMMUNITY_INDEX_CACHE_NAME = 'wwcombo-community-index-v1';
 const commissionSourceUrl = requestedCommissionSource
   ? new URL(requestedCommissionSource, location.href).href
   : '/api/community/commissions';
@@ -2189,6 +2200,7 @@ function renderFilters() {
   els.reset.hidden = leaderboardView;
   els.createCommission.hidden = true;
   els.resultsTitle.hidden = leaderboardView;
+  if (els.leaderboardRulesButton) els.leaderboardRulesButton.hidden = !leaderboardView;
   if (els.leaderboardMetricHeaders) els.leaderboardMetricHeaders.hidden = !leaderboardView;
   els.resultsTitle.textContent = leaderboardView ? '' : t(commissionView ? 'plaza.commissions' : 'results.title');
   els.title.placeholder = t(commissionView ? 'commission.searchPlaceholder' : 'search.titlePlaceholder');
@@ -3278,7 +3290,16 @@ function axisStepDisplay(step, labels) {
   if (!state.axisKeySettings || !axisLabelMatchesMove(custom, step.moveId) || state.axisIconSet === 'tide') return { label, iconSrc: '', iconWidthScale: 1 };
   if (state.axisIconSet === 'english') {
     const code = axisBindingCode(step.moveId, 'keyboard');
-    return { label, iconSrc: code ? axisCustomIconSource('keyboard', code) || keyboardMouseIconSource(code) || '' : '', iconWidthScale: keyboardMouseIconWidthScale(code) };
+    return {
+      label,
+      iconSrc: code
+        ? axisCustomIconSource('keyboard', code)
+          || defaultKeyboardMouseIconSource(step.moveId, code)
+          || keyboardMouseIconSource(code)
+          || ''
+        : '',
+      iconWidthScale: keyboardMouseIconWidthScale(code)
+    };
   }
   const code = axisBindingCode(step.moveId, 'gamepad');
   return { label, iconSrc: code ? axisCustomIconSource('gamepad', code) || gamepadIconSource(code, state.axisIconSet) || '' : '', iconWidthScale: code.includes('+') ? 49 / AXIS_ICON_SIZE : 1 };
@@ -3839,23 +3860,71 @@ function renderLeaderboardRules() {
   const rules = document.createElement('section');
   rules.className = 'leaderboard-rules';
   rules.setAttribute('aria-label', '果力计分规则');
-  const title = document.createElement('div');
-  title.className = 'leaderboard-rules-title';
-  title.innerHTML = '<i data-lucide="sparkles" aria-hidden="true"></i><strong>贡献排行</strong><span>按当前公开贡献实时排序</span>';
-  const items = [
-    ['打轴高手', '连段上传与下载'],
-    ['助人为乐', '委托发布、回应、完成与采纳'],
-    ['人形百科', '单人连段与 Wiki 修正']
+  const points = (key, fallback) => {
+    const value = Number(state.leaderboardRules?.[key]);
+    return Number.isFinite(value) ? value : fallback;
+  };
+  const groups = [
+    {
+      title: '打轴高手', icon: 'route', items: [
+        [`上传一个公开连段`, points('comboUpload', 200)],
+        [`同队伍组合中最早公开上传，额外奖励`, points('comboFirstTeamUpload', 500)],
+        [`连段每被下载一次`, points('comboDownload', 1)]
+      ], note: '队伍组合不区分角色排列顺序。'
+    },
+    {
+      title: '助人为乐', icon: 'heart-handshake', items: [
+        ['发布一个委托', points('commissionPublish', 100)],
+        ['发布的委托每收到一个回应', points('commissionReceived', 100)],
+        ['回应一个委托', points('commissionResponse', 200)],
+        ['回应被采纳', points('commissionAdopted', 500)],
+        ['完成委托额外奖励', points('commissionCompleted', 500)],
+        ['委托方主动采纳回应', points('commissionActiveAdopt', 100)]
+      ]
+    },
+    {
+      title: '人形百科', icon: 'book-open', items: [
+        ['上传一个单人连段', points('wikiSoloCombo', 200)],
+        ['编辑 Wiki 并修复错误', points('wikiRepair', 300)]
+      ]
+    }
   ];
-  const list = document.createElement('div');
-  list.className = 'leaderboard-rule-list';
-  for (const [label, copy] of items) {
-    const item = document.createElement('p');
-    item.innerHTML = `<strong>${label}</strong><span>${copy}</span>`;
-    list.appendChild(item);
+  for (const group of groups) {
+    const article = document.createElement('article');
+    article.className = 'leaderboard-rule-group';
+    const heading = document.createElement('h3');
+    heading.innerHTML = `<i data-lucide="${group.icon}" aria-hidden="true"></i><span>${group.title}</span>`;
+    const list = document.createElement('ul');
+    for (const [label, value] of group.items) {
+      const item = document.createElement('li');
+      item.innerHTML = `<span>${label}</span><strong>+${value}</strong>`;
+      list.appendChild(item);
+    }
+    article.append(heading, list);
+    if (group.note) {
+      const note = document.createElement('p');
+      note.textContent = group.note;
+      article.appendChild(note);
+    }
+    rules.appendChild(article);
   }
-  rules.append(title, list);
   return rules;
+}
+
+function openLeaderboardRules() {
+  if (!els.leaderboardRulesBackdrop || !els.leaderboardRulesBody) return;
+  els.leaderboardRulesBody.replaceChildren(renderLeaderboardRules());
+  els.leaderboardRulesBackdrop.hidden = false;
+  syncModalBody();
+  window.lucide?.createIcons({ root: els.leaderboardRulesBackdrop });
+  requestAnimationFrame(() => els.closeLeaderboardRules?.focus());
+}
+
+function closeLeaderboardRules() {
+  if (!els.leaderboardRulesBackdrop || els.leaderboardRulesBackdrop.hidden) return;
+  els.leaderboardRulesBackdrop.hidden = true;
+  syncModalBody();
+  els.leaderboardRulesButton?.focus();
 }
 
 function render() {
@@ -4164,11 +4233,9 @@ async function loadIndex() {
   els.list.hidden = false;
   state.indexLoadState = 'loading';
   if (state.view === 'combos') setStatus('', t('status.loading'));
-  try {
-    const response = await fetch(sourceUrl, { cache: 'no-cache', credentials: 'same-origin', headers: embeddedVoterHeaders(sourceUrl) });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    if (data.type !== 'wwcombo-community-index' || !Array.isArray(data.charts)) throw new Error(t('status.invalidIndex'));
+  let renderedFromCache = false;
+  const renderIndex = (data) => {
+    if (data?.type !== 'wwcombo-community-index' || !Array.isArray(data.charts)) throw new Error(t('status.invalidIndex'));
     state.charts = data.charts.map((chart) => ({ ...chart, tags: normalizedTags(chart.tags) }));
     state.gameVersion = /^\d+\.\d+$/.test(String(data.gameVersion || '')) ? String(data.gameVersion) : '3.5';
     state.indexUpdatedAt = Number(data.updatedAt || 0);
@@ -4184,7 +4251,34 @@ async function loadIndex() {
     if (state.view === 'combos') setStatus('ready', t('status.ready', { count: state.charts.length, date: formatDate(data.updatedAt) }));
     void loadCharacterIcons();
     void loadCharacterBasePresets();
+  };
+
+  if (!isFilePreview && 'caches' in window) {
+    try {
+      const cache = await caches.open(COMMUNITY_INDEX_CACHE_NAME);
+      const cached = await cache.match(new URL(sourceUrl, location.href).href);
+      if (cached) {
+        renderIndex(await cached.json());
+        renderedFromCache = true;
+      }
+    } catch {}
+  }
+
+  try {
+    const response = await fetch(sourceUrl, { cache: 'no-cache', credentials: 'same-origin', headers: embeddedVoterHeaders(sourceUrl) });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    renderIndex(data);
+    if (!isFilePreview && 'caches' in window) {
+      try {
+        const cache = await caches.open(COMMUNITY_INDEX_CACHE_NAME);
+        await cache.put(new URL(sourceUrl, location.href).href, new Response(JSON.stringify(data), {
+          headers: { 'content-type': 'application/json; charset=utf-8' }
+        }));
+      } catch {}
+    }
   } catch (error) {
+    if (renderedFromCache) return;
     state.charts = [];
     state.indexLoadState = 'error';
     if (state.view === 'combos') {
@@ -4365,6 +4459,7 @@ window.addEventListener('resize', () => {
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
   if (!els.appDialogBackdrop.hidden) closeAppDialog(false);
+  else if (els.leaderboardRulesBackdrop && !els.leaderboardRulesBackdrop.hidden) closeLeaderboardRules();
   else if (!els.clientDownloadBackdrop.hidden) closeClientDownload();
   else if (!els.commentsBackdrop.hidden) closeComments();
   else if (!els.uploadBackdrop.hidden) closeUpload();
@@ -4379,6 +4474,9 @@ document.addEventListener('keydown', (event) => {
 els.appDialogCancel?.addEventListener('click', () => closeAppDialog(false));
 els.appDialogAccept?.addEventListener('click', () => closeAppDialog(true));
 els.appDialogBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.appDialogBackdrop) closeAppDialog(false); });
+els.leaderboardRulesButton?.addEventListener('click', openLeaderboardRules);
+els.closeLeaderboardRules?.addEventListener('click', closeLeaderboardRules);
+els.leaderboardRulesBackdrop?.addEventListener('mousedown', (event) => { if (event.target === els.leaderboardRulesBackdrop) closeLeaderboardRules(); });
 els.commentForm?.addEventListener('submit', submitComment);
 document.addEventListener('click', (event) => {
   const trigger = event.target.closest?.('#detailComments');

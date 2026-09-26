@@ -3257,6 +3257,67 @@ html:not([data-theme='day']) .leaderboard-metric-headers small { color: #aeb8ba;
   .leaderboard-metric-headers small { font-size: 8px; }
 }
 
+/* Wiki tool icons must follow the surface contrast. Some tree/editor controls
+   set a light icon color locally, which becomes unreadable on the day rail. */
+html[data-theme='day'] body.wiki-route {
+  --wiki-tool-ink: #172126;
+}
+html:not([data-theme='day']) body.wiki-route {
+  --wiki-tool-ink: #f3f6f5;
+}
+html[data-theme='day'] body.wiki-route .community-wiki-home-surface-back,
+html[data-theme='day'] body.wiki-route .community-wiki-home-surface-fullscreen,
+html[data-theme='day'] body.wiki-route .community-wiki-home-surface-character,
+html[data-theme='day'] body.wiki-route .community-wiki-home-surface-tabs button,
+html[data-theme='day'] body.wiki-route .community-wiki-home-rail-tool,
+html[data-theme='day'] body.wiki-route .community-wiki-home-content-tab,
+html[data-theme='day'] body.wiki-route .community-wiki-home-control,
+html[data-theme='day'] body.wiki-route .community-wiki-home-control-pills button,
+html[data-theme='day'] body.wiki-route .community-wiki-home-tree-toolbar,
+html[data-theme='day'] body.wiki-route .community-wiki-home-tree-toolbar button,
+html[data-theme='day'] body.wiki-route .community-wiki-home-tree-toolbar select,
+html[data-theme='day'] body.wiki-route .community-wiki-solo-rail-tool {
+  color: var(--wiki-tool-ink);
+}
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-surface-back,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-surface-fullscreen,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-surface-character,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-surface-tabs button,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-rail-tool,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-content-tab,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-control,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-control-pills button,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-tree-toolbar,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-tree-toolbar button,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-tree-toolbar select,
+html:not([data-theme='day']) body.wiki-route .community-wiki-solo-rail-tool {
+  color: var(--wiki-tool-ink);
+}
+html[data-theme='day'] body.wiki-route .community-wiki-home-surface-back svg,
+html[data-theme='day'] body.wiki-route .community-wiki-home-surface-fullscreen svg,
+html[data-theme='day'] body.wiki-route .community-wiki-home-surface-character svg,
+html[data-theme='day'] body.wiki-route .community-wiki-home-surface-tabs button > svg,
+html[data-theme='day'] body.wiki-route .community-wiki-home-rail-tool svg,
+html[data-theme='day'] body.wiki-route .community-wiki-home-control > svg,
+html[data-theme='day'] body.wiki-route .community-wiki-home-control-pills button svg,
+html[data-theme='day'] body.wiki-route .community-wiki-home-tree-toolbar button > svg,
+html[data-theme='day'] body.wiki-route .community-wiki-solo-rail-tool svg {
+  color: var(--wiki-tool-ink);
+  stroke: var(--wiki-tool-ink);
+}
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-surface-back svg,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-surface-fullscreen svg,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-surface-character svg,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-surface-tabs button > svg,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-rail-tool svg,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-control > svg,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-control-pills button svg,
+html:not([data-theme='day']) body.wiki-route .community-wiki-home-tree-toolbar button > svg,
+html:not([data-theme='day']) body.wiki-route .community-wiki-solo-rail-tool svg {
+  color: var(--wiki-tool-ink);
+  stroke: var(--wiki-tool-ink);
+}
+
 /* Keep the desktop plaza controls on one row. The mode switch owns roughly
    one third of the rail and keeps that footprint in all three views. */
 @media (min-width: 821px) {

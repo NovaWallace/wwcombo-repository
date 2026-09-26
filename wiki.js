@@ -58,7 +58,7 @@
     selectedNode: '', profileOpen: false, editing: false, contextMenu: null, clipboard: null,
     editorStore: {}, editorHistory: [], editorFuture: [], contextDismiss: null,
     graphZoom: 1, graphCanvasZoom: 1, graphContentZoom: 1, graphPan: { x: 0, y: 0 }, expandedGroups: {}, replacementStates: {}, inputRouteStates: {}, editorDraftCategory: 'normal', tideIcons: new Map(), formId: 'normal', formIds: {}, chainIds: {}, modeIds: {}, wikiSaveTimers: new Map(), wikiSaveChains: new Map(), wikiSaveStatus: '', announcement: null, announcementOpen: false, hoveredCharacter: '',
-    homeMenuName: '', homeSurfaceTab: 'selector', homeContentTab: 'profile', homeSelectorScrollLeft: {}, homeSurfaceLoading: false, homeSurfaceLoadingSequence: 0, homeSurfaceFullscreen: false, homeCharacterPickerOpen: false, soloComboOpen: false, soloComboTab: 'solo', soloComboEditing: false, soloComboEditMode: 'combo', soloComboDraft: null, soloComboSelection: -1, soloComboSelections: [], soloComboClipboard: null, soloComboHistory: [], soloComboFuture: [], soloNativeDrag: null, soloComboCommunity: [], soloComboCommunityLoading: false, soloComboCommunityLoaded: false, soloComboPanelRect: null, soloCombosByCharacter: new Map(), soloComboLoadState: new Map(), soloComboSaveState: '', soloComboSaveConfirm: false, soloComboAnnotating: false, soloComboNoteAnchor: -1, homeFlowPreview: null, homeInfoLoadPromises: new Map(), homeInfoLoadState: new Map(), homeWikiLoadPromises: new Map(), homeFlowLoadPromises: new Map(), homeTreeAssetLoadPromises: new Map()
+    homeMenuName: '', homeSurfaceTab: 'selector', homeContentTab: 'profile', homeSelectorScrollLeft: {}, homeSurfaceLoading: false, homeSurfaceLoadingSequence: 0, homeSurfaceFullscreen: false, homeCharacterPickerOpen: false, soloComboOpen: false, soloComboTab: 'solo', soloComboEditing: false, soloComboEditMode: 'combo', soloComboDraft: null, soloComboSelection: -1, soloComboSelections: [], soloComboClipboard: null, soloComboHistory: [], soloComboFuture: [], soloNativeDrag: null, soloComboCommunity: [], soloComboCommunityLoading: false, soloComboCommunityLoaded: false, soloComboPanelRect: null, soloCombosByCharacter: new Map(), soloComboLoadState: new Map(), soloComboSaveState: '', soloComboSaveConfirm: false, soloComboAnnotating: false, soloComboNoteAnchor: -1, homeFlowPreview: null, homeInfoLoadPromises: new Map(), homeInfoLoadState: new Map(), homeWikiLoadPromises: new Map(), homeFlowLoadPromises: new Map(), homeTreeAssetLoadPromises: new Map(), homeCharacterWarmPromises: new Map(), modelCache: new Map()
   };
 
   const EDITOR_STORAGE_KEY = 'wwcombo-community-wiki-editor-v1';
@@ -7797,6 +7797,28 @@
     return `<button type="button" class="community-wiki-home-surface-fullscreen" data-wiki-home-fullscreen title="${state.homeSurfaceFullscreen ? '退出全屏' : '全屏显示'}" aria-label="${state.homeSurfaceFullscreen ? '退出全屏' : '全屏显示'}"><i data-lucide="move"></i></button>`;
   }
 
+  function openHomeCharacterSurface(name, tab = 'raw') {
+    const character = String(name || '').trim();
+    if (!character) return;
+    const token = ++state.homeSurfaceLoadingSequence;
+    state.selected = tab === 'tree' ? character : '';
+    state.homeMenuName = character;
+    state.hoveredCharacter = character;
+    state.homeSurfaceTab = tab;
+    state.homeContentTab = 'profile';
+    state.homeSurfaceFullscreen = false;
+    state.homeCharacterPickerOpen = false;
+    state.soloComboOpen = false;
+    state.homeFlowPreview = null;
+    state.homeSurfaceLoading = true;
+    // Start every resource needed by this character as soon as the panel is
+    // opened. The tab switch below reuses these promises instead of starting
+    // a second request when the user reaches the tree or flow view.
+    void warmHomeCharacterData(character);
+    renderHome();
+    beginHomeSurfaceLoad(character, tab, token);
+  }
+
   function soloComboSelectedIndices(draft = state.soloComboDraft) {
     const items = soloComboDraftItems(draft);
     const selected = Array.isArray(state.soloComboSelections) ? state.soloComboSelections : [];
@@ -7855,9 +7877,22 @@
         return;
       }
       const item = event.target.closest('.community-wiki-solo-item[data-solo-item-index]');
-      if (!item || event.detail > 1) return;
+      if (!item) return;
       if (item.dataset.soloDragged === 'true') {
         item.dataset.soloDragged = '';
+        return;
+      }
+      // Some pointer-capture implementations suppress the final dblclick
+      // event used by the draggable editor cards. Detect two ordinary clicks
+      // as well, because real pointer input does not always preserve detail=2.
+      const clickedAt = performance.now();
+      const previousClickAt = Number(item.dataset.soloLastClickAt || 0);
+      item.dataset.soloLastClickAt = String(clickedAt);
+      if (event.detail >= 2 || (previousClickAt > 0 && clickedAt - previousClickAt <= 480)) {
+        item.dataset.soloLastClickAt = '0';
+        event.preventDefault();
+        event.stopPropagation();
+        openSoloComboNote(state.selected || state.homeMenuName || '', Number(item.dataset.soloItemIndex));
         return;
       }
       setSoloComboSelection(Number(item.dataset.soloItemIndex), event.ctrlKey || event.metaKey);
@@ -7868,10 +7903,23 @@
       const item = event.target.closest('.community-wiki-solo-item[data-solo-item-index]');
       if (!inline || !item || item.dataset.soloDragged === 'true') return;
       event.preventDefault();
-      event.stopPropagation();
+      event.stopImmediatePropagation();
       openSoloComboNote(state.selected || state.homeMenuName || '', Number(item.dataset.soloItemIndex));
-    });
+    }, true);
     WIKI_ROOT.dataset.soloInlineDelegationBound = 'true';
+  }
+
+  function bindSoloComboInlineDoubleClick(root = WIKI_ROOT) {
+    root.querySelectorAll('.community-wiki-solo-inline .community-wiki-solo-item[data-solo-item-index]').forEach((item) => {
+      if (item.dataset.soloNoteDblclickBound === 'true') return;
+      item.dataset.soloNoteDblclickBound = 'true';
+      item.addEventListener('dblclick', (event) => {
+        if (item.dataset.soloDragged === 'true') return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        openSoloComboNote(state.selected || state.homeMenuName || '', Number(item.dataset.soloItemIndex));
+      });
+    });
   }
 
   function renderShell(content, detail = false) {
@@ -7891,25 +7939,9 @@
     bindSoloComboInlineDelegation();
     WIKI_ROOT.querySelectorAll('[data-wiki-home-choice]').forEach((element) => element.addEventListener('click', (event) => {
       event.preventDefault();
-      if (window.matchMedia('(max-width: 820px)').matches) {
-        state.homeMenuName = state.homeMenuName === element.dataset.wikiHomeChoice ? '' : (element.dataset.wikiHomeChoice || '');
-        renderHome();
-        return;
-      }
-      state.selected = '';
       const name = element.dataset.wikiHomeChoice || '';
       if (!name) return;
-      const token = ++state.homeSurfaceLoadingSequence;
-      state.homeMenuName = name;
-      state.homeSurfaceTab = 'raw';
-      state.homeContentTab = 'profile';
-      state.homeSurfaceFullscreen = false;
-      state.homeCharacterPickerOpen = false;
-      state.soloComboOpen = false;
-      state.homeFlowPreview = null;
-      state.homeSurfaceLoading = true;
-      renderHome();
-      beginHomeSurfaceLoad(name, 'raw', token);
+      openHomeCharacterSurface(name, 'raw');
     }));
     WIKI_ROOT.querySelectorAll('[data-wiki-home-choice]').forEach((element) => element.addEventListener('pointerenter', () => {
       const name = element.dataset.wikiHomeChoice || '';
@@ -7957,6 +7989,7 @@
       state.homeContentTab = 'profile';
       state.homeCharacterPickerOpen = false;
       state.homeSurfaceLoading = true;
+      void warmHomeCharacterData(name);
       renderHome();
       beginHomeSurfaceLoad(name, state.homeSurfaceTab, token);
     }));
@@ -7969,7 +8002,7 @@
     }));
     WIKI_ROOT.querySelectorAll('[data-wiki-home-main]').forEach((element) => element.addEventListener('click', (event) => {
       if (window.matchMedia('(max-width: 820px)').matches) {
-        handleAction('open', element.dataset.name || '');
+        openHomeCharacterSurface(element.dataset.name || '', 'raw');
         return;
       }
       event.preventDefault();
@@ -7992,6 +8025,7 @@
       if (state.homeSurfaceTab === 'raw') state.homeContentTab = 'profile';
       state.soloComboOpen = false;
       state.homeSurfaceLoading = true;
+      void warmHomeCharacterData(name);
       renderHome();
       beginHomeSurfaceLoad(name, nextTab, token);
     }));
@@ -8093,9 +8127,40 @@
       if (rows.length > 1) button.closest('[data-wiki-input-route-row]')?.remove();
     }));
     WIKI_ROOT.querySelectorAll('[data-wiki-editor-form]').forEach((form) => form.addEventListener('submit', (event) => { event.preventDefault(); saveEditorForm(new FormData(form)); }));
-    WIKI_ROOT.querySelectorAll('[data-wiki-editor-toggle]').forEach((element) => element.addEventListener('click', () => { state.editing = !state.editing; if (state.homeSurfaceTab === 'tree' && state.homeMenuName === state.selected) renderHome(); else renderDetail(state.selected); }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-editor-toggle]').forEach((element) => element.addEventListener('click', () => {
+      const nextEditing = !state.editing;
+      const name = state.selected || state.homeMenuName;
+      state.selectedNode = '';
+      state.contextMenu = null;
+      // Editing only changes node affordances. Keep the existing graph DOM so
+      // toggling the mode does not block the main thread on a full graph
+      // render, which made the button appear not to respond.
+      const changedInPlace = nextEditing
+        ? enterGraphEditingInPlace(name)
+        : exitGraphEditingInPlace(name);
+      if (!changedInPlace) {
+        state.editing = nextEditing;
+        if (state.homeSurfaceTab === 'tree' && state.homeMenuName === state.selected) renderHome();
+        else renderDetail(state.selected || name);
+      }
+    }));
     WIKI_ROOT.querySelectorAll('[data-wiki-profile]').forEach((element) => element.addEventListener('click', () => { state.selectedNode = ''; state.profileOpen = false; beginSoloCombo(state.selected); }));
-    WIKI_ROOT.querySelectorAll('[data-wiki-overlay-close]').forEach((element) => element.addEventListener('click', () => { state.selectedNode = ''; state.profileOpen = false; renderCurrentWikiSurface(state.selected || state.homeMenuName); }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-overlay-close]').forEach((element) => element.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      state.selectedNode = '';
+      state.profileOpen = false;
+      const floating = element.closest('.community-wiki-floating');
+      if (floating && state.homeMenuName && new URLSearchParams(location.search).get('wiki') === 'home') {
+        floating.remove();
+        return;
+      }
+      // A home Wiki surface owns its fullscreen state. Closing a node detail
+      // must only clear the modal; it must never navigate through the detail
+      // renderer or accidentally create a fullscreen shell.
+      if (state.homeMenuName && new URLSearchParams(location.search).get('wiki') === 'home') renderHome();
+      else renderCurrentWikiSurface(state.selected || state.homeMenuName);
+    }));
     WIKI_ROOT.querySelectorAll('[data-wiki-open-announcement]').forEach((element) => element.addEventListener('click', () => { state.announcementOpen = true; renderHome(); }));
     WIKI_ROOT.querySelectorAll('[data-wiki-close-announcement]').forEach((element) => element.addEventListener('click', () => { state.announcementOpen = false; renderHome(); }));
     WIKI_ROOT.querySelectorAll('[data-solo-tab]').forEach((element) => element.addEventListener('click', () => {
@@ -8131,6 +8196,7 @@
       renderCurrentWikiSurface(state.selected || state.homeMenuName);
     }));
     bindSoloComboNoteInputs(WIKI_ROOT);
+    bindSoloComboInlineDoubleClick(WIKI_ROOT);
     WIKI_ROOT.querySelectorAll('.community-wiki-solo-item[data-solo-item-index]').forEach((element) => {
       const name = element.dataset.wikiName || state.selected || state.homeMenuName || '';
       const index = Number(element.dataset.soloItemIndex);
@@ -8409,7 +8475,17 @@
         // the route state changed but the graph had no selected node, so the
         // route-specific highlight layer never became visible.
         state.selectedNode = nodeId;
-        refreshGraphCanvas(state.selected);
+        const graph = nodeElement?.closest('[data-wiki-graph]');
+        if (state.editing) {
+          nodeElement?.querySelectorAll('[data-wiki-input-route]').forEach((routeElement) => {
+            const routeIndex = Number(routeElement.dataset.wikiInputIndex);
+            const active = routeIndex === index;
+            routeElement.classList.toggle('active', active);
+            routeElement.classList.toggle('stacked', !active);
+            routeElement.style.setProperty('--wiki-input-stack-offset', active ? '0px' : `${12 + Math.abs(routeIndex - index) * 7}px`);
+          });
+          updateGraphSelectionInDom(graph, state.selected, nodeId);
+        } else refreshGraphCanvas(state.selected);
         const activeRoute = [...WIKI_ROOT.querySelectorAll('[data-wiki-node]')]
           .find((nodeElement) => nodeElement.dataset.wikiNode === nodeId)
           ?.querySelector(`[data-wiki-input-route][data-wiki-input-index="${index}"]`);
@@ -8422,7 +8498,6 @@
     WIKI_ROOT.querySelectorAll('[data-wiki-graph] [data-wiki-node]').forEach((element) => {
       let seriesClickTimer = 0;
       let soloClickTimer = 0;
-      let nodeClickTimer = 0;
       let replayingSoloClick = false;
       let lastSeriesClickAt = 0;
       const graphName = state.selected || state.homeMenuName;
@@ -8479,15 +8554,18 @@
         if (seriesKey && (element.dataset.wikiSeriesCollapsed === 'true' || (element.dataset.wikiSeriesMaster === element.dataset.wikiNode && element.dataset.wikiSeriesCollapsed === 'false'))) {
           return;
         }
-        if (nodeClickTimer) window.clearTimeout(nodeClickTimer);
-        nodeClickTimer = window.setTimeout(() => {
+        if (state.editing) {
           state.selectedNode = nodeId;
-          refreshGraphCanvas(graphName);
-          nodeClickTimer = 0;
-        }, 220);
+          updateGraphSelectionInDom(element.closest('[data-wiki-graph]'), graphName, nodeId);
+          return;
+        }
+        state.selectedNode = nodeId;
+        updateGraphSelectionInDom(element.closest('[data-wiki-graph]'), graphName, nodeId);
       });
       element.addEventListener('dblclick', (event) => {
+        if (event.target.closest('.community-wiki-solo-inline')) return;
         event.preventDefault();
+        event.stopPropagation();
         if (soloClickTimer) window.clearTimeout(soloClickTimer);
         soloClickTimer = 0;
         const nodeId = element.dataset.wikiNode || '';
@@ -8502,7 +8580,12 @@
           return;
         }
         state.selectedNode = nodeId;
-        renderCurrentWikiSurface(graphName);
+        // Keep the current surface mode. Opening node details must never
+        // toggle or recreate the fullscreen shell; only the node modal is
+        // changed by the normal surface render.
+        if (state.homeSurfaceTab === 'tree' && state.homeMenuName === graphName) {
+          mountHomeNodeModal(graphName, nodeId);
+        } else renderDetail(graphName);
       });
       element.addEventListener('contextmenu', (event) => {
         event.preventDefault();
@@ -8567,7 +8650,7 @@
         });
         element.addEventListener('pointercancel', (event) => { soloPointerDrag = null; document.body.classList.remove('wiki-solo-dragging'); WIKI_ROOT.querySelector('[data-solo-dropzone]')?.classList.remove('is-dragover'); event.stopPropagation(); });
       }
-      bindNodeDrag(element);
+      bindNodeDrag(element, seriesGroups);
     });
     WIKI_ROOT.querySelectorAll('[data-wiki-graph-scroll]').forEach((element) => {
       // The frame is replaced when a series is toggled. Keep the viewport
@@ -8592,6 +8675,50 @@
     WIKI_ROOT.__wikiSoloDragCleanup = () => {
       soloDragCleanups.splice(0).forEach((cleanup) => cleanup());
     };
+  }
+
+  function enterGraphEditingInPlace(name) {
+    if (!name || !canEditWiki()) return false;
+    const viewport = WIKI_ROOT.querySelector('[data-wiki-graph-scroll]');
+    const graph = viewport?.querySelector('[data-wiki-graph]');
+    if (!graph) return false;
+    state.editing = true;
+    graph.dataset.wikiEditing = 'true';
+    const groups = graphSeriesGroups(currentModel(name));
+    graph.querySelectorAll('[data-wiki-node]').forEach((element) => {
+      if (!element.querySelector('.community-wiki-graph-node-grip')) {
+        const grip = document.createElement('i');
+        grip.className = 'community-wiki-graph-node-grip';
+        grip.dataset.lucide = 'move';
+        element.appendChild(grip);
+      }
+      bindNodeDrag(element, groups);
+    });
+    window.lucide?.createIcons({ root: graph });
+    WIKI_ROOT.querySelectorAll('[data-wiki-editor-toggle]').forEach((button) => {
+      button.classList.add('active');
+      button.innerHTML = `<i data-lucide="pencil"></i>${esc(t('editing'))}<small>${esc(isLocalWikiPreview() ? t('localEdit') : t('readonly'))}</small>`;
+      window.lucide?.createIcons({ root: button });
+    });
+    return true;
+  }
+
+  function exitGraphEditingInPlace(name) {
+    if (!name) return false;
+    const viewport = WIKI_ROOT.querySelector('[data-wiki-graph-scroll]');
+    const graph = viewport?.querySelector('[data-wiki-graph]');
+    if (!graph) return false;
+    state.editing = false;
+    graph.dataset.wikiEditing = 'false';
+    graph.querySelectorAll('.community-wiki-graph-node-grip').forEach((grip) => grip.remove());
+    graph.querySelectorAll('[data-wiki-node].selected').forEach((node) => node.classList.remove('selected'));
+    WIKI_ROOT.querySelectorAll('.community-wiki-node-modal').forEach((modal) => modal.closest('.community-wiki-floating')?.remove());
+    WIKI_ROOT.querySelectorAll('[data-wiki-editor-toggle]').forEach((button) => {
+      button.classList.remove('active');
+      button.innerHTML = `<i data-lucide="pencil"></i>${esc(t('edit'))}`;
+      window.lucide?.createIcons({ root: button });
+    });
+    return true;
   }
 
   function graphZoomParts(viewport, zoom, frame) {
@@ -8734,6 +8861,7 @@
       const members = ordered.filter((entry) => entry.element === element);
       const withRail = true;
       return `<section class="community-wiki-showcase-group" data-wiki-character-group="${esc(element)}" style="--wiki-element:${colorFor(element)}">
+        <header class="community-wiki-showcase-group-label"><img src="${esc(elementIconFor(element))}" alt="" aria-hidden="true"><span>${esc(displayValue(element))}</span><small>${members.length}</small></header>
         <div class="community-wiki-showcase-track" data-wiki-selector-scroll tabindex="0" aria-label="${esc(displayValue(element))}">${members.length ? members.map((entry) => cardFor(entry, withRail)).join('') : `<span class="community-wiki-selector-empty">—</span>`}</div>
       </section>`;
     };
@@ -8766,7 +8894,8 @@
              ? `<aside class="community-wiki-home-rail is-tree-rail">${surfaceLeading}${surfaceFullscreenButton}${railTabs}${soloComboRailTools(activeName)}</aside><div class="community-wiki-home-tree-main">${treeToolbar}<main class="community-wiki-desktop-surface-content"><div class="community-wiki-desktop-surface-body">${surfaceWaiting ? '<div class="community-wiki-home-surface-loading" aria-hidden="true"></div>' : state.info.has(activeName) ? `<div class="community-wiki-desktop-tree-scroll" data-wiki-graph-scroll data-wiki-lock-six-lanes>${renderGraph(viewModelFor(activeName), colorFor(activeEntry?.element), activeName)}${soloComboEditorOverlay(activeName)}</div>` : `<div class="community-wiki-home-surface-loading"><i data-lucide="loader-circle"></i><span>${esc(t('detailLoading'))}</span></div>`}</div></main></div>`
             : `<aside class="community-wiki-home-rail">${surfaceLeading}${surfaceFullscreenButton}${nonTreeRail}</aside><main class="community-wiki-desktop-surface-content"><div class="community-wiki-desktop-surface-body">${surfaceWaiting ? '<div class="community-wiki-home-surface-loading" aria-hidden="true"></div>' : surfaceTab === 'raw' ? `<div class="community-wiki-home-raw">${homeContentSurface(activeName, contentTab)}</div>` : flowSurface(activeName)}</div></main>`}
         </div>`;
-    const mainCard = `<button class="community-wiki-showcase-main-card ${Number(previewEntry.star) >= 5 ? 'rarity-5' : 'rarity-4'}" type="button" data-wiki-home-main data-name="${esc(previewEntry.name)}" data-wiki-preview-name="${esc(previewEntry.name)}" style="--wiki-element:${esc(colorFor(previewEntry.element))};--wiki-element-bg:url(&quot;${esc(elementBackgroundFor(previewEntry.element))}&quot;)" aria-label="${esc(previewEntry.name)}">
+    const mobileHome = window.matchMedia('(max-width: 820px)').matches;
+    const mainCard = mobileHome ? '' : `<button class="community-wiki-showcase-main-card ${Number(previewEntry.star) >= 5 ? 'rarity-5' : 'rarity-4'}" type="button" data-wiki-home-main data-name="${esc(previewEntry.name)}" data-wiki-preview-name="${esc(previewEntry.name)}" style="--wiki-element:${esc(colorFor(previewEntry.element))};--wiki-element-bg:url(&quot;${esc(elementBackgroundFor(previewEntry.element))}&quot;)" aria-label="${esc(previewEntry.name)}">
       <span class="community-wiki-showcase-main-art"><img class="community-wiki-showcase-main-portrait" data-wiki-showcase-portrait src="${esc(portraitFor(previewEntry.name))}" alt="${esc(previewEntry.name)}" loading="eager"><span class="community-wiki-showcase-main-fallback" data-wiki-showcase-fallback>${portraitFallback}</span></span>
       <span class="community-wiki-showcase-main-info"><img class="community-wiki-showcase-emblem" data-wiki-showcase-emblem src="${esc(emblemFor(previewEntry.name))}" alt="" aria-hidden="true"><span><strong data-wiki-showcase-name>${esc(previewEntry.name)}</strong><span class="community-wiki-showcase-meta" data-wiki-showcase-meta aria-label="${esc(showcaseMetaLabel(previewEntry))}" title="${esc(showcaseMetaLabel(previewEntry))}">${showcaseMetaMarkup(previewEntry)}</span></span></span>
     </button>`;
@@ -8775,7 +8904,7 @@
     renderShell(`<section class="community-wiki-home-toolbar" aria-label="${esc(t('announcement'))}"><div class="community-wiki-home-toolbar-inner"><button class="community-wiki-update-line" type="button" data-wiki-open-announcement><i data-lucide="megaphone" aria-hidden="true"></i><span>${esc(state.announcement?.title || t('noAnnouncement'))}</span><small>${state.announcement?.updatedAt ? esc(new Date(state.announcement.updatedAt).toLocaleDateString(locale())) : ''}</small></button></div></section>
       <section class="community-wiki-showcase-stage" style="--wiki-element:${esc(colorFor(previewEntry.element))}">
         <div class="community-wiki-showcase-layout">
-          <div class="community-wiki-showcase-center">${mainCard}</div>
+          ${mobileHome ? '' : `<div class="community-wiki-showcase-center">${mainCard}</div>`}
           <div class="community-wiki-desktop-character-panel ${activeName ? 'is-open' : ''} ${state.homeSurfaceFullscreen ? 'is-fullscreen' : ''}">${surfaceContent}${surfaceLoadingMarkup}${surfacePickerMarkup}</div>
           <div class="community-wiki-showcase-side community-wiki-showcase-side-left">${leftElements.map(groupFor).join('')}</div>
           <div class="community-wiki-showcase-side community-wiki-showcase-side-right">${rightElements.map(groupFor).join('')}</div>
@@ -8800,7 +8929,12 @@
     // warmed predictably before the rest of the roster is requested.
     const initial = ordered.find((entry) => entry.name === '赞妮') || ordered[0] || FALLBACK_CHARACTERS[0];
     state.hoveredCharacter = state.hoveredCharacter && ordered.some((entry) => entry.name === state.hoveredCharacter) ? state.hoveredCharacter : initial.name;
-    const previewEntry = ordered.find((entry) => entry.name === state.hoveredCharacter) || initial;
+    // Once a character surface is open, its card and element backdrop remain
+    // the visual source of truth. Background preload renders must not restore
+    // the landing page's default character around the active panel.
+    const previewEntry = ordered.find((entry) => entry.name === state.homeMenuName)
+      || ordered.find((entry) => entry.name === state.hoveredCharacter)
+      || initial;
     renderShowcaseHome(ordered, previewEntry);
   }
 
@@ -9159,7 +9293,7 @@
           await cacheJsonResponse(url, new Response(JSON.stringify(payload), { headers: { 'content-type': 'application/json' } }));
           state.info.set(name, payload);
           state.homeInfoLoadState.set(name, 'ready');
-          if (state.homeMenuName === name) renderCurrentWikiSurface(name);
+          if (state.homeSurfaceLoading && state.homeMenuName === name) renderCurrentWikiSurface(name);
         })
         .catch(() => {});
       return cached;
@@ -9189,7 +9323,7 @@
         return state.info.get(name);
       } finally {
         state.homeInfoLoadPromises.delete(name);
-        if (state.homeMenuName === name) renderCurrentWikiSurface(name);
+        if (state.homeSurfaceLoading && state.homeMenuName === name) renderCurrentWikiSurface(name);
       }
     })();
     state.homeInfoLoadPromises.set(name, promise);
@@ -9197,27 +9331,58 @@
   }
 
   let homeInfoWarmupSequence = 0;
+  let homeDataWarmupSequence = 0;
+  const homeWarmupDelay = (ms = 0) => new Promise((resolve) => window.setTimeout(resolve, ms));
   function warmHomeInfoCache(sequence) {
     if (homeInfoWarmupSequence === sequence) return;
     homeInfoWarmupSequence = sequence;
-    const names = [...new Set([
-      '赞妮',
-      ...state.characters.map((entry) => characterName(entry)).filter(Boolean)
-    ])];
+    // Do not flood the network with every character when the Wiki home first
+    // appears. The selected character is warmed immediately when its panel is
+    // opened; the rest can wait for an actual visit.
+    const activeName = state.homeMenuName || state.selected || '';
+    const names = activeName ? [activeName] : [];
+    if (!names.length) return;
     const start = async () => {
-      let cursor = 0;
-      const worker = async () => {
-        while (sequence === characterLoadSequence && cursor < names.length) {
-          const name = names[cursor++];
-          try { await ensureHomeInfo(name); } catch {}
-          // Keep the upstream API and the main thread free for actual input.
-          await new Promise((resolve) => window.setTimeout(resolve, 140));
-        }
-      };
-      await Promise.all([worker(), worker()]);
+      for (const name of names) {
+        if (sequence !== characterLoadSequence) return;
+        try { await ensureHomeInfo(name); } catch {}
+        await homeWarmupDelay(24);
+      }
     };
     if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(() => { void start(); }, { timeout: 1200 });
     else window.setTimeout(() => { void start(); }, 260);
+  }
+
+  // Warm the data and visuals for the character the user is looking at. All
+  // callers share one promise per character, so opening the raw panel, moving
+  // to Flow, and moving to Tree never duplicate the same requests.
+  function warmHomeCharacterData(name) {
+    const character = String(name || '').trim();
+    if (!character) return Promise.resolve();
+    const pending = state.homeCharacterWarmPromises.get(character);
+    if (pending) return pending;
+    const infoPromise = ensureHomeInfo(character);
+    const wikiPromise = infoPromise.then(() => ensureHomeWikiState(character));
+    const flowPromise = infoPromise.then(() => ensureHomeFlowData(character));
+    const visualPromise = Promise.all([infoPromise, wikiPromise]).then(() => {
+      preloadHomeCharacterAssets(character);
+      return ensureHomeTreeAssets(character);
+    });
+    const promise = Promise.allSettled([wikiPromise, flowPromise, visualPromise])
+      .then(() => undefined)
+      .finally(() => state.homeCharacterWarmPromises.delete(character));
+    state.homeCharacterWarmPromises.set(character, promise);
+    return promise;
+  }
+
+  // Keep the old hook, but limit it to a directly opened character. The home
+  // page no longer starts a full-roster graph/flow warm-up that competes with
+  // the user's first click.
+  function warmHomeDetailData(sequence) {
+    if (homeDataWarmupSequence === sequence) return;
+    homeDataWarmupSequence = sequence;
+    const activeName = state.homeMenuName || state.selected || '';
+    if (activeName && sequence === characterLoadSequence) void warmHomeCharacterData(activeName);
   }
 
   function ensureHomeWikiState(name) {
@@ -9226,7 +9391,6 @@
     if (pending) return pending;
     const promise = loadWikiState(name).finally(() => {
       state.homeWikiLoadPromises.delete(name);
-      if (state.homeMenuName === name) renderCurrentWikiSurface(name);
     });
     state.homeWikiLoadPromises.set(name, promise);
     return promise;
@@ -9238,7 +9402,6 @@
     if (pending) return pending;
     const promise = Promise.all([loadSoloCombos(name), loadSoloCommunityCombos(name)]).finally(() => {
       state.homeFlowLoadPromises.delete(name);
-      if (state.homeMenuName === name) renderCurrentWikiSurface(name);
     });
     state.homeFlowLoadPromises.set(name, promise);
     return promise;
@@ -9249,7 +9412,10 @@
     const infoReady = homeInfoReady(name) ? Promise.resolve() : loadHomeInfo(name);
     if (tab === 'tree') {
       const wikiReady = homeTreeReady(name) ? Promise.resolve() : ensureHomeWikiState(name);
-      loads.push(Promise.all([infoReady, wikiReady]).then(() => ensureHomeTreeAssets(name)));
+      // Tree entry only waits for data and the first graph DOM. Node art and
+      // detail assets are already warming in the background and must not block
+      // the surface from becoming interactive.
+      loads.push(Promise.all([infoReady, wikiReady]));
     } else {
       if (!homeInfoReady(name)) loads.push(infoReady);
       if (tab === 'flow' && !homeFlowReady(name)) loads.push(infoReady.then(() => ensureHomeFlowData(name)));
@@ -9275,8 +9441,7 @@
     if (!name) return;
     await ensureHomeInfo(name);
     preloadHomeCharacterAssets(name);
-    void ensureHomeWikiState(name);
-    void ensureHomeFlowData(name);
+    void warmHomeCharacterData(name);
   }
 
   function preloadHomeCharacterAssets(name) {
@@ -9338,11 +9503,10 @@
   function soloComboInlineNoteMarkup(anchor) {
     const note = (state.soloComboDraft?.notes || []).find((item) => Number(item.anchor) === Number(anchor));
     const active = state.soloComboAnnotating && Number(state.soloComboNoteAnchor) === Number(anchor);
-    // Empty note anchors are represented by the lightweight gap marker
-    // between cards. Do not emit an empty slot: it used to reserve 126px and
-    // changed the editor lane's card layout before the user typed anything.
-    if (!note?.text && !active) return '';
-    return `<span class="community-wiki-solo-note-slot ${note?.text ? 'has-note' : ''} ${active ? 'is-active' : ''}" data-solo-note-anchor="${anchor}">${active ? `<input data-solo-note-input data-solo-note-anchor="${anchor}" value="${esc(note?.text || '')}" maxlength="300" placeholder="在这里输入备注">` : note?.text ? `<span class="community-wiki-solo-note-text">${esc(note.text)}</span>` : `<button type="button" class="community-wiki-solo-note-add" data-solo-note-anchor="${anchor}"><i data-lucide="plus"></i><span>备注</span></button>`}</span>`;
+    // Saved notes use the numbered badge on the card. Only mount a floating
+    // slot while its input is active, so notes never consume lane space.
+    if (!active) return '';
+    return `<span class="community-wiki-solo-note-slot is-active" data-solo-note-anchor="${anchor}"><input data-solo-note-input data-solo-note-anchor="${anchor}" value="${esc(note?.text || '')}" maxlength="300" placeholder="在这里输入备注"></span>`;
   }
 
   function soloComboInlineItemMarkup(item, index, itemTitle = (value) => value.title || value.nodeId || '招式') {
@@ -9366,10 +9530,21 @@
     const editItemsMarkup = items.map((item, index) => `${soloComboInlineItemMarkup(item, index, itemTitle)}${soloComboInlineNoteMarkup(index)}${index < items.length - 1 ? `<button type="button" class="community-wiki-solo-note-gap" data-solo-note-anchor="${index + 1}" aria-label="在此处添加备注"><i data-lucide="plus"></i></button>` : ''}`).join('') + (items.length ? soloComboInlineNoteMarkup(items.length) : '');
     const noteHint = state.soloComboAnnotating ? '双击招式或点击卡片之间添加备注' : t('dropNodes');
     dropzone.innerHTML = `<div class="community-wiki-solo-drop-hint"><i data-lucide="${state.soloComboAnnotating ? 'message-square-text' : 'plus'}"></i><span>${esc(noteHint)}</span></div>${editItemsMarkup}`;
+    if (dropzone.dataset.soloNoteDblclickBound !== 'true') {
+      dropzone.addEventListener('dblclick', (event) => {
+        const item = event.target.closest('.community-wiki-solo-item[data-solo-item-index]');
+        if (!item) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        openSoloComboNote(name, Number(item.dataset.soloItemIndex));
+      }, true);
+      dropzone.dataset.soloNoteDblclickBound = 'true';
+    }
     dropzone.scrollLeft = scrollLeft;
     syncSoloComboEditorViewport(dropzone.closest('[data-wiki-graph-scroll]'));
     positionSoloInlineNoteMarkers(dropzone);
     bindSoloComboNoteInputs(dropzone);
+    bindSoloComboInlineDoubleClick(dropzone);
     window.lucide?.createIcons({ root: dropzone });
     if (dropzone.dataset.soloInlineFastBound !== 'true') {
       dropzone.addEventListener('contextmenu', (event) => {
@@ -9431,19 +9606,32 @@
     // A signed-in account can edit every unlocked Wiki. The public state may
     // arrive a frame later than the account session, so do not hide the editor
     // while that request is still pending. The server remains authoritative.
-    return wiki?.lock?.locked !== true && wiki?.editable !== false;
+    return wiki?.lock?.locked !== true;
   }
 
   function isLocalWikiPreview() {
     // The community preview may use the fallback Vite port when the main
     // development server is already occupied. Both local ports are previews,
     // so they should expose the same editor surface for verification.
-    return ['localhost', '127.0.0.1'].includes(String(location.hostname || '').toLowerCase()) && [4174, 4175, 4176, 4177, 4178, 4179].includes(Number(location.port || 80));
+    const port = Number(location.port || 80);
+    return ['localhost', '127.0.0.1'].includes(String(location.hostname || '').toLowerCase())
+      && ((port >= 4174 && port <= 4179) || (port >= 4191 && port <= 4199));
   }
 
   function isWikiAccountAuthenticated() {
     const session = window.wwcomboCommunityAccountSession;
-    return Boolean(session?.authenticated && typeof session.email === 'string' && session.email.trim());
+    if (session?.authenticated && typeof session.email === 'string' && session.email.trim()) return true;
+    // The account request can finish after Wiki's first render, and older
+    // embedded pages may not publish the session object until the next tick.
+    // A stored account token plus the stored profile email is enough to expose
+    // the editor optimistically; the API remains authoritative when saving.
+    try {
+      const token = String(localStorage.getItem(ACCOUNT_TOKEN_STORAGE_KEY) || '').trim();
+      const profile = JSON.parse(localStorage.getItem('wwcombo-community-profile-v1') || '{}');
+      return Boolean(token && String(profile?.email || '').trim());
+    } catch {
+      return false;
+    }
   }
 
   function isWikiLocked(name = state.selected) {
@@ -9539,8 +9727,15 @@
     } catch { return {}; }
   }
 
-  function persistEditorStore() {
-    try { localStorage.setItem(EDITOR_STORAGE_KEY, JSON.stringify(state.editorStore)); } catch {}
+  let editorStorePersistTimer = 0;
+  function persistEditorStore(defer = false) {
+    if (editorStorePersistTimer) clearTimeout(editorStorePersistTimer);
+    const write = () => {
+      editorStorePersistTimer = 0;
+      try { localStorage.setItem(EDITOR_STORAGE_KEY, JSON.stringify(state.editorStore)); } catch {}
+    };
+    if (defer) editorStorePersistTimer = window.setTimeout(write, 160);
+    else write();
   }
 
   function soloCombosFor(name) {
@@ -10014,14 +10209,40 @@
         // when the browser does not dispatch an input event before focus moves.
         saveSoloComboNoteInput(element);
         state.soloComboDraft.updatedAt = Date.now();
+        const anchor = Number(element.dataset.soloNoteAnchor);
+        const text = String(element.value || '').trim();
+        const dropzone = element.closest('[data-solo-dropzone]');
+        const slot = element.closest('.community-wiki-solo-note-slot[data-solo-note-anchor]');
+        if (!dropzone || !slot) return;
+        const item = [...dropzone.querySelectorAll('.community-wiki-solo-item[data-solo-item-index]')]
+          .find((entry) => Number(entry.dataset.soloItemIndex) === anchor);
+        let badge = item?.querySelector('[data-solo-note-badge]');
+        if (!text) {
+          slot.remove();
+          badge?.remove();
+        } else {
+          if (!badge && item) {
+            badge = document.createElement('span');
+            badge.className = 'community-wiki-solo-note-badge';
+            badge.dataset.soloNoteBadge = '';
+            badge.dataset.soloNoteAnchor = String(anchor);
+            badge.setAttribute('role', 'button');
+            badge.tabIndex = 0;
+            item.prepend(badge);
+          }
+          const noteNumber = soloComboNoteNumber(anchor);
+          if (badge) {
+            badge.textContent = String(noteNumber);
+            badge.setAttribute('aria-label', `编辑备注 ${noteNumber}`);
+          }
+          slot.remove();
+        }
         state.soloComboAnnotating = false;
         state.soloComboNoteAnchor = -1;
-        // Saving a note only changes the editor lane. Rebuilding the whole
-        // Wiki surface here also rebuilds every graph node and its listeners,
-        // which makes a simple blur feel like a stalled tree refresh.
-        if (!refreshSoloComboNotePresentation(Number(element.dataset.soloNoteAnchor))) {
-          renderCurrentWikiSurface(state.selected || state.homeMenuName);
-        }
+        dropzone.closest('.community-wiki-solo-inline')?.classList.remove('is-annotating');
+        syncSoloComboEditorViewport(dropzone.closest('[data-wiki-graph-scroll]'));
+        positionSoloInlineNoteMarkers(dropzone);
+        syncSoloComboSelectionPresentation(dropzone);
       });
     });
   }
@@ -10067,35 +10288,63 @@
     }
     const noteSlot = [...dropzone.querySelectorAll('.community-wiki-solo-note-slot[data-solo-note-anchor]')]
       .find((entry) => Number(entry.dataset.soloNoteAnchor) === Number(anchor));
-    if (noteSlot) {
-      if (note) {
-        noteSlot.classList.remove('is-active');
-        noteSlot.classList.add('has-note');
-        noteSlot.replaceChildren(Object.assign(document.createElement('span'), {
-          className: 'community-wiki-solo-note-text',
-          textContent: note.text
-        }));
-      } else {
-        noteSlot.remove();
-      }
+    if (noteSlot && !noteSlot.querySelector('[data-solo-note-input]')) noteSlot.remove();
+    const input = dropzone.querySelector('[data-solo-note-input]');
+    if (input && Number(input.dataset.soloNoteAnchor) === Number(anchor)) {
+      const currentNote = (state.soloComboDraft.notes || []).find((entry) => Number(entry.anchor) === Number(anchor));
+      if (document.activeElement !== input) input.value = currentNote?.text || '';
     }
     positionSoloInlineNoteMarkers(dropzone);
     return true;
   }
 
   function openSoloComboNote(name, anchor) {
-    if (!state.soloComboDraft || state.soloComboEditMode !== 'combo') return;
+    if (!state.soloComboDraft) return;
+    // Notes belong to the action track. A stale mode value should not make a
+    // visible action card silently ignore a double-click.
+    state.soloComboEditMode = 'combo';
     const dropzone = WIKI_ROOT.querySelector('.community-wiki-solo-inline [data-solo-dropzone]');
+    if (!dropzone) return;
+    const viewport = dropzone?.closest('[data-wiki-graph-scroll]');
     const scrollLeft = dropzone?.scrollLeft || 0;
+    const viewportScrollLeft = viewport?.scrollLeft || 0;
+    const viewportScrollTop = viewport?.scrollTop || 0;
     state.soloComboAnnotating = true;
     state.soloComboNoteAnchor = Number(anchor);
-    if (!refreshSoloComboInline(name)) renderCurrentWikiSurface(name);
+    dropzone.closest('.community-wiki-solo-inline')?.classList.add('is-annotating');
+    let slot = [...dropzone.querySelectorAll('.community-wiki-solo-note-slot[data-solo-note-anchor]')]
+      .find((entry) => Number(entry.dataset.soloNoteAnchor) === Number(anchor));
+    if (!slot) {
+      slot = document.createElement('span');
+      slot.className = 'community-wiki-solo-note-slot is-active';
+      slot.dataset.soloNoteAnchor = String(anchor);
+      const item = [...dropzone.querySelectorAll('.community-wiki-solo-item[data-solo-item-index]')]
+        .find((entry) => Number(entry.dataset.soloItemIndex) === Number(anchor));
+      if (item?.nextElementSibling) item.parentNode.insertBefore(slot, item.nextElementSibling);
+      else dropzone.appendChild(slot);
+    }
+    slot.classList.add('is-active');
+    slot.classList.remove('has-note');
+    const currentNote = (state.soloComboDraft.notes || []).find((entry) => Number(entry.anchor) === Number(anchor));
+    slot.innerHTML = `<input data-solo-note-input data-solo-note-anchor="${Number(anchor)}" value="${esc(currentNote?.text || '')}" maxlength="300" placeholder="在这里输入备注">`;
+    bindSoloComboNoteInputs(slot);
+    syncSoloComboEditorViewport(viewport);
+    positionSoloInlineNoteMarkers(dropzone);
     const restore = () => {
       const nextDropzone = WIKI_ROOT.querySelector('.community-wiki-solo-inline [data-solo-dropzone]');
       if (nextDropzone) nextDropzone.scrollLeft = scrollLeft;
-      const input = WIKI_ROOT.querySelector('[data-solo-note-input]');
+      const nextViewport = nextDropzone?.closest('[data-wiki-graph-scroll]');
+      if (nextViewport) {
+        nextViewport.scrollLeft = viewportScrollLeft;
+        nextViewport.scrollTop = viewportScrollTop;
+      }
+      const input = WIKI_ROOT.querySelector(`[data-solo-note-input][data-solo-note-anchor="${Number(anchor)}"]`);
       input?.focus({ preventScroll: true });
       if (nextDropzone) nextDropzone.scrollLeft = scrollLeft;
+      if (nextViewport) {
+        nextViewport.scrollLeft = viewportScrollLeft;
+        nextViewport.scrollTop = viewportScrollTop;
+      }
     };
     restore();
     requestAnimationFrame(restore);
@@ -10113,7 +10362,7 @@
   }
 
   function flushSoloComboNoteInput() {
-    const input = WIKI_ROOT.querySelector('[data-solo-note-input]');
+    const input = WIKI_ROOT.querySelector('[data-solo-note-input]:focus, [data-solo-note-input]');
     if (input) saveSoloComboNoteInput(input);
   }
 
@@ -10325,7 +10574,7 @@
     } catch { state.soloComboCommunity = []; }
     state.soloComboCommunityLoading = false;
     state.soloComboCommunityLoaded = true;
-    renderCurrentWikiSurface(name);
+    if (state.homeMenuName === name && state.homeSurfaceTab === 'flow') renderCurrentWikiSurface(name);
   }
 
   async function loadSoloCombos(name, force = false) {
@@ -10345,7 +10594,7 @@
       state.soloCombosByCharacter.set(name, []);
       state.soloComboLoadState.set(name, 'error');
     }
-    renderCurrentWikiSurface(name);
+    if (state.homeMenuName === name && state.homeSurfaceTab === 'flow') renderCurrentWikiSurface(name);
   }
 
   function copyModel(model) {
@@ -11284,14 +11533,31 @@
   }
 
   function modelFor(name, info, formId = state.formIds[name] || state.formId || 'normal') {
+    const storedSource = state.editorStore[name] || null;
+    const modeId = currentModeId(name);
+    const chainId = Number(state.chainIds[name] || 0);
+    const cached = state.modelCache.get(name);
+    if (cached
+      && cached.info === info
+      && cached.stored === storedSource
+      && cached.formId === formId
+      && cached.modeId === modeId
+      && cached.chainId === chainId) return cached.model;
     const base = normalizeModelCategories(stripPersistentAuxiliaryNodes(baseModelFor(name, info, formId)));
     const stored = normalizeModelCategories(stripPersistentAuxiliaryNodes(storedModelFor(name, formId)));
-    if (!stored || !Array.isArray(stored.nodes)) return filterModes(filterResonanceChains(resolveAirborneTags(base), name), name);
+    let result;
+    if (!stored || !Array.isArray(stored.nodes)) {
+      result = filterModes(filterResonanceChains(resolveAirborneTags(base), name), name);
+      state.modelCache.set(name, { info, stored: storedSource, formId, modeId, chainId, model: result });
+      return result;
+    }
     const legacyFlatApi = stored.nodes.some((node) => /^api:\d+$/.test(String(node?.id || '')));
     if (Number(stored.version || 1) < base.version || legacyFlatApi) {
       // Older previews stored one page per form or one node per skill. Rebase
       // matching edits onto the complete graph and retain custom additions.
-      return filterModes(filterResonanceChains(resolveAirborneTags(rebaseStoredModel(name, base, stored)), name), name);
+      result = filterModes(filterResonanceChains(resolveAirborneTags(rebaseStoredModel(name, base, stored)), name), name);
+      state.modelCache.set(name, { info, stored: storedSource, formId, modeId, chainId, model: result });
+      return result;
     }
     const activeMode = currentModeId(name);
     const nodes = stored.nodes.filter((node) => node && node.id && node.title && (!node.modeId || node.modeId === activeMode));
@@ -11304,7 +11570,9 @@
     const mergedIds = new Set(mergedNodes.map((node) => node.id));
     const storedEdges = Array.isArray(stored.edges) ? stored.edges : base.edges;
     const mergedEdges = [...storedEdges, ...base.edges.filter((edge) => mergedIds.has(edge.from) && mergedIds.has(edge.to) && !storedEdges.some((item) => item.from === edge.from && item.to === edge.to))];
-    return filterModes(filterResonanceChains(resolveAirborneTags({ ...base, ...stored, nodes: mergedNodes, edges: mergedEdges, positions: stored.positions && typeof stored.positions === 'object' ? stored.positions : {} }), name), name);
+    result = filterModes(filterResonanceChains(resolveAirborneTags({ ...base, ...stored, nodes: mergedNodes, edges: mergedEdges, positions: stored.positions && typeof stored.positions === 'object' ? stored.positions : {} }), name), name);
+    state.modelCache.set(name, { info, stored: storedSource, formId, modeId, chainId, model: result });
+    return result;
   }
 
   function graphLabelWidth(value, asciiWidth, wideWidth) {
@@ -11474,6 +11742,68 @@
     return { x, y, width: element.offsetWidth || Number.parseFloat(element.style.getPropertyValue('--wiki-node-width')) || 190, height: element.offsetHeight || 50 };
   }
 
+  function updateGraphSelectionInDom(graph, name, nodeId) {
+    if (!graph) return;
+    if (state.editing) {
+      graph.querySelectorAll('[data-wiki-node]').forEach((element) => {
+        const ids = element.dataset.wikiNode ? [element.dataset.wikiNode] : [];
+        element.classList.toggle('selected', ids.includes(nodeId));
+      });
+      return;
+    }
+    const model = currentModel(name);
+    if (!model) return;
+    const levels = relatedNodeLevels(model, nodeId, name);
+    const triggerBuffs = directTriggerBuffIds(model, nodeId);
+    const groups = graphSeriesGroups(model);
+    const visibleNodes = new Map();
+    graph.querySelectorAll('[data-wiki-node]').forEach((element) => {
+      const id = element.dataset.wikiNode || '';
+      if (!id) return;
+      if (!visibleNodes.has(id) || element.dataset.wikiReplacementActive === 'true') visibleNodes.set(id, element);
+    });
+    const edgeIndicators = new Map([...graph.querySelectorAll('[data-wiki-edge-direction-source][data-wiki-edge-direction-target]')]
+      .map((element) => [`${element.dataset.wikiEdgeDirectionSource}->${element.dataset.wikiEdgeDirectionTarget}`, element]));
+    const memberIdsFor = (element) => {
+      const key = element.dataset.wikiSeries || '';
+      return groups.find((group) => group.key === key)?.memberIds || [element.dataset.wikiNode || ''];
+    };
+    const includesAny = (set, ids) => ids.some((id) => set.has(id));
+    graph.querySelectorAll('[data-wiki-node]').forEach((element) => {
+      const ids = memberIdsFor(element);
+      const related = includesAny(levels.primary, ids);
+      const secondary = includesAny(levels.secondary, ids);
+      const context = includesAny(levels.context || levels.primary, ids);
+      const trigger = includesAny(triggerBuffs, ids);
+      const selected = nodeId === element.dataset.wikiNode || (element.dataset.wikiSeriesCollapsed === 'true' && ids.includes(nodeId));
+      element.classList.toggle('related', Boolean(nodeId && related));
+      element.classList.toggle('related-secondary', Boolean(nodeId && secondary));
+      element.classList.toggle('context-related', Boolean(nodeId && context && !related));
+      element.classList.toggle('unrelated', Boolean(nodeId && !related && !secondary && !context));
+      element.classList.toggle('trigger-related', Boolean(nodeId && trigger));
+      element.classList.toggle('replacement-trigger-buff', Boolean(nodeId && trigger && element.classList.contains('buff')));
+      element.classList.toggle('selected', Boolean(selected));
+    });
+    graph.querySelectorAll('.community-wiki-graph-lines path[data-wiki-edge-source][data-wiki-edge-target]').forEach((path) => {
+      const source = visibleNodes.get(path.dataset.wikiEdgeSource);
+      const target = visibleNodes.get(path.dataset.wikiEdgeTarget);
+      const sourceIds = source ? memberIdsFor(source) : [path.dataset.wikiEdgeSource];
+      const targetIds = target ? memberIdsFor(target) : [path.dataset.wikiEdgeTarget];
+      const active = includesAny(levels.primary, sourceIds) && includesAny(levels.primary, targetIds);
+      const context = includesAny(levels.context || levels.primary, sourceIds) && includesAny(levels.context || levels.primary, targetIds);
+      const secondary = Boolean(levels.hasInputRoutes && context && !active);
+      path.classList.toggle('active', active);
+      path.classList.toggle('secondary', secondary);
+      path.classList.toggle('dimmed', Boolean(nodeId && !context));
+      const indicator = edgeIndicators.get(`${path.dataset.wikiEdgeSource}->${path.dataset.wikiEdgeTarget}`);
+      if (indicator) {
+        indicator.classList.toggle('active', active);
+        indicator.classList.toggle('secondary', secondary);
+        indicator.classList.toggle('dimmed', Boolean(nodeId && !context));
+      }
+    });
+  }
+
   function syncGraphLinesFromDom(graph) {
     if (!graph) return;
     const nodeHeight = 50;
@@ -11495,14 +11825,16 @@
       height: Number.parseFloat(element.style.height) || element.offsetHeight || 88
     })) };
     const routeUsage = { horizontal: [], vertical: [] };
+    const contentZoom = Number(graph.querySelector('[data-wiki-graph-content]')?.dataset.contentZoom || 1);
+    const indicators = new Map([...graph.querySelectorAll('[data-wiki-edge-direction-source][data-wiki-edge-direction-target]')]
+      .map((element) => [`${element.dataset.wikiEdgeDirectionSource}->${element.dataset.wikiEdgeDirectionTarget}`, element]));
     graph.querySelectorAll('.community-wiki-graph-lines path[data-wiki-edge-source][data-wiki-edge-target]').forEach((path) => {
       const source = entryPoints.get(path.dataset.wikiEdgeSource), target = entryPoints.get(path.dataset.wikiEdgeTarget);
       if (!source || !target) return;
-      const nodeScale = Number(graph.querySelector('[data-wiki-graph-content]')?.dataset.contentZoom || 1);
       const savedRouteY = Number(path.dataset.wikiEdgeRouteY);
-      const geometry = edgeGeometry({ ...source, node: { id: path.dataset.wikiEdgeSource }, renderX: source.x, renderY: source.y }, { ...target, node: { id: path.dataset.wikiEdgeTarget }, renderX: target.x, renderY: target.y }, layout, { bidirectional: path.classList.contains('bidirectional'), nodeScale, routeY: Number.isFinite(savedRouteY) ? savedRouteY : undefined, routeUsage });
+      const geometry = edgeGeometry({ ...source, node: { id: path.dataset.wikiEdgeSource }, renderX: source.x, renderY: source.y }, { ...target, node: { id: path.dataset.wikiEdgeTarget }, renderX: target.x, renderY: target.y }, layout, { bidirectional: path.classList.contains('bidirectional'), nodeScale: contentZoom, routeY: Number.isFinite(savedRouteY) ? savedRouteY : undefined, routeUsage });
       path.setAttribute('d', geometry.d);
-      const indicator = [...graph.querySelectorAll('[data-wiki-edge-direction-source][data-wiki-edge-direction-target]')].find((element) => element.dataset.wikiEdgeDirectionSource === path.dataset.wikiEdgeSource && element.dataset.wikiEdgeDirectionTarget === path.dataset.wikiEdgeTarget);
+      const indicator = indicators.get(`${path.dataset.wikiEdgeSource}->${path.dataset.wikiEdgeTarget}`);
       if (indicator && geometry.midpoint) indicator.setAttribute('transform', `translate(${geometry.midpoint.x} ${geometry.midpoint.y}) rotate(${geometry.midpoint.angle || 0})`);
     });
   }
@@ -12795,6 +13127,26 @@
     window.lucide?.createIcons({ root: viewport.querySelector('[data-wiki-graph-frame]') || viewport });
   }
 
+  function mountHomeNodeModal(name, nodeId) {
+    const graph = WIKI_ROOT.querySelector('[data-wiki-graph]');
+    const node = currentModel(name)?.nodes?.find((entry) => entry.id === nodeId);
+    if (!graph || !node) return false;
+    WIKI_ROOT.querySelectorAll('.community-wiki-floating').forEach((element) => element.remove());
+    const shell = document.createElement('div');
+    shell.className = 'community-wiki-floating';
+    shell.innerHTML = `<div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-node-modal" role="dialog" aria-modal="true"><header><div><i data-lucide="git-branch"></i><strong>${esc(t('selectedNode'))}</strong></div><button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><div class="community-wiki-node-panel-inner">${nodeDetail(node, name, viewModelFor(name))}</div></section>`;
+    WIKI_ROOT.querySelector('.community-wiki-inner')?.appendChild(shell);
+    shell.querySelectorAll('[data-wiki-overlay-close]').forEach((element) => element.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      state.selectedNode = '';
+      state.profileOpen = false;
+      shell.remove();
+    }));
+    window.lucide?.createIcons({ root: shell });
+    return true;
+  }
+
   function positionSoloInlineNoteMarkers(dropzone) {
     if (!dropzone) return;
     const items = [...dropzone.querySelectorAll('.community-wiki-solo-item[data-solo-item-index]')];
@@ -12805,28 +13157,42 @@
     const graphScale = graph && graph.offsetWidth ? (graphRect.width / graph.offsetWidth) || 1 : 1;
     const isViewportOverlay = Boolean(dropzone.closest('.community-wiki-solo-editor-overlay'));
     const markerScale = isViewportOverlay ? 1 : graphScale;
-    dropzone.querySelectorAll('[data-solo-note-anchor]').forEach((marker) => {
+    dropzone.querySelectorAll('.community-wiki-solo-note-slot[data-solo-note-anchor], .community-wiki-solo-note-gap[data-solo-note-anchor]').forEach((marker) => {
       const anchor = Number(marker.dataset.soloNoteAnchor);
       if (!Number.isInteger(anchor)) return;
       const item = anchor < items.length ? items[anchor] : items[items.length - 1];
       if (!item) return;
       const itemRect = item.getBoundingClientRect();
       const isGap = marker.classList.contains('community-wiki-solo-note-gap');
+      const input = marker.querySelector('[data-solo-note-input]');
+      const itemWidth = Math.max(48, itemRect.width / markerScale);
+      const inputWidth = Math.max(200, Math.min(240, itemWidth * 1.7));
+      const itemLeft = (itemRect.left - dropzoneRect.left) / markerScale + contentLeft;
+      const itemRight = (itemRect.right - dropzoneRect.left) / markerScale + contentLeft;
+      const visibleLeft = contentLeft + 2;
+      const visibleRight = contentLeft + dropzone.clientWidth - 2;
       // Note slots are overlay anchors, not flex items. Keep the slot itself
       // at the exact insertion point so its editor can float without shifting
       // the cards underneath it.
       const boundary = isGap
         ? (anchor < items.length ? itemRect.left : itemRect.right) - dropzoneRect.left
         : itemRect.left - dropzoneRect.left;
-      const itemWidth = Math.max(48, itemRect.width / markerScale);
-      const localBoundary = boundary / markerScale + contentLeft;
+      const rightInputLeft = itemRight - 10;
+      const localBoundary = input
+        ? (rightInputLeft + inputWidth <= visibleRight
+          ? rightInputLeft
+          : Math.max(visibleLeft, itemLeft - inputWidth + 10))
+        : boundary / markerScale + contentLeft;
       marker.style.left = `${Math.max(2, localBoundary - (isGap ? 9 : 0))}px`;
-      marker.style.top = isGap ? '50%' : `${Math.max(2, (itemRect.bottom - dropzoneRect.top) / markerScale + 4)}px`;
-      const input = marker.querySelector('[data-solo-note-input]');
+      marker.style.top = isGap
+        ? '50%'
+        : input
+          ? `${Math.max(2, (itemRect.top - dropzoneRect.top) / markerScale - 4)}px`
+          : `${Math.max(2, (itemRect.bottom - dropzoneRect.top) / markerScale + 4)}px`;
       if (input) {
         input.style.left = '0px';
         input.style.top = '0px';
-        input.style.width = `${itemWidth}px`;
+        input.style.width = `${inputWidth}px`;
       }
       const noteText = marker.querySelector('.community-wiki-solo-note-text');
       if (noteText) {
@@ -12976,9 +13342,9 @@
     state.editorHistory = state.editorHistory.slice(-50);
     state.editorFuture = [];
     writeStoredModel(name, currentFormId(name), model);
-    persistEditorStore();
+    persistEditorStore(options.deferPersist === true);
     queueWikiSave(name, model);
-    renderDetail(name);
+    if (!options.preserveGraph) renderDetail(name);
     if (Number.isFinite(options.scrollLeft) || Number.isFinite(options.scrollTop)) {
       const viewport = WIKI_ROOT.querySelector('[data-wiki-graph-scroll]');
       if (viewport) {
@@ -13172,14 +13538,20 @@
     state.selectedNode = ''; commitModel(state.selected, next);
   }
 
-  function bindNodeDrag(element) {
+  function bindNodeDrag(element, seriesGroups = []) {
     if (!state.editing || !canEditWiki()) return;
+    if (element.dataset.wikiDragBound === 'true') return;
+    element.dataset.wikiDragBound = 'true';
     let drag = null;
     const updateVisualDrag = () => {
       if (!drag) return;
       const viewport = drag.viewport;
-      if (viewport) drag.viewportRect = viewport.getBoundingClientRect();
-      const graphRect = drag.graph.getBoundingClientRect();
+      if (drag.geometryDirty) {
+        if (viewport) drag.viewportRect = viewport.getBoundingClientRect();
+        drag.graphRect = drag.graph.getBoundingClientRect();
+        drag.geometryDirty = false;
+      }
+      const graphRect = drag.graphRect;
       const scale = drag.zoom;
       // The graph rect includes the current scroll offset. Measuring against
       // the live rect keeps the pointer anchored while the viewport auto-scrolls.
@@ -13190,47 +13562,27 @@
       drag.currentDx = dx;
       drag.currentDy = dy;
       drag.starts.forEach((start) => {
-        const target = graphDomNode(drag.graph, start.id);
+        const target = start.element;
         if (!target) return;
         const nextX = Math.max(8, start.renderX + dx), nextY = Math.max(8, start.renderY + dy);
         target.style.transform = `translate(${nextX}px,${nextY}px) scale(var(--wiki-node-scale, 1))`;
         target.dataset.nodeX = String(nextX);
         target.dataset.nodeY = String(nextY);
+        drag.boundsRight = Math.max(drag.boundsRight, nextX + start.width);
+        drag.boundsBottom = Math.max(drag.boundsBottom, nextY + start.height);
       });
-      const bounds = measureGraphDomBounds(drag.graph);
-      const nearRight = drag.lastClientX >= drag.viewportRect.right - drag.edge;
-      const nearBottom = drag.lastClientY >= drag.viewportRect.bottom - drag.edge;
-      const visibleRight = ((viewport?.scrollLeft || 0) + (viewport?.clientWidth || 0)) / scale;
-      const visibleBottom = ((viewport?.scrollTop || 0) + (viewport?.clientHeight || 0)) / scale;
-      const frame = drag.graph.closest('[data-wiki-graph-frame]');
-      const currentWidth = Number(frame?.dataset.baseWidth || 0);
-      const currentHeight = Number(frame?.dataset.baseHeight || 0);
-      const atRightBoundary = currentWidth > 0 && visibleRight >= currentWidth - drag.edgeThreshold;
-      const atBottomBoundary = currentHeight > 0 && visibleBottom >= currentHeight - drag.edgeThreshold;
-      // Prime a fresh runway as soon as the pointer enters the edge zone.
-      // Waiting for the old boundary first makes a fast drag stop against the
-      // viewport before the scroll loop gets a chance to extend the canvas.
-      if (!nearRight) drag.edgeRunwayPrimed = false;
-      if (!nearBottom) drag.bottomRunwayPrimed = false;
-      const rightRunway = nearRight
-        ? Math.max(visibleRight + drag.edgeBuffer, currentWidth + (atRightBoundary || !drag.edgeRunwayPrimed ? drag.growthStep : 0))
-        : 0;
-      const bottomRunway = nearBottom
-        ? Math.max(visibleBottom + drag.edgeBuffer, currentHeight + (atBottomBoundary || !drag.bottomRunwayPrimed ? drag.growthStep : 0))
-        : 0;
-      if (nearRight && rightRunway > currentWidth) drag.edgeRunwayPrimed = true;
-      if (nearBottom && bottomRunway > currentHeight) drag.bottomRunwayPrimed = true;
-      const minWidth = rightRunway;
-      const minHeight = bottomRunway;
-      updateGraphBoundsDuringDrag(drag.graph, bounds.right, bounds.bottom, {
-        minWidth,
-        minHeight
-      });
-      syncGraphLinesFromDom(drag.graph);
     };
     const stopAutoScroll = () => {
       if (drag?.autoScrollFrame) cancelAnimationFrame(drag.autoScrollFrame);
       if (drag) drag.autoScrollFrame = 0;
+    };
+    const scheduleVisualDrag = () => {
+      if (!drag || drag.visualFrame) return;
+      drag.visualFrame = requestAnimationFrame(() => {
+        if (!drag) return;
+        drag.visualFrame = 0;
+        updateVisualDrag();
+      });
     };
     const scrollViewportAtEdge = () => {
       if (!drag || !drag.viewport) return;
@@ -13244,13 +13596,57 @@
       else if (drag.lastClientX < rect.left + edge) { drag.viewport.scrollLeft = Math.max(0, drag.viewport.scrollLeft - maxStep); moved = true; }
       if (drag.lastClientY > rect.bottom - edge) { drag.viewport.scrollTop += maxStep; moved = true; }
       else if (drag.lastClientY < rect.top + edge) { drag.viewport.scrollTop = Math.max(0, drag.viewport.scrollTop - maxStep); moved = true; }
+      if (moved) drag.geometryDirty = true;
       return moved;
+    };
+    const extendDragRunway = () => {
+      if (!drag?.viewport) return;
+      const frame = drag.graph.closest('[data-wiki-graph-frame]');
+      if (!frame) return;
+      const scale = drag.zoom;
+      const currentWidth = Number(frame.dataset.baseWidth || 0);
+      const currentHeight = Number(frame.dataset.baseHeight || 0);
+      const visibleRight = (drag.viewport.scrollLeft + drag.viewport.clientWidth) / scale;
+      const visibleBottom = (drag.viewport.scrollTop + drag.viewport.clientHeight) / scale;
+      const nearRight = drag.lastClientX >= drag.viewportRect.right - drag.edge;
+      const nearBottom = drag.lastClientY >= drag.viewportRect.bottom - drag.edge;
+      const atRightBoundary = currentWidth > 0 && visibleRight >= currentWidth - drag.edgeThreshold;
+      const atBottomBoundary = currentHeight > 0 && visibleBottom >= currentHeight - drag.edgeThreshold;
+      if (!nearRight) drag.edgeRunwayPrimed = false;
+      if (!nearBottom) drag.bottomRunwayPrimed = false;
+      const rightRunway = nearRight
+        ? Math.max(visibleRight + drag.edgeBuffer, currentWidth + (atRightBoundary || !drag.edgeRunwayPrimed ? drag.growthStep : 0))
+        : 0;
+      const bottomRunway = nearBottom
+        ? Math.max(visibleBottom + drag.edgeBuffer, currentHeight + (atBottomBoundary || !drag.bottomRunwayPrimed ? drag.growthStep : 0))
+        : 0;
+      if (nearRight && rightRunway > currentWidth) drag.edgeRunwayPrimed = true;
+      if (nearBottom && bottomRunway > currentHeight) drag.bottomRunwayPrimed = true;
+      if (rightRunway > currentWidth || bottomRunway > currentHeight) {
+        updateGraphBoundsDuringDrag(drag.graph, drag.boundsRight, drag.boundsBottom, { minWidth: rightRunway, minHeight: bottomRunway });
+      }
     };
     const autoScroll = () => {
       if (!drag || !drag.viewport) return;
+      drag.viewportRect = drag.viewport.getBoundingClientRect();
+      const inEdgeZone = drag.lastClientX > drag.viewportRect.right - drag.edge
+        || drag.lastClientX < drag.viewportRect.left + drag.edge
+        || drag.lastClientY > drag.viewportRect.bottom - drag.edge
+        || drag.lastClientY < drag.viewportRect.top + drag.edge;
+      if (!inEdgeZone) {
+        drag.autoScrollFrame = 0;
+        return;
+      }
       const moved = scrollViewportAtEdge();
-      if (moved) updateVisualDrag();
+      if (moved) {
+        extendDragRunway();
+        scheduleVisualDrag();
+      }
       if (drag) drag.autoScrollFrame = requestAnimationFrame(autoScroll);
+    };
+    const ensureAutoScroll = () => {
+      if (!drag || drag.autoScrollFrame) return;
+      drag.autoScrollFrame = requestAnimationFrame(autoScroll);
     };
     const removeGlobalDragListeners = () => {
       window.removeEventListener('pointermove', onGlobalPointerMove, true);
@@ -13266,10 +13662,18 @@
       if (Number.isFinite(event.clientX) && Number.isFinite(event.clientY) && activeDrag.moved) {
         activeDrag.lastClientX = event.clientX;
         activeDrag.lastClientY = event.clientY;
+        if (activeDrag.visualFrame) cancelAnimationFrame(activeDrag.visualFrame);
+        activeDrag.visualFrame = 0;
         updateVisualDrag();
+      }
+      if (activeDrag.moved) {
+        const bounds = measureGraphDomBounds(activeDrag.graph);
+        updateGraphBoundsDuringDrag(activeDrag.graph, bounds.right, bounds.bottom);
+        syncGraphLinesFromDom(activeDrag.graph);
       }
       drag.finished = true;
       stopAutoScroll();
+      if (drag?.visualFrame) cancelAnimationFrame(drag.visualFrame);
       removeGlobalDragListeners();
       const dragState = activeDrag;
       const moved = dragState.moved;
@@ -13282,7 +13686,7 @@
       dragState.starts.forEach((start) => {
         next.positions[start.id] = { x: Math.max(8, start.x + dragState.currentDx), y: Math.max(8, start.y + dragState.currentDy) };
       });
-      commitModel(state.selected, next, { scrollLeft: dragState.viewport?.scrollLeft, scrollTop: dragState.viewport?.scrollTop });
+      commitModel(state.selected, next, { preserveGraph: true, deferPersist: true });
     };
     const onGlobalPointerMove = (event) => {
       if (!drag || event.pointerId !== drag.pointerId) return;
@@ -13294,14 +13698,13 @@
       if (!drag.moved) return;
       event.preventDefault();
       element.dataset.dragged = 'true';
-      // Also nudge synchronously on pointermove. The animation loop can miss
-      // a very quick drag whose pointerup arrives in the same frame.
-      scrollViewportAtEdge();
-      updateVisualDrag();
+      ensureAutoScroll();
+      scheduleVisualDrag();
     };
     const onGlobalPointerUp = (event) => finishDrag(event);
     const onGlobalPointerCancel = (event) => finishDrag(event);
     element.addEventListener('pointerdown', (event) => {
+      if (!state.editing || !canEditWiki()) return;
       if (event.button !== 0) return;
       // Input-route icons are interactive controls inside the card. In edit
       // mode they must switch the route before the card-level drag handler
@@ -13311,7 +13714,7 @@
       const viewport = graph?.closest('[data-wiki-graph-scroll]');
       const seriesKey = element.dataset.wikiSeries || '';
       const model = currentModel(state.selected);
-      const series = seriesKey ? graphSeriesGroups(model).find((group) => group.key === seriesKey) : null;
+      const series = seriesKey ? seriesGroups.find((group) => group.key === seriesKey) : null;
       const graphRect = graph.getBoundingClientRect();
       const canvasZoom = Math.max(.01, graph.offsetWidth ? graphRect.width / graph.offsetWidth : Number(state.graphCanvasZoom || state.graphZoom) || 1);
       const contentZoom = Math.max(.01, Number(graph.querySelector('[data-wiki-graph-content]')?.dataset.contentZoom || state.graphContentZoom || 1));
@@ -13325,7 +13728,10 @@
           x: point?.x ?? Number(rendered?.dataset.nodeLogicalX || rendered?.dataset.nodeX || 8),
           y: point?.y ?? Number(rendered?.dataset.nodeLogicalY || rendered?.dataset.nodeY || 8),
           renderX: Number(rendered?.dataset.nodeX || point?.x || 8),
-          renderY: Number(rendered?.dataset.nodeY || point?.y || 8)
+          renderY: Number(rendered?.dataset.nodeY || point?.y || 8),
+          width: rendered?.offsetWidth || Number.parseFloat(rendered?.style.getPropertyValue('--wiki-node-width')) || 190,
+          height: rendered?.offsetHeight || 50,
+          element: rendered
         };
       });
       drag = {
@@ -13333,7 +13739,10 @@
         startScrollTop: viewport?.scrollTop || 0, starts, zoom, moved: false, series,
         primaryId: element.dataset.wikiNode || '', pointerId: event.pointerId,
         lastClientX: event.clientX, lastClientY: event.clientY, currentDx: 0, currentDy: 0,
-         autoScrollFrame: 0, finished: false, edge: 56, edgeBuffer: 220, edgeThreshold: 96, growthStep: 320,
+         autoScrollFrame: 0, visualFrame: 0, finished: false, edge: 56, edgeBuffer: 220, edgeThreshold: 96, growthStep: 320,
+         boundsRight: Number(graph.closest('[data-wiki-graph-frame]')?.dataset.baseWidth || graph.offsetWidth || 0),
+         boundsBottom: Number(graph.closest('[data-wiki-graph-frame]')?.dataset.baseHeight || graph.offsetHeight || 0),
+         graphRect, geometryDirty: false,
          edgeRunwayPrimed: false, bottomRunwayPrimed: false,
          viewportRect: viewport?.getBoundingClientRect() || { left: 0, right: 0, top: 0, bottom: 0 },
          startPointerGraphX: 0, startPointerGraphY: 0
@@ -13343,7 +13752,6 @@
       window.addEventListener('pointermove', onGlobalPointerMove, true);
       window.addEventListener('pointerup', onGlobalPointerUp, true);
       window.addEventListener('pointercancel', onGlobalPointerCancel, true);
-      drag.autoScrollFrame = requestAnimationFrame(autoScroll);
       event.preventDefault();
       event.stopPropagation();
       document.body.classList.add('wiki-node-dragging');
@@ -13487,7 +13895,9 @@
     // are intentionally handled after boot.
     await preloadHomeSurface(state.characters, '赞妮');
     if (sequence !== characterLoadSequence) return;
-    renderHome();
+    // Direct character routes can already be rendering their tree while the
+    // home assets finish warming. Never replace that active route with home.
+    if (!state.selected && !state.homeMenuName) renderHome();
     finishWikiBoot();
   }
 
@@ -13495,7 +13905,7 @@
     const sequence = ++characterLoadSequence;
     homeBootstrapSequence = 0;
     state.loading = true;
-    renderHome();
+    if (!state.selected && !state.homeMenuName) renderHome();
     let supportStarted = false;
     const startSupport = () => {
       if (supportStarted || sequence !== characterLoadSequence) return;
@@ -13507,6 +13917,7 @@
       // Skill text is independent from the tree/flow payloads. Warm it in the
       // background so opening a second character can use the cache instantly.
       warmHomeInfoCache(sequence);
+      warmHomeDetailData(sequence);
       void hydrateCharacterSupportData(sequence).catch((error) => console.warn('[wiki] support data unavailable', error));
     };
     const cachedCharacters = normalizeCharacters(await readCachedJson(CHARACTER_LIST_URL));
@@ -13514,10 +13925,10 @@
       state.characters = cachedCharacters;
       state.error = '';
       state.loading = false;
-      renderHome();
+      if (!state.selected && !state.homeMenuName) renderHome();
       void prepareHomeSurface(sequence).then(startSupport).catch((error) => {
         console.warn('[wiki] home bootstrap failed', error);
-        if (sequence === characterLoadSequence) { renderHome(); finishWikiBoot(); startSupport(); }
+        if (sequence === characterLoadSequence) { if (!state.selected && !state.homeMenuName) renderHome(); finishWikiBoot(); startSupport(); }
       });
     }
     try {
@@ -13528,19 +13939,19 @@
       state.characters = normalizeCharacters(payload);
       if (!state.characters.length) throw new Error('empty-character-list');
       state.error = ''; state.loading = false;
-      renderHome();
+      if (!state.selected && !state.homeMenuName) renderHome();
       void prepareHomeSurface(sequence).then(startSupport).catch((error) => {
         console.warn('[wiki] home bootstrap failed', error);
-        if (sequence === characterLoadSequence) { renderHome(); finishWikiBoot(); startSupport(); }
+        if (sequence === characterLoadSequence) { if (!state.selected && !state.homeMenuName) renderHome(); finishWikiBoot(); startSupport(); }
       });
     } catch (error) {
       if (sequence !== characterLoadSequence) return;
       if (state.characters.length) return;
       state.characters = FALLBACK_CHARACTERS; state.error = String(error?.message || error); state.loading = false;
-      renderHome();
+      if (!state.selected && !state.homeMenuName) renderHome();
       void prepareHomeSurface(sequence).then(startSupport).catch((error) => {
         console.warn('[wiki] fallback home bootstrap failed', error);
-        if (sequence === characterLoadSequence) { renderHome(); finishWikiBoot(); startSupport(); }
+        if (sequence === characterLoadSequence) { if (!state.selected && !state.homeMenuName) renderHome(); finishWikiBoot(); startSupport(); }
       });
     }
   }
