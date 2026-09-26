@@ -236,12 +236,6 @@ html[data-theme='day'] .community-announcement-body { color: #294249; }
   .community-announcement-panel { max-height: 92vh; }
 }
 
-@media (max-width: 520px) {
-  .leaderboard-rules-dialog { width: 100%; max-height: 94vh; border-radius: 6px 6px 0 0; }
-  .leaderboard-rules-body { padding: 14px 16px 18px; }
-  .leaderboard-rules { grid-template-columns: 1fr; }
-}
-
 .results-band { padding: 30px 0 64px; }
 .results-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 22px; margin-bottom: 14px; }
 .results-head h2 { margin: 0; font-size: 20px; }
@@ -3772,4 +3766,10 @@ html[data-theme='day'] body.wiki-route .community-wiki-home-surface-character { 
   body.wiki-home-surface-fullscreen .community-wiki-desktop-character-panel.is-fullscreen .community-wiki-desktop-surface-body {
     min-height: 0;
   }
+}
+
+@media (max-width: 520px) {
+  .leaderboard-rules-dialog { width: 100%; max-height: 94vh; border-radius: 6px 6px 0 0; }
+  .leaderboard-rules-body { padding: 14px 16px 18px; }
+  .leaderboard-rules { grid-template-columns: 1fr; }
 }
