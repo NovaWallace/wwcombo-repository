@@ -1407,6 +1407,7 @@ html[data-theme='day'] body.wiki-route .community-wiki-resonance-change-list p {
 .community-wiki-solo-inline .community-wiki-solo-dropzone.has-items .community-wiki-solo-drop-hint { opacity: .16; }
 .community-wiki-solo-inline.is-annotating .community-wiki-solo-dropzone.has-items .community-wiki-solo-drop-hint { inset: auto 8px 8px auto; width: auto; height: 24px; padding: 3px 8px; gap: 5px; border: 1px solid var(--line-soft); border-radius: 999px; background: color-mix(in srgb, var(--surface) 88%, var(--wiki-element, var(--gold))); color: var(--muted-strong); font-size: 9px; font-weight: 750; line-height: 1; opacity: .9; z-index: 6; }
 .community-wiki-solo-inline.is-annotating .community-wiki-solo-dropzone.has-items .community-wiki-solo-drop-hint svg { width: 12px; height: 12px; }
+.community-wiki-solo-inline.is-annotating .community-wiki-solo-dropzone { align-items: flex-start; padding-top: 16px; }
 .community-wiki-solo-inline .community-wiki-solo-item { width: auto; min-width: 126px; max-width: 200px; min-height: 45px; flex: 0 0 auto; }
 .community-wiki-solo-inline .community-wiki-solo-item span { overflow: hidden; overflow-wrap: normal; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25; }
 .community-wiki-solo-inline .community-wiki-solo-item.is-form-2 { border-color: #72b7e5; background: color-mix(in srgb, #72b7e5 18%, var(--surface-raised)); }
