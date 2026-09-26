@@ -3838,7 +3838,7 @@ function renderLeaderboardCard(user, displayRank = user.rank) {
   metrics.append(
     homepageSlot,
     leaderboardMetric('打轴高手', [user.combo?.uploads || 0, user.combo?.downloads || 0], '仇远', '上传 / 下载', { showLabel: false }),
-    leaderboardMetric('助人为乐', [user.commission?.published || 0, user.commission?.responses || 0, user.commission?.adopted || 0], '菲比', '求助 / 回应 / 采纳', { showLabel: false }),
+    leaderboardMetric('助人为乐', [user.commission?.published || 0, user.commission?.responses || 0, user.commission?.adopted || 0, user.commission?.completed || 0], '菲比', '求助 / 回应 / 采纳 / 完成', { showLabel: false }),
     leaderboardMetric('人形百科', [user.wiki?.soloCombos || 0, user.wiki?.repairs || 0], '西格莉卡', '流程 / 修正', { showLabel: false })
   );
   const decoration = document.createElement('div'); decoration.className = 'leaderboard-decoration';

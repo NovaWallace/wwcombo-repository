@@ -3216,6 +3216,7 @@ body.leaderboard-view #resultsTitle { display: none; }
 .leaderboard-metric-headers strong { min-width: 0; justify-self: center; overflow: hidden; text-overflow: ellipsis; font-size: 13px; white-space: nowrap; }
 .leaderboard-metric-header-details { min-width: 0; display: grid; grid-template-columns: repeat(var(--metric-count, 2), minmax(0, 1fr)); gap: 8px; }
 .leaderboard-metric-header-details.is-three { --metric-count: 3; gap: 2px; }
+.leaderboard-metric-header-details.is-four { --metric-count: 4; gap: 2px; }
 .leaderboard-metric-headers small { min-width: 0; overflow: hidden; color: #73817e; font-size: 10px; font-weight: 800; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 html:not([data-theme='day']) .leaderboard-metric-headers > span { color: #e0e5e4; }
 html:not([data-theme='day']) .leaderboard-metric-headers small { color: #aeb8ba; }

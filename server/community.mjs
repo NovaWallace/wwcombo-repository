@@ -31,6 +31,19 @@ const MAX_WIKI_SPONSOR_AMOUNT = 20;
 const MAX_WIKI_ACCESS_REQUESTS = 2000;
 const COMMISSION_AUTO_ADOPT_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 const COMMISSION_TAGS = ['轮椅', '基础', '标准', '进阶', '冒烟', '错轮'];
+const LEADERBOARD_RULES = Object.freeze({
+  comboUpload: 200,
+  comboFirstTeamUpload: 500,
+  comboDownload: 1,
+  commissionPublish: 100,
+  commissionResponse: 200,
+  commissionAdopted: 500,
+  commissionCompleted: 500,
+  commissionReceived: 100,
+  commissionActiveAdopt: 100,
+  wikiSoloCombo: 200,
+  wikiRepair: 300
+});
 const ACCOUNT_ROLE_NAMES = new Set(['wiki-admin']);
 const WIKI_AUTHOR_EMAIL = 'hls040630@foxmail.com';
 const WIKI_AUTHOR_NAME = '灵狱Nova';
@@ -2056,10 +2069,18 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
         return /^https?:$/i.test(url.protocol) && /(bilibili\.com|b23\.tv|douyin\.com)$/i.test(url.hostname.replace(/^www\./i, '')) ? url.href.slice(0, 300) : '';
       } catch { return ''; }
     };
+    const usableEmail = (value) => {
+      const email = normalizeEmail(value);
+      return email && !email.includes('*') && !email.endsWith('.invalid') ? email : '';
+    };
+    const usableName = (value) => {
+      const name = cleanName(value);
+      return /^(?:unknown|undefined|null|匿名用户|未命名用户|连段作者|委托发布者|回应作者|wiki 作者|wiki 编辑者)$/iu.test(name) ? '' : name;
+    };
     const identity = (value, fallback = '匿名用户') => {
       const source = record(value);
-      const email = normalizeEmail(source.email || source.editorEmail);
-      const name = cleanName(source.nickname || source.username || source.editorName || source.name);
+      const email = usableEmail(source.email || source.editorEmail);
+      const name = usableName(source.nickname || source.username || source.editorName || source.name);
       return {
         key: email ? `email:${email}` : `name:${name || fallback}`,
         name: name || (email ? publicEmail(email) : fallback),
@@ -2132,45 +2153,55 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       // index rather than in the public package. Merge that record before
       // building the leaderboard so legacy uploads join the same person as
       // commissions and Wiki edits instead of becoming "连段作者".
-      const contributor = { ...record(chart.submitter), ...owner };
+      const submitter = record(chart.submitter);
+      const contributor = {};
+      for (const key of ['email', 'username', 'nickname', 'editorName', 'name', 'avatar', 'homepage']) {
+        const candidates = [owner[key], submitter[key], chart[key]];
+        const value = key === 'email'
+          ? candidates.map(usableEmail).find(Boolean)
+          : ['username', 'nickname', 'editorName', 'name'].includes(key)
+            ? candidates.map(usableName).find(Boolean)
+            : candidates.map((candidate) => cleanName(candidate)).find(Boolean);
+        if (value) contributor[key] = value;
+      }
       const comboUser = ensure(contributor.email || contributor.username || contributor.nickname ? contributor : chart, '连段作者');
-      add(contributor.email || contributor.username || contributor.nickname ? contributor : chart, 'combo', 'uploads', 200, '连段作者');
+      add(contributor.email || contributor.username || contributor.nickname ? contributor : chart, 'combo', 'uploads', LEADERBOARD_RULES.comboUpload, '连段作者');
       addCharacters(comboUser, chart.characters || chart.character);
       if (entry.teamKey && firstUploadByTeam.get(entry.teamKey) === entry) {
-        comboUser.combo.score += 500;
-        comboUser.score += 500;
+        comboUser.combo.score += LEADERBOARD_RULES.comboFirstTeamUpload;
+        comboUser.score += LEADERBOARD_RULES.comboFirstTeamUpload;
       }
       const count = Math.max(0, Number(downloads?.[id] || 0));
       if (count) {
         const user = ensure(contributor.email || contributor.username || contributor.nickname ? contributor : chart, '连段作者');
         user.combo.downloads += count;
-        user.combo.score += count;
-        user.score += count;
+        user.combo.score += count * LEADERBOARD_RULES.comboDownload;
+        user.score += count * LEADERBOARD_RULES.comboDownload;
       }
     }
     for (const commission of (Array.isArray(commissions?.commissions) ? commissions.commissions : [])) {
       const commissionOwner = ensure(commission.owner, '委托发布者');
-      add(commission.owner, 'commission', 'published', 100, '委托发布者');
+      add(commission.owner, 'commission', 'published', LEADERBOARD_RULES.commissionPublish, '委托发布者');
       addCharacters(commissionOwner, commission.characters);
       for (const response of (Array.isArray(commission.responses) ? commission.responses : [])) {
         const responseUser = ensure(response, '回应作者');
-        add(response, 'commission', 'responses', 200, '回应作者');
+        add(response, 'commission', 'responses', LEADERBOARD_RULES.commissionResponse, '回应作者');
         addCharacters(responseUser, commission.characters);
         const owner = ensure(commission.owner, '委托发布者');
         owner.commission.received += 1;
-        owner.commission.score += 100;
-        owner.score += 100;
+        owner.commission.score += LEADERBOARD_RULES.commissionReceived;
+        owner.score += LEADERBOARD_RULES.commissionReceived;
         const accepted = response.status === 'accepted' || response.acceptedAt || commission.acceptedResponseId === response.id;
         if (accepted) {
-          add(response, 'commission', 'adopted', 500, '回应作者');
+          add(response, 'commission', 'adopted', LEADERBOARD_RULES.commissionAdopted, '回应作者');
           if (commission.status === 'completed') {
-            add(response, 'commission', 'completed', 500, '回应作者');
+            add(response, 'commission', 'completed', LEADERBOARD_RULES.commissionCompleted, '回应作者');
           }
           if (!response.autoAdopted && !commission.autoAdopted) {
             const ownerUser = ensure(commission.owner, '委托发布者');
             ownerUser.commission.adopted += 1;
-            ownerUser.commission.score += 100;
-            ownerUser.score += 100;
+            ownerUser.commission.score += LEADERBOARD_RULES.commissionActiveAdopt;
+            ownerUser.score += LEADERBOARD_RULES.commissionActiveAdopt;
           }
         }
       }
@@ -2179,11 +2210,11 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
       if (entry.action === 'author-baseline') continue;
       if (['solo-combo-upload', 'solo-combo', 'single-combo-upload'].includes(entry.action)) {
         const wikiUser = ensure(entry, 'Wiki 作者');
-        add(entry, 'wiki', 'soloCombos', 200, 'Wiki 作者');
+        add(entry, 'wiki', 'soloCombos', LEADERBOARD_RULES.wikiSoloCombo, 'Wiki 作者');
         addCharacters(wikiUser, entry.character);
       } else if (entry.action === 'save' || entry.action === 'repair') {
         const wikiUser = ensure(entry, 'Wiki 编辑者');
-        add(entry, 'wiki', 'repairs', 300, 'Wiki 编辑者');
+        add(entry, 'wiki', 'repairs', LEADERBOARD_RULES.wikiRepair, 'Wiki 编辑者');
         addCharacters(wikiUser, entry.character);
       }
     }
@@ -2199,13 +2230,13 @@ export function createCommunityService({ runtimeRoot, rebuildRelease }) {
         characters: item.characters,
         score: item.score,
         combo: { uploads: item.combo.uploads, downloads: item.combo.downloads },
-        commission: { published: item.commission.published, responses: item.commission.responses, adopted: item.commission.adopted },
+        commission: { published: item.commission.published, responses: item.commission.responses, adopted: item.commission.adopted, completed: item.commission.completed },
         wiki: { soloCombos: item.wiki.soloCombos, repairs: item.wiki.repairs }
       }));
     return {
       version: 1,
       updatedAt: Date.now(),
-      rules: { comboUpload: 200, comboFirstTeamUpload: 500, comboDownload: 1, commissionPublish: 100, commissionResponse: 200, commissionAdopted: 500, commissionCompleted: 500, commissionReceived: 100, commissionActiveAdopt: 100, wikiSoloCombo: 200, wikiRepair: 300 },
+      rules: { ...LEADERBOARD_RULES },
       users: rows
     };
   }
