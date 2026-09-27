@@ -8321,7 +8321,14 @@
       dropzone.addEventListener('scroll', () => positionSoloInlineNoteMarkers(dropzone), { passive: true });
       dropzone.addEventListener('dragover', (event) => { event.preventDefault(); if (state.soloNativeDrag) { state.soloNativeDrag.x = event.clientX; state.soloNativeDrag.y = event.clientY; } dropzone.classList.add('is-dragover'); });
       dropzone.addEventListener('dragleave', () => dropzone.classList.remove('is-dragover'));
-      dropzone.addEventListener('drop', (event) => { event.preventDefault(); dropzone.classList.remove('is-dragover'); const nodeId = event.dataTransfer?.getData('text/wiki-node') || ''; addSoloComboNode(state.selected, nodeId); });
+      dropzone.addEventListener('drop', (event) => {
+        event.preventDefault();
+        dropzone.classList.remove('is-dragover');
+        const nodeId = event.dataTransfer?.getData('text/wiki-node') || '';
+        const name = state.selected || state.homeMenuName;
+        const node = currentModel(name)?.nodes?.find((entry) => entry.id === nodeId);
+        addSoloComboNode(name, nodeId, activeInputRouteIndex(name, node));
+      });
     });
     bindSoloPanelInteractions();
     WIKI_ROOT.querySelectorAll('[data-wiki-preview-name]').forEach((element) => element.addEventListener('mouseenter', () => {
@@ -8504,11 +8511,11 @@
         const nodeId = nodeElement?.dataset.wikiNode || '';
         const clickedIndex = Number(element.dataset.wikiInputIndex);
         if (!nodeId || !Number.isInteger(clickedIndex)) return;
-        const node = currentModel(state.selected)?.nodes?.find((entry) => entry.id === nodeId);
+        const node = currentModel(graphName)?.nodes?.find((entry) => entry.id === nodeId);
         const routes = inputRoutesForNode(node);
         if (routes.length < 2) return;
-        const key = inputRouteKey(state.selected, { id: nodeId });
-        const currentIndex = activeInputRouteIndex(state.selected, node);
+        const key = inputRouteKey(graphName, { id: nodeId });
+        const currentIndex = activeInputRouteIndex(graphName, node);
         // Clicking the exposed lower icon selects it directly. Clicking the
         // active icon advances to the next route so the stacked inputs can be
         // browsed without opening the node or rebuilding the page.
@@ -8529,7 +8536,7 @@
         // Route switching only changes the stacked input and highlight state;
         // rebuilding the whole graph here was the main source of the visible
         // multi-second click delay.
-        updateGraphSelectionInDom(graph, state.selected, nodeId);
+        updateGraphSelectionInDom(graph, graphName, nodeId);
         const activeRoute = [...WIKI_ROOT.querySelectorAll('[data-wiki-node]')]
           .find((nodeElement) => nodeElement.dataset.wikiNode === nodeId)
           ?.querySelector(`[data-wiki-input-route][data-wiki-input-index="${index}"]`);
@@ -8616,7 +8623,8 @@
         // snapshot to the editor lane. It must not open the normal node
         // detail modal; the source node remains reusable in the graph.
         if (state.soloComboOpen && state.soloComboEditing) {
-          addSoloComboNode(graphName, nodeId);
+          const routeIndex = activeInputRouteIndex(graphName, currentModel(graphName)?.nodes?.find((entry) => entry.id === nodeId));
+          addSoloComboNode(graphName, nodeId, routeIndex);
           return;
         }
         state.selectedNode = nodeId;
@@ -8687,7 +8695,8 @@
           element.dataset.dragged = 'true';
           event.preventDefault();
           event.stopPropagation();
-          addSoloComboNode(graphName, nodeId);
+          const routeIndex = activeInputRouteIndex(graphName, currentModel(graphName)?.nodes?.find((entry) => entry.id === nodeId));
+          addSoloComboNode(graphName, nodeId, routeIndex);
         };
         element.addEventListener('pointerup', finishSoloPointerDrag);
         window.addEventListener('pointerup', finishSoloPointerDrag, true);
@@ -9570,6 +9579,12 @@
 
   function homeSoloFlowStep(name, item, index) {
     const node = currentModel(name)?.nodes?.find((entry) => entry.id === item?.nodeId) || { id: item?.nodeId || `preview-${index}`, title: item?.title || item?.nodeId || '招式', category: item?.category || 'other', iconAction: item?.iconAction || '' };
+    // A combo item may represent one of several input routes of the same
+    // graph node. Render the route captured at insertion time instead of
+    // falling back to the node's default input/icon.
+    const displayNode = item?.input
+      ? { ...node, input: [item.input], inputRoutes: item.inputRoute ? [item.inputRoute] : [{ input: item.input }], iconAction: item.iconAction || iconActionForNode({ ...node, input: [item.input] }) }
+      : node;
     const aliases = slangForCharacter(name);
     const slang = clean(item?.slang || aliases[node.id] || aliases[node.title] || '');
     const entry = state.characters.find((character) => character.name === name);
@@ -9577,7 +9592,7 @@
     const formColor = soloComboFormColor(name, { ...item, formId: item?.formId || node.formId }, roleColor);
     const note = soloComboNotes(state.homeFlowPreview?.combo).find((value) => Number(value.anchor) === index);
     const noteNumber = note ? soloComboNotes(state.homeFlowPreview?.combo).indexOf(note) + 1 : 0;
-    return `<article class="axis-step community-wiki-home-flow-step${item?.formId ? ' has-form' : ''}" style="--role-color:${esc(roleColor)};--flow-form-color:${esc(formColor)}"><span class="community-wiki-home-flow-step-icon">${graphNodeIcon(name, node)}</span>${noteNumber ? `<b class="community-wiki-home-flow-note-badge">${noteNumber}</b>` : ''}<span class="community-wiki-home-flow-step-copy"><strong>${esc(node.title || '招式')}</strong>${slang ? `<em>${esc(slang)}</em>` : ''}</span></article>`;
+    return `<article class="axis-step community-wiki-home-flow-step${item?.formId ? ' has-form' : ''}" style="--role-color:${esc(roleColor)};--flow-form-color:${esc(formColor)}"><span class="community-wiki-home-flow-step-icon">${graphNodeIcon(name, displayNode)}</span>${noteNumber ? `<b class="community-wiki-home-flow-note-badge">${noteNumber}</b>` : ''}<span class="community-wiki-home-flow-step-copy"><strong>${esc(node.title || '招式')}</strong>${slang ? `<em>${esc(slang)}</em>` : ''}</span></article>`;
   }
 
   function homeFlowReady(name) {
@@ -9864,7 +9879,9 @@
     const noteNumber = soloComboNoteNumber(index);
     const noteBadge = noteNumber ? `<span class="community-wiki-solo-note-badge" data-solo-note-badge data-solo-note-anchor="${index}" role="button" tabindex="0" aria-label="编辑备注 ${noteNumber}">${noteNumber}</span>` : '';
     const selected = soloComboSelectedIndices().includes(index);
-    return `<button type="button" class="community-wiki-solo-item${formClass} ${selected ? 'selected' : ''}" aria-selected="${selected ? 'true' : 'false'}" data-solo-item-index="${index}">${noteBadge}<i data-lucide="circle-dot"></i><span>${esc(itemTitle(item))}</span><small>${esc(categoryLabel(item.category || 'other'))}</small></button>`;
+    const input = clean(item.input || '');
+    const inputHint = input ? ` · ${input}` : '';
+    return `<button type="button" class="community-wiki-solo-item${formClass} ${selected ? 'selected' : ''}" aria-selected="${selected ? 'true' : 'false'}" aria-label="${esc(`${itemTitle(item)}${inputHint}`)}" title="${esc(input || itemTitle(item))}" data-solo-item-index="${index}">${noteBadge}<i data-lucide="circle-dot"></i><span>${esc(itemTitle(item))}</span><small>${esc(categoryLabel(item.category || 'other'))}${input ? ` · ${esc(input)}` : ''}</small></button>`;
   }
 
   function refreshSoloComboInline(name) {
@@ -10376,10 +10393,31 @@
     return { ...preset, ...legacyResolved, ...roleAliases };
   }
 
-  function soloComboNodeSnapshot(name, nodeId) {
+  function soloComboNodeSnapshot(name, nodeId, routeIndex = null) {
     const node = currentModel(name)?.nodes?.find((item) => item.id === nodeId);
     if (!node) return null;
-    return { nodeId: node.id, title: node.title, category: node.category, formId: node.formId || 'shared', modeId: node.modeId || '', slang: node.slang || '', iconAction: node.iconAction || '' };
+    const routes = inputRoutesForNode(node, name);
+    const activeIndex = Number.isInteger(routeIndex) ? Math.max(0, Math.min(routes.length - 1, routeIndex)) : activeInputRouteIndex(name, node);
+    const route = routes.length ? (routes[activeIndex] || routes[0]) : null;
+    const input = route?.input || (Array.isArray(node.input) ? node.input[0] : node.input) || '';
+    const routeSnapshot = route ? {
+      input,
+      fromIds: Array.isArray(route.fromIds) ? [...route.fromIds] : [],
+      condition: route.condition || ''
+    } : null;
+    const routeNode = route ? { ...node, input: [input], inputRoutes: [route], iconAction: iconActionForNode({ ...node, input: [input] }) } : node;
+    return {
+      nodeId: node.id,
+      title: node.title,
+      category: node.category,
+      formId: node.formId || 'shared',
+      modeId: node.modeId || '',
+      slang: node.slang || '',
+      input,
+      inputRouteIndex: routes.length > 1 ? activeIndex : 0,
+      inputRoute: routeSnapshot,
+      iconAction: routeNode.iconAction || node.iconAction || ''
+    };
   }
 
   function bindSoloPanelInteractions() {
@@ -10821,9 +10859,9 @@
     renderCurrentWikiSurface(name);
   }
 
-  function addSoloComboNode(name, nodeId) {
+  function addSoloComboNode(name, nodeId, routeIndex = null) {
     if (!state.soloComboDraft || !nodeId) return;
-    const snapshot = soloComboNodeSnapshot(name, nodeId);
+    const snapshot = soloComboNodeSnapshot(name, nodeId, routeIndex);
     if (!snapshot) return;
     const next = copyModel(state.soloComboDraft);
     const key = state.soloComboEditMode === 'buff' ? 'buffs' : 'nodes';
