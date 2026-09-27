@@ -56,9 +56,9 @@
     characters: [], icons: new Map(), query: '', element: '全部', selected: '',
     info: new Map(), wikiState: new Map(), characterBasePresets: new Map(), loading: true, detailLoading: false, error: '', detailError: '',
     selectedNode: '', profileOpen: false, editing: false, contextMenu: null, clipboard: null,
-    editorStore: {}, editorHistory: [], editorFuture: [], contextDismiss: null,
+    editorStore: {}, editorHistory: [], editorFuture: [], editorSession: null, contextDismiss: null,
     graphZoom: 1, graphCanvasZoom: 1, graphContentZoom: 1, graphPan: { x: 0, y: 0 }, expandedGroups: {}, replacementStates: {}, inputRouteStates: {}, editorDraftCategory: 'normal', tideIcons: new Map(), formId: 'normal', formIds: {}, chainIds: {}, modeIds: {}, wikiSaveTimers: new Map(), wikiSaveChains: new Map(), wikiSaveStatus: '', announcement: null, announcementOpen: false, hoveredCharacter: '',
-    homeMenuName: '', homeSurfaceTab: 'selector', homeContentTab: 'profile', homeSelectorScrollLeft: {}, homeSurfaceLoading: false, homeSurfaceLoadingSequence: 0, homeSurfaceFullscreen: false, homeCharacterPickerOpen: false, soloComboOpen: false, soloComboTab: 'solo', soloComboEditing: false, soloComboEditMode: 'combo', soloComboDraft: null, soloComboSelection: -1, soloComboSelections: [], soloComboClipboard: null, soloComboHistory: [], soloComboFuture: [], soloNativeDrag: null, soloComboCommunity: [], soloComboCommunityLoading: false, soloComboCommunityLoaded: false, soloComboPanelRect: null, soloCombosByCharacter: new Map(), soloComboLoadState: new Map(), soloComboSaveState: '', soloComboSaveConfirm: false, soloComboAnnotating: false, soloComboNoteAnchor: -1, homeFlowPreview: null, homeInfoLoadPromises: new Map(), homeInfoLoadState: new Map(), homeWikiLoadPromises: new Map(), homeFlowLoadPromises: new Map(), homeTreeAssetLoadPromises: new Map(), homeCharacterWarmPromises: new Map(), modelCache: new Map()
+    homeMenuName: '', homeSurfaceTab: 'selector', homeContentTab: 'profile', homeSelectorScrollLeft: {}, homeSurfaceLoading: false, homeSurfaceLoadingSequence: 0, homeSurfaceFullscreen: false, homeCharacterPickerOpen: false, editorCreateMode: false, soloComboOpen: false, soloComboTab: 'solo', soloComboEditing: false, soloComboEditMode: 'combo', soloComboDraft: null, soloComboSelection: -1, soloComboSelections: [], soloComboClipboard: null, soloComboHistory: [], soloComboFuture: [], soloNativeDrag: null, soloComboCommunity: [], soloComboCommunityLoading: false, soloComboCommunityLoaded: false, soloComboPanelRect: null, soloCombosByCharacter: new Map(), soloComboLoadState: new Map(), soloComboSaveState: '', soloComboSaveConfirm: false, soloComboAnnotating: false, soloComboNoteAnchor: -1, homeFlowPreview: null, homeInfoLoadPromises: new Map(), homeInfoLoadState: new Map(), homeWikiLoadPromises: new Map(), homeFlowLoadPromises: new Map(), homeTreeAssetLoadPromises: new Map(), homeCharacterWarmPromises: new Map(), modelCache: new Map()
   };
 
   const EDITOR_STORAGE_KEY = 'wwcombo-community-wiki-editor-v1';
@@ -124,7 +124,7 @@
       back: '返回角色列表', skills: '技能与派生', raw: '技能原文', base: '基础资料', star: '星级', element: '属性', weapon: '武器',
       treeHint: '按输入类型整理；双击招式查看触发条件、前置状态与产生效果。', conditions: '触发与关联', trigger: '触发按键', inputCondition: '输入条件', prerequisites: '前置条件', effects: '产生 / 消耗', noDetails: '这条技能暂时没有可提取的额外条件。',
       normal: '普攻', heavy: '重击', skill: '技能', liberation: '解放', other: '其他', buff: 'Buff', flow: '流程', homeRaw: '原文', noCharacters: '没有找到符合条件的角色。', details: '查看详情', close: '关闭详情', forms: '形态 / 状态', stats: '基础数值',
-       noInfo: '暂时没有技能资料', detailLoading: '正在读取技能资料', skillCount: '{count} 项技能', nodeCount: '{count} 个节点', stageCount: '{count} 段', expand: '点击展开', collapse: '收起段落', edit: '编辑模式', editing: '编辑中', localPreview: '本地预览', readonly: '只读', add: '新增招式块', save: '保存节点', cancel: '取消', delete: '删除', copy: '复制', paste: '粘贴', cut: '剪切', undo: '撤销', redo: '重做', resetLayout: '恢复自动布局', restore: '恢复节点', newAction: '新建招式块', newBuff: '新建 Buff 块', name: '节点名称', category: '节点类型', input: '触发按键', prerequisites: '前置条件', effects: 'Buff / 效果', notes: '备注', connect: '关联节点', independent: '独立起点', chain: '共鸣链', baseChain: '本体', chainLevel: '{count}链及以上', chainAny: '全部共鸣链', form: '所属形态', formShared: '两种形态通用', airborne: '空中状态', airborneNone: '无', airborneOnly: '仅空中', airborneAvailable: '可空中', airborneAscend: '升空', inputRoutes: '多按键触发路径', inputRouteHint: '每条路径可指定不同输入及其前置节点', inputRouteAdd: '添加输入路径', inputRouteRemove: '移除路径', editorHint: '编辑模式下可拖动节点；双击节点查看详情，右键打开编辑菜单。', selectedNode: '选中招式', editorTitle: 'Wiki 编辑', noNode: '请先选择一个招式节点', graphNodes: '个节点'
+       noInfo: '暂时没有技能资料', detailLoading: '正在读取技能资料', skillCount: '{count} 项技能', nodeCount: '{count} 个节点', stageCount: '{count} 段', expand: '点击展开', collapse: '收起段落', edit: '编辑模式', editing: '编辑中', localPreview: '本地预览', readonly: '只读', add: '新增招式块', save: '保存节点', saveEditor: '保存编辑', cancel: '取消', delete: '删除', copy: '复制', paste: '粘贴', cut: '剪切', undo: '撤销', redo: '重做', resetLayout: '恢复自动布局', restore: '恢复节点', newAction: '新建招式块', newBuff: '新建 Buff 块', name: '节点名称', category: '节点类型', input: '触发按键', prerequisites: '前置条件', effects: 'Buff / 效果', notes: '备注', connect: '关联节点', independent: '独立起点', chain: '共鸣链', baseChain: '本体', chainLevel: '{count}链及以上', chainAny: '全部共鸣链', form: '所属形态', formShared: '两种形态通用', airborne: '空中状态', airborneNone: '无', airborneOnly: '仅空中', airborneAvailable: '可空中', airborneAscend: '升空', inputRoutes: '多按键触发路径', inputRouteHint: '每条路径可指定不同输入及其前置节点', inputRouteAdd: '添加输入路径', inputRouteRemove: '移除路径', editorHint: '编辑模式下可拖动节点；双击节点查看详情，右键打开编辑菜单。', selectedNode: '选中招式', editorTitle: 'Wiki 编辑', noNode: '请先选择一个招式节点', graphNodes: '个节点'
     },
     'en-US': {
       nav: 'Character Wiki', community: 'Combo Community', home: '椰书 wiki', eyebrow: 'CHARACTER KNOWLEDGE BASE', subtitle: 'Pursuing a doctorate in Library Language',
@@ -7932,6 +7932,7 @@
       if (key) state.homeSelectorScrollLeft[key] = element.scrollLeft;
     });
     WIKI_ROOT.innerHTML = `<div class="community-wiki-inner${detail ? ' is-detail' : ''}">${content}</div>`;
+    ensureWikiCreateGhost();
     syncWikiAnnouncementDismissControl();
     WIKI_ROOT.querySelectorAll('[data-wiki-action]').forEach((element) => element.addEventListener('click', () => handleAction(element.dataset.wikiAction || '', element.dataset.name || '')));
     WIKI_ROOT.querySelectorAll('[data-wiki-search]').forEach((element) => element.addEventListener('input', () => { state.query = element.value; renderHome(); }));
@@ -8110,6 +8111,15 @@
     WIKI_ROOT.querySelectorAll('button[data-wiki-mode]').forEach((element) => element.addEventListener('click', () => applyModeSelection(element)));
     bindGraphContent();
     WIKI_ROOT.querySelectorAll('[data-wiki-editor-action]').forEach((element) => element.addEventListener('click', () => handleEditorAction(element.dataset.wikiEditorAction || '', element.dataset.wikiNode || '')));
+    WIKI_ROOT.querySelectorAll('[data-wiki-editor-rail-action]').forEach((element) => element.addEventListener('click', () => handleEditorAction(element.dataset.wikiEditorRailAction || '', state.selectedNode || '')));
+    WIKI_ROOT.querySelectorAll('[data-wiki-editor-save]').forEach((element) => element.addEventListener('click', () => { void saveEditorSession(element.dataset.wikiName || state.selected || state.homeMenuName); }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-editor-exit]').forEach((element) => element.addEventListener('click', () => discardEditorSession(element.dataset.wikiName || state.selected || state.homeMenuName)));
+    WIKI_ROOT.querySelectorAll('[data-wiki-editor-create-toggle]').forEach((element) => element.addEventListener('click', () => {
+      if (!state.editing) return;
+      state.editorCreateMode = !state.editorCreateMode;
+      syncWikiCreateGhost();
+      WIKI_ROOT.querySelectorAll('[data-wiki-editor-create-toggle]').forEach((button) => button.classList.toggle('active', state.editorCreateMode));
+    }));
     WIKI_ROOT.querySelectorAll('[data-wiki-input-route-add]').forEach((button) => button.addEventListener('click', () => {
       const list = button.closest('[data-wiki-editor-form]')?.querySelector('[data-wiki-input-route-list]');
       const template = list?.querySelector('[data-wiki-input-route-row]');
@@ -8126,22 +8136,36 @@
       const rows = list.querySelectorAll('[data-wiki-input-route-row]');
       if (rows.length > 1) button.closest('[data-wiki-input-route-row]')?.remove();
     }));
-    WIKI_ROOT.querySelectorAll('[data-wiki-editor-form]').forEach((form) => form.addEventListener('submit', (event) => { event.preventDefault(); saveEditorForm(new FormData(form)); }));
+    WIKI_ROOT.querySelectorAll('[data-wiki-editor-form]').forEach((form) => form.addEventListener('submit', (event) => { event.preventDefault(); saveEditorForm(new FormData(form), form.dataset.wikiName || state.selected || state.homeMenuName); }));
     WIKI_ROOT.querySelectorAll('[data-wiki-editor-toggle]').forEach((element) => element.addEventListener('click', () => {
       const nextEditing = !state.editing;
       const name = state.selected || state.homeMenuName;
+      if (!nextEditing) {
+        discardEditorSession(name);
+        return;
+      }
+      discardSoloEditorState(name);
+      state.soloComboOpen = false;
+      state.soloComboEditing = false;
+      state.soloComboDraft = null;
+      state.soloComboAnnotating = false;
+      state.soloComboSaveConfirm = false;
+      clearSoloComboSelection();
+      state.editorCreateMode = false;
       state.selectedNode = '';
       state.contextMenu = null;
       // Editing only changes node affordances. Keep the existing graph DOM so
       // toggling the mode does not block the main thread on a full graph
       // render, which made the button appear not to respond.
-      const changedInPlace = nextEditing
-        ? enterGraphEditingInPlace(name)
-        : exitGraphEditingInPlace(name);
+      const changedInPlace = enterGraphEditingInPlace(name);
       if (!changedInPlace) {
         state.editing = nextEditing;
         if (state.homeSurfaceTab === 'tree' && state.homeMenuName === state.selected) renderHome();
         else renderDetail(state.selected || name);
+      } else {
+        // Add the editor rail without rebuilding the graph. Rebuilding here
+        // made entering edit mode block all tree input for multiple seconds.
+        mountEditorRailInPlace(name);
       }
     }));
     WIKI_ROOT.querySelectorAll('[data-wiki-profile]').forEach((element) => element.addEventListener('click', () => { state.selectedNode = ''; state.profileOpen = false; beginSoloCombo(state.selected); }));
@@ -8172,7 +8196,12 @@
       const action = element.dataset.soloAction || '';
       const name = element.dataset.wikiName || state.selected || state.homeMenuName || '';
       if (action === 'close') closeSoloCombo(name);
-      else if (action === 'new') { state.soloComboOpen = true; state.soloComboTab = 'solo'; if (state.info.has(name)) startSoloComboDraft(name); else navigate(name); }
+      else if (action === 'new') {
+        if (state.soloComboEditing) { closeSoloCombo(name); return; }
+        state.soloComboOpen = true;
+        state.soloComboTab = 'solo';
+        if (state.info.has(name)) startSoloComboDraft(name); else navigate(name);
+      }
       else if (action === 'cancel-edit') { state.soloComboEditing = false; state.soloComboAnnotating = false; state.soloComboNoteAnchor = -1; state.soloComboDraft = null; clearSoloComboSelection(); renderCurrentWikiSurface(name); }
       else if (action === 'save') {
         state.soloComboSaveConfirm = true;
@@ -8405,7 +8434,8 @@
     // Shorthand names are a permanent second line of each action card. Keep
     // this in the binding pass so rerendering, zooming, and route switching
     // all use the same card markup without a separate display mode.
-    const model = currentModel(state.selected), slang = slangForCharacter(state.selected);
+    const graphName = state.selected || state.homeMenuName;
+    const model = currentModel(graphName), slang = slangForCharacter(graphName);
     const seriesGroups = model ? graphSeriesGroups(model) : [];
     WIKI_ROOT.querySelectorAll('[data-wiki-graph] [data-wiki-node]').forEach((element) => {
       const copy = element.querySelector('.community-wiki-graph-node-copy');
@@ -8443,7 +8473,20 @@
         const nextIndex = (graphReplacementActiveIndex(group) + 1) % group.members.length;
         state.replacementStates[key] = nextIndex;
         state.selectedNode = group.members[nextIndex]?.id || '';
-        refreshGraphCanvas(state.selected);
+        const graph = element.closest('[data-wiki-graph]');
+        const activeId = group.members[nextIndex]?.id || '';
+        graph?.querySelectorAll(`[data-wiki-replacement="${CSS.escape(key)}"]`).forEach((replacementNode) => {
+          const replacementIndex = Number(replacementNode.dataset.wikiReplacementIndex);
+          const active = replacementIndex === nextIndex;
+          replacementNode.classList.toggle('is-replacement-active', active);
+          replacementNode.classList.toggle('is-replacement-hidden', !active);
+          replacementNode.dataset.wikiReplacementActive = active ? 'true' : 'false';
+          replacementNode.querySelector('.community-wiki-graph-node-icon')?.replaceChildren();
+          const node = currentModel(state.selected)?.nodes?.find((entry) => entry.id === replacementNode.dataset.wikiNode);
+          const icon = replacementNode.querySelector('.community-wiki-graph-node-icon');
+          if (icon && node) icon.innerHTML = graphNodeIcon(state.selected, node);
+        });
+        updateGraphSelectionInDom(graph, state.selected, activeId);
       };
       element.addEventListener('click', toggleReplacement);
       element.addEventListener('keydown', (event) => {
@@ -8476,16 +8519,17 @@
         // route-specific highlight layer never became visible.
         state.selectedNode = nodeId;
         const graph = nodeElement?.closest('[data-wiki-graph]');
-        if (state.editing) {
-          nodeElement?.querySelectorAll('[data-wiki-input-route]').forEach((routeElement) => {
-            const routeIndex = Number(routeElement.dataset.wikiInputIndex);
-            const active = routeIndex === index;
-            routeElement.classList.toggle('active', active);
-            routeElement.classList.toggle('stacked', !active);
-            routeElement.style.setProperty('--wiki-input-stack-offset', active ? '0px' : `${12 + Math.abs(routeIndex - index) * 7}px`);
-          });
-          updateGraphSelectionInDom(graph, state.selected, nodeId);
-        } else refreshGraphCanvas(state.selected);
+        nodeElement?.querySelectorAll('[data-wiki-input-route]').forEach((routeElement) => {
+          const routeIndex = Number(routeElement.dataset.wikiInputIndex);
+          const active = routeIndex === index;
+          routeElement.classList.toggle('active', active);
+          routeElement.classList.toggle('stacked', !active);
+          routeElement.style.setProperty('--wiki-input-stack-offset', active ? '0px' : `${12 + Math.abs(routeIndex - index) * 7}px`);
+        });
+        // Route switching only changes the stacked input and highlight state;
+        // rebuilding the whole graph here was the main source of the visible
+        // multi-second click delay.
+        updateGraphSelectionInDom(graph, state.selected, nodeId);
         const activeRoute = [...WIKI_ROOT.querySelectorAll('[data-wiki-node]')]
           .find((nodeElement) => nodeElement.dataset.wikiNode === nodeId)
           ?.querySelector(`[data-wiki-input-route][data-wiki-input-index="${index}"]`);
@@ -8500,11 +8544,10 @@
       let soloClickTimer = 0;
       let replayingSoloClick = false;
       let lastSeriesClickAt = 0;
-      const graphName = state.selected || state.homeMenuName;
       element.addEventListener('click', (event) => {
         if (element.dataset.wikiFormDisabled === 'true' && !state.editing) return;
         if (element.dataset.dragged === 'true') { element.dataset.dragged = ''; return; }
-        const nodeId = element.dataset.wikiNode || '';
+      const nodeId = element.dataset.wikiNode || '';
         const node = currentModel(graphName)?.nodes?.find((entry) => entry.id === nodeId);
         // Do not let the first click of a double-click rebuild the graph.
         // Single-click behavior is replayed after the double-click window;
@@ -8537,13 +8580,10 @@
             return;
           }
           lastSeriesClickAt = now;
-          seriesClickTimer = window.setTimeout(() => {
-            const key = graphSeriesStateKey(graphName, seriesKey);
-            state.expandedGroups[key] = !graphSeriesIsExpanded(graphName, seriesKey);
-            state.selectedNode = '';
-            refreshGraphCanvas(graphName);
-            seriesClickTimer = 0;
-          }, 420);
+          const key = graphSeriesStateKey(graphName, seriesKey);
+          state.expandedGroups[key] = !graphSeriesIsExpanded(graphName, seriesKey);
+          state.selectedNode = '';
+          toggleGraphSeriesInDom(graphName, seriesKey, element.closest('[data-wiki-graph]'));
           return;
         }
         if (event.detail > 1) {
@@ -8580,6 +8620,14 @@
           return;
         }
         state.selectedNode = nodeId;
+        // In Wiki edit mode a double-click is the edit affordance. Keep the
+        // current surface (including the home Wiki tree) so it opens the
+        // normal Wiki editor instead of the legacy node-detail shell.
+        if (state.editing && canEditWiki(graphName)) {
+          state.profileOpen = false;
+          mountHomeNodeModal(graphName, nodeId, true);
+          return;
+        }
         // Keep the current surface mode. Opening node details must never
         // toggle or recreate the fullscreen shell; only the node modal is
         // changed by the normal surface render.
@@ -8650,7 +8698,7 @@
         });
         element.addEventListener('pointercancel', (event) => { soloPointerDrag = null; document.body.classList.remove('wiki-solo-dragging'); WIKI_ROOT.querySelector('[data-solo-dropzone]')?.classList.remove('is-dragover'); event.stopPropagation(); });
       }
-      bindNodeDrag(element, seriesGroups);
+      bindNodeDrag(element, seriesGroups, graphName);
     });
     WIKI_ROOT.querySelectorAll('[data-wiki-graph-scroll]').forEach((element) => {
       // The frame is replaced when a series is toggled. Keep the viewport
@@ -8664,6 +8712,21 @@
     WIKI_ROOT.querySelectorAll('[data-wiki-graph-scroll]').forEach((element) => {
       if (element.dataset.wikiGraphViewportBound === 'true') return;
       bindGraphViewport(element);
+      element.addEventListener('pointermove', (event) => updateWikiCreateGhost(event.clientX, event.clientY, element), { passive: true });
+      element.addEventListener('pointerleave', () => syncWikiCreateGhost(false), { passive: true });
+      element.addEventListener('click', (event) => {
+        if (!state.editing || !state.editorCreateMode) return;
+        const graph = element.querySelector('[data-wiki-graph]');
+        const lane = graph ? [...graph.querySelectorAll('.community-wiki-graph-lane')].find((candidate) => {
+          const rect = candidate.getBoundingClientRect();
+          return event.clientY >= rect.top && event.clientY <= rect.bottom;
+        }) : null;
+        if (!lane) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const category = [...lane.classList].find((value) => CATEGORY_ORDER.includes(value)) || 'normal';
+        createWikiNodeAt(state.selected || state.homeMenuName, category, event.clientX, event.clientY, element);
+      }, true);
       element.dataset.wikiGraphViewportBound = 'true';
     });
     // The solo editor is rendered as a sibling overlay of the graph frame.
@@ -8677,11 +8740,160 @@
     };
   }
 
+  function toggleGraphSeriesInDom(name, seriesKey, graph) {
+    if (!graph) return;
+    const model = currentModel(name);
+    const series = graphSeriesGroups(model).find((entry) => entry.key === seriesKey);
+    if (!series) return;
+    const layout = graphLayout(model, name);
+    layout.nodes.forEach((entry) => {
+      const card = graph.querySelector(`[data-wiki-node="${CSS.escape(entry.node.id)}"]`);
+      if (!card) return;
+      card.style.setProperty('--wiki-node-width', `${entry.width}px`);
+      card.style.transform = `translate(${entry.renderX}px,${entry.renderY}px) scale(var(--wiki-node-scale, 1))`;
+      card.dataset.nodeX = String(entry.renderX);
+      card.dataset.nodeY = String(entry.renderY);
+      if (entry.series) {
+        card.dataset.wikiSeriesCollapsed = entry.collapsed ? 'true' : 'false';
+        card.classList.toggle('is-series-collapsed', entry.collapsed);
+        card.classList.toggle('is-series-expanded', !entry.collapsed);
+        card.setAttribute('aria-hidden', entry.collapsed && !entry.isMaster ? 'true' : 'false');
+        if (entry.collapsed && !entry.isMaster) card.setAttribute('tabindex', '-1');
+        else card.removeAttribute('tabindex');
+        if (entry.isMaster) {
+          card.setAttribute('aria-expanded', entry.collapsed ? 'false' : 'true');
+          const title = card.querySelector('.community-wiki-graph-node-copy strong');
+          if (title) title.textContent = entry.collapsed ? `${entry.series.baseTitle} · ${format(t('seriesCount'), entry.series.memberIds.length)}` : entry.node.title;
+        }
+      }
+    });
+    const frame = graph.closest('[data-wiki-graph-frame]');
+    if (frame) {
+      frame.dataset.baseWidth = String(layout.width);
+      frame.dataset.baseHeight = String(layout.height);
+      frame.style.width = `${Math.max(layout.width * (Number(state.graphCanvasZoom) || 1), frame.parentElement?.clientWidth || 0)}px`;
+      frame.style.height = `${Math.max(layout.height * (Number(state.graphCanvasZoom) || 1), frame.parentElement?.clientHeight || 0)}px`;
+      graph.style.width = `${layout.width}px`;
+      graph.style.height = `${layout.height}px`;
+    }
+    graph.dataset.baseWidth = String(layout.width);
+    graph.dataset.baseHeight = String(layout.height);
+    const svg = graph.querySelector('.community-wiki-graph-lines');
+    if (svg) {
+      svg.setAttribute('width', String(layout.width));
+      svg.setAttribute('height', String(layout.height));
+      svg.setAttribute('viewBox', `0 0 ${layout.width} ${layout.height}`);
+    }
+    window.setTimeout(() => {
+      if (graph.isConnected) syncGraphLinesFromDom(graph);
+    }, 0);
+  }
+
+  function ensureWikiCreateGhost() {
+    let ghost = WIKI_ROOT.querySelector('[data-wiki-create-ghost]');
+    if (!ghost) {
+      ghost = document.createElement('div');
+      ghost.className = 'community-wiki-create-ghost';
+      ghost.dataset.wikiCreateGhost = 'true';
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.innerHTML = '<i data-lucide="plus"></i><span></span>';
+      WIKI_ROOT.appendChild(ghost);
+      window.lucide?.createIcons({ root: ghost });
+    }
+    syncWikiCreateGhost(false);
+    return ghost;
+  }
+
+  function syncWikiCreateGhost(visible = false, category = 'normal') {
+    const ghost = WIKI_ROOT.querySelector('[data-wiki-create-ghost]');
+    if (!ghost) return;
+    const active = Boolean(state.editorCreateMode && state.editing && visible);
+    ghost.hidden = !active;
+    ghost.classList.toggle('is-buff', category === 'buff');
+    const label = ghost.querySelector('span');
+    if (label) label.textContent = category === 'buff' ? t('newBuff') : t('newAction');
+  }
+
+  function updateWikiCreateGhost(x, y, viewport) {
+    if (!state.editorCreateMode || !state.editing) return;
+    const graph = viewport.querySelector('[data-wiki-graph]');
+    const lane = graph ? [...graph.querySelectorAll('.community-wiki-graph-lane')].find((candidate) => {
+      const rect = candidate.getBoundingClientRect();
+      return y >= rect.top && y <= rect.bottom;
+    }) : null;
+    if (!lane) return syncWikiCreateGhost(false);
+    const category = [...lane.classList].find((value) => CATEGORY_ORDER.includes(value)) || 'normal';
+    const ghost = ensureWikiCreateGhost();
+    ghost.style.left = `${x + 14}px`;
+    ghost.style.top = `${y + 14}px`;
+    syncWikiCreateGhost(true, category);
+  }
+
+  function createWikiNodeAt(name, category, clientX, clientY, viewport) {
+    if (!name || !state.editing || !canEditWiki(name)) return;
+    const graph = viewport.querySelector('[data-wiki-graph]');
+    if (!graph) return;
+    const graphRect = graph.getBoundingClientRect();
+    const zoom = Math.max(.01, Number(state.graphCanvasZoom || state.graphZoom) || 1);
+    const id = `custom:${Date.now().toString(36)}`;
+    const isBuff = category === 'buff';
+    const node = {
+      id, title: isBuff ? t('newBuff') : t('newAction'), slang: '', category: isBuff ? 'buff' : category,
+      categoryManual: true, tone: 'input', modeId: '', formId: '', formManual: false,
+      input: [], inputCondition: '', inputRoutes: [], airborneTag: '', airborneTagManual: true,
+      transitionKind: '', transitionKindManual: true, prerequisites: [], effects: [], notes: [],
+      summary: '', raw: '', rawIndexes: [], resonance: false, resonanceLevel: 0, iconAction: ''
+    };
+    const next = copyModel(currentModel(name));
+    next.nodes.push(node);
+    next.positions = { ...(next.positions || {}), [id]: {
+      x: Math.max(8, (clientX - graphRect.left) / zoom),
+      y: Math.max(8, (clientY - graphRect.top) / zoom - 25)
+    } };
+    state.editorDraftCategory = node.category;
+    state.selectedNode = id;
+    state.editorCreateMode = false;
+    syncWikiCreateGhost(false);
+    commitModel(name, next);
+  }
+
+  function discardSoloEditorState(name) {
+    if (state.editorSession && state.editorSession.name === name) {
+      writeStoredModel(name, state.editorSession.formId, state.editorSession.model);
+      persistEditorStore();
+    }
+    state.editorSession = null;
+    state.editing = false;
+    state.editorHistory = [];
+    state.editorFuture = [];
+    state.editorCreateMode = false;
+  }
+
+  function mountWikiEditActivity(name) {
+    const activity = editActivityMarkup(name);
+    if (!activity) return;
+    const targets = [
+      WIKI_ROOT.querySelector('.community-wiki-home-tree-tools'),
+      WIKI_ROOT.querySelector('.community-wiki-tree-actions')
+    ].filter(Boolean);
+    targets.forEach((target) => {
+      if (target.querySelector('.community-wiki-edit-activity-rail')) return;
+      const toggle = target.querySelector('[data-wiki-editor-toggle]');
+      if (toggle) toggle.insertAdjacentHTML('afterend', activity);
+      else target.insertAdjacentHTML('beforeend', activity);
+      const mounted = target.querySelector('.community-wiki-edit-activity-rail');
+      window.lucide?.createIcons({ root: mounted || target });
+    });
+  }
+
   function enterGraphEditingInPlace(name) {
     if (!name || !canEditWiki()) return false;
     const viewport = WIKI_ROOT.querySelector('[data-wiki-graph-scroll]');
     const graph = viewport?.querySelector('[data-wiki-graph]');
     if (!graph) return false;
+    if (!state.editorSession || state.editorSession.name !== name) {
+      state.editorSession = { name, formId: currentFormId(name), model: copyModel(currentModel(name)) };
+    }
     state.editing = true;
     graph.dataset.wikiEditing = 'true';
     const groups = graphSeriesGroups(currentModel(name));
@@ -8692,7 +8904,7 @@
         grip.dataset.lucide = 'move';
         element.appendChild(grip);
       }
-      bindNodeDrag(element, groups);
+      bindNodeDrag(element, groups, name);
     });
     window.lucide?.createIcons({ root: graph });
     WIKI_ROOT.querySelectorAll('[data-wiki-editor-toggle]').forEach((button) => {
@@ -8700,6 +8912,87 @@
       button.innerHTML = `<i data-lucide="pencil"></i>${esc(t('editing'))}<small>${esc(isLocalWikiPreview() ? t('localEdit') : t('readonly'))}</small>`;
       window.lucide?.createIcons({ root: button });
     });
+    mountWikiEditActivity(name);
+    return true;
+  }
+
+  function renderActiveWikiSurface(name) {
+    if (state.homeSurfaceTab === 'tree' && state.homeMenuName === name) renderHome();
+    else renderDetail(name);
+  }
+
+  function bindWikiEditorRail(root = WIKI_ROOT) {
+    root?.querySelectorAll?.('[data-wiki-editor-create-toggle]').forEach((element) => {
+      if (element.dataset.wikiEditorCreateBound === 'true') return;
+      element.dataset.wikiEditorCreateBound = 'true';
+      element.addEventListener('click', () => {
+        if (!state.editing) return;
+        state.editorCreateMode = !state.editorCreateMode;
+        syncWikiCreateGhost(false);
+        WIKI_ROOT.querySelectorAll('[data-wiki-editor-create-toggle]').forEach((button) => button.classList.toggle('active', state.editorCreateMode));
+      });
+    });
+    root?.querySelectorAll?.('[data-wiki-editor-rail-action]').forEach((element) => {
+      if (element.dataset.wikiEditorRailBound === 'true') return;
+      element.dataset.wikiEditorRailBound = 'true';
+      element.addEventListener('click', () => handleEditorAction(element.dataset.wikiEditorRailAction || '', state.selectedNode || ''));
+    });
+    root?.querySelectorAll?.('[data-wiki-editor-save]').forEach((element) => {
+      if (element.dataset.wikiEditorSaveBound === 'true') return;
+      element.dataset.wikiEditorSaveBound = 'true';
+      element.addEventListener('click', () => { void saveEditorSession(element.dataset.wikiName || state.selected || state.homeMenuName); });
+    });
+    root?.querySelectorAll?.('[data-wiki-editor-exit]').forEach((element) => {
+      if (element.dataset.wikiEditorExitBound === 'true') return;
+      element.dataset.wikiEditorExitBound = 'true';
+      element.addEventListener('click', () => discardEditorSession(element.dataset.wikiName || state.selected || state.homeMenuName));
+    });
+  }
+
+  function mountEditorRailInPlace(name) {
+    if (!name || !state.editing || !canEditWiki(name)) return;
+    const homeRail = WIKI_ROOT.querySelector('.community-wiki-home-rail.is-tree-rail');
+    if (homeRail && !homeRail.querySelector('.community-wiki-editor-rail-tools')) {
+      homeRail.insertAdjacentHTML('beforeend', wikiEditorRailTools(name));
+      const rail = homeRail.querySelector('.community-wiki-editor-rail-tools');
+      bindWikiEditorRail(rail);
+      window.lucide?.createIcons({ root: rail || homeRail });
+    }
+  }
+
+  function discardEditorSession(name = state.selected || state.homeMenuName) {
+    const session = state.editorSession;
+    if (session && session.name === name) {
+      writeStoredModel(name, session.formId, session.model);
+      persistEditorStore();
+    }
+    state.editorSession = null;
+    state.editing = false;
+    state.selectedNode = '';
+    state.editorHistory = [];
+    state.editorFuture = [];
+    state.editorCreateMode = false;
+    syncWikiCreateGhost(false);
+    state.contextMenu = null;
+    closeContextMenu();
+    renderActiveWikiSurface(name);
+  }
+
+  async function saveEditorSession(name = state.selected || state.homeMenuName) {
+    if (!name || !state.editing || !canEditWiki(name)) return false;
+    const model = copyModel(currentModel(name));
+    await saveWikiModel(name, model);
+    if (state.wikiSaveStatus === 'error') return false;
+    state.editorSession = null;
+    state.editing = false;
+    state.selectedNode = '';
+    state.editorHistory = [];
+    state.editorFuture = [];
+    state.editorCreateMode = false;
+    syncWikiCreateGhost(false);
+    state.contextMenu = null;
+    closeContextMenu();
+    renderActiveWikiSurface(name);
     return true;
   }
 
@@ -8876,7 +9169,14 @@
     const activeInfo = state.info.get(activeName);
     const activeModel = activeName && activeInfo ? viewModelFor(activeName) : null;
     const activeSelectedNode = activeModel?.nodes?.find((node) => node.id === state.selectedNode);
-    const homeNodeModal = activeSelectedNode ? `<div class="community-wiki-floating"><div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-node-modal" role="dialog" aria-modal="true"><header><div><i data-lucide="git-branch"></i><strong>${esc(t('selectedNode'))}</strong></div><button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><div class="community-wiki-node-panel-inner">${nodeDetail(activeSelectedNode, activeName, activeModel)}</div></section></div>` : '';
+    const homeNodeEditing = Boolean(activeName && state.editing && canEditWiki(activeName) && (activeSelectedNode || state.selectedNode === 'new'));
+    const homeNodeTarget = activeSelectedNode || (state.selectedNode === 'new' ? null : null);
+    const homeNodePanel = homeNodeEditing
+      ? `<div class="community-wiki-node-panel-inner"><div class="community-wiki-panel-title"><i data-lucide="pencil"></i><strong>${esc(t('editorTitle'))}</strong></div>${editorForm(homeNodeTarget, activeModel || currentModel(activeName), activeName)}</div>`
+      : activeSelectedNode
+        ? `<div class="community-wiki-node-panel-inner">${nodeDetail(activeSelectedNode, activeName, activeModel)}</div>`
+        : '';
+    const homeNodeModal = homeNodePanel ? `<div class="community-wiki-floating"><div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-node-modal" role="dialog" aria-modal="true"><header><div><i data-lucide="${homeNodeEditing ? 'pencil' : 'git-branch'}"></i><strong>${esc(homeNodeEditing ? t('editorTitle') : t('selectedNode'))}</strong></div><div class="community-wiki-editor-header-actions">${homeNodeEditing ? wikiEditorHeaderSaveButton() : ''}<button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></div></header>${homeNodePanel}</section></div>` : '';
     const isTreeSurface = surfaceTab === 'tree';
     const railTabs = `<nav class="community-wiki-home-surface-tabs" role="tablist" aria-label="${esc(t('details'))}"><button type="button" data-wiki-home-surface-tab="raw" data-wiki-name="${esc(activeName)}" class="${surfaceTab === 'raw' ? 'active' : ''}" title="${esc(t('homeRaw'))}"><i data-lucide="book-open"></i><span>${esc(t('homeRaw'))}</span></button><button type="button" data-wiki-home-surface-tab="flow" data-wiki-name="${esc(activeName)}" class="${surfaceTab === 'flow' ? 'active' : ''}" title="${esc(t('flow'))}"><i data-lucide="route"></i><span>${esc(t('flow'))}</span></button><button type="button" data-wiki-home-surface-tab="tree" data-wiki-name="${esc(activeName)}" class="${surfaceTab === 'tree' ? 'active' : ''}" title="${esc(t('tree'))}"><i data-lucide="git-branch"></i><span>${esc(t('tree'))}</span></button></nav>`;
     const contentTabs = HOME_CONTENT_TABS.map(([id, label]) => `<button type="button" class="community-wiki-home-content-tab is-${id} ${surfaceTab === 'raw' && contentTab === id ? 'active' : ''}" data-wiki-home-content-tab="${id}" data-wiki-name="${esc(activeName)}" title="${esc(label)}"><img src="${esc(id === 'profile' ? emblemFor(activeName) : homeSkillIconFor(activeName, id))}" alt="" aria-hidden="true"><span>${esc(label)}</span></button>`).join('');
@@ -8891,7 +9191,7 @@
       ? `<div class="community-wiki-desktop-selector">${desktopSelector}</div>`
       : `<div class="community-wiki-desktop-surface ${isTreeSurface ? 'is-tree-surface' : ''}" style="--wiki-element:${esc(colorFor(activeEntry?.element))}">
           ${isTreeSurface
-             ? `<aside class="community-wiki-home-rail is-tree-rail">${surfaceLeading}${surfaceFullscreenButton}${railTabs}${soloComboRailTools(activeName)}</aside><div class="community-wiki-home-tree-main">${treeToolbar}<main class="community-wiki-desktop-surface-content"><div class="community-wiki-desktop-surface-body">${surfaceWaiting ? '<div class="community-wiki-home-surface-loading" aria-hidden="true"></div>' : state.info.has(activeName) ? `<div class="community-wiki-desktop-tree-scroll" data-wiki-graph-scroll data-wiki-lock-six-lanes>${renderGraph(viewModelFor(activeName), colorFor(activeEntry?.element), activeName)}${soloComboEditorOverlay(activeName)}</div>` : `<div class="community-wiki-home-surface-loading"><i data-lucide="loader-circle"></i><span>${esc(t('detailLoading'))}</span></div>`}</div></main></div>`
+             ? `<aside class="community-wiki-home-rail is-tree-rail">${surfaceLeading}${surfaceFullscreenButton}${railTabs}${wikiEditorRailTools(activeName)}${soloComboRailTools(activeName)}</aside><div class="community-wiki-home-tree-main">${treeToolbar}<main class="community-wiki-desktop-surface-content"><div class="community-wiki-desktop-surface-body">${surfaceWaiting ? '<div class="community-wiki-home-surface-loading" aria-hidden="true"></div>' : state.info.has(activeName) ? `<div class="community-wiki-desktop-tree-scroll" data-wiki-graph-scroll data-wiki-lock-six-lanes>${renderGraph(viewModelFor(activeName), colorFor(activeEntry?.element), activeName)}${soloComboEditorOverlay(activeName)}</div>` : `<div class="community-wiki-home-surface-loading"><i data-lucide="loader-circle"></i><span>${esc(t('detailLoading'))}</span></div>`}</div></main></div>`
             : `<aside class="community-wiki-home-rail">${surfaceLeading}${surfaceFullscreenButton}${nonTreeRail}</aside><main class="community-wiki-desktop-surface-content"><div class="community-wiki-desktop-surface-body">${surfaceWaiting ? '<div class="community-wiki-home-surface-loading" aria-hidden="true"></div>' : surfaceTab === 'raw' ? `<div class="community-wiki-home-raw">${homeContentSurface(activeName, contentTab)}</div>` : flowSurface(activeName)}</div></main>`}
         </div>`;
     const mobileHome = window.matchMedia('(max-width: 820px)').matches;
@@ -9045,9 +9345,10 @@
     const mode = modes.length === 2
       ? `<div class="community-wiki-mode-toggle" style="--wiki-element:${esc(colorFor(entry?.element))}" role="group" aria-label="${esc(t('mode'))}"><i data-lucide="waypoints" aria-hidden="true"></i><span>${esc(t('mode'))}</span><div class="community-wiki-mode-toggle-buttons">${modes.map((item) => `<button type="button" value="${esc(item.id)}" data-wiki-mode class="${item.id === activeMode ? 'active' : ''}" aria-pressed="${item.id === activeMode}" title="${esc(item.description || item.label)}"><i data-lucide="${modeIcon(item)}" aria-hidden="true"></i><b>${esc(item.label)}</b></button>`).join('')}</div></div>`
       : modes.length ? `<label class="community-wiki-mode-select" style="--wiki-element:${esc(colorFor(entry?.element))}"><i data-lucide="waypoints" aria-hidden="true"></i><span>${esc(t('mode'))}</span><select data-wiki-mode aria-label="${esc(t('mode'))}">${modes.map((item) => `<option value="${esc(item.id)}" ${item.id === activeMode ? 'selected' : ''}>${esc(item.label)}</option>`).join('')}</select></label>` : '';
-    const newCombo = `<button class="community-wiki-new-combo" type="button" data-solo-action="new" data-wiki-name="${esc(name)}" title="${esc(t('newCombo'))}"><i data-lucide="plus" aria-hidden="true"></i><span>${esc(t('newCombo'))}</span></button>`;
-    const editor = canEditWiki() ? `<button type="button" class="community-wiki-editor-toggle ${state.editing ? 'active' : ''}" data-wiki-editor-toggle><i data-lucide="pencil"></i>${esc(state.editing ? t('editing') : t('edit'))}</button>` : '';
-    return `<div class="community-wiki-home-tree-tools">${newCombo}${editor}<span class="community-wiki-home-tree-tools-spacer" aria-hidden="true"></span>${chain}${mode}${form}</div>`;
+    const creatingCombo = Boolean(state.soloComboEditing && state.soloComboOpen);
+    const newCombo = `<button class="community-wiki-new-combo ${creatingCombo ? 'active' : ''}" type="button" data-solo-action="new" data-wiki-name="${esc(name)}" title="${esc(creatingCombo ? '退出创建' : t('newCombo'))}"><i data-lucide="${creatingCombo ? 'x' : 'plus'}" aria-hidden="true"></i><span>${esc(creatingCombo ? '创建中' : t('newCombo'))}</span></button>`;
+    const editor = canEditWiki(name) ? `<button type="button" class="community-wiki-editor-toggle ${state.editing ? 'active' : ''}" data-wiki-editor-toggle><i data-lucide="pencil"></i>${esc(state.editing ? t('editing') : t('edit'))}</button>` : '';
+    return `<div class="community-wiki-home-tree-tools">${newCombo}${editor}${state.editing ? editActivityMarkup(name) : ''}<span class="community-wiki-home-tree-tools-spacer" aria-hidden="true"></span>${chain}${mode}${form}</div>`;
   }
 
   function soloComboRailTools(name) {
@@ -9065,6 +9366,53 @@
       <button type="button" class="community-wiki-solo-rail-tool is-save" data-solo-action="save" data-wiki-name="${esc(name)}" title="${esc(t('saveCombo'))}" aria-label="${esc(t('saveCombo'))}"><i data-lucide="save"></i></button>
       <button type="button" class="community-wiki-solo-rail-tool is-close" data-solo-action="close" data-wiki-name="${esc(name)}" title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button>
     </div>`;
+  }
+
+  function wikiEditorRailTools(name) {
+    if (!state.editing || !canEditWiki(name)) return '';
+    const tool = (action, icon, label, extra = '') => `<button type="button" class="community-wiki-solo-rail-tool community-wiki-editor-rail-tool ${extra}" data-wiki-editor-rail-action="${esc(action)}" data-wiki-name="${esc(name)}" title="${esc(label)}" aria-label="${esc(label)}"><i data-lucide="${esc(icon)}"></i></button>`;
+    return `<div class="community-wiki-solo-rail-tools community-wiki-editor-rail-tools" role="toolbar" aria-label="${esc(t('editorTitle'))}">
+      <span class="community-wiki-solo-rail-mark" aria-hidden="true"><i data-lucide="pencil"></i></span>
+      <button type="button" class="community-wiki-solo-rail-tool community-wiki-editor-rail-tool ${state.editorCreateMode ? 'active' : ''}" data-wiki-editor-create-toggle title="${esc(t('add'))}" aria-label="${esc(t('add'))}"><i data-lucide="plus"></i></button>
+      ${tool('copy', 'copy', t('copy'))}
+      ${tool('cut', 'scissors', t('cut'))}
+      ${tool('paste', 'clipboard', t('paste'))}
+      ${tool('delete', 'trash-2', t('delete'), 'is-danger')}
+      ${tool('undo', 'undo-2', t('undo'))}
+      ${tool('redo', 'redo-2', t('redo'))}
+      <span class="community-wiki-solo-rail-divider" aria-hidden="true"></span>
+      <button type="button" class="community-wiki-solo-rail-tool is-save" data-wiki-editor-save data-wiki-name="${esc(name)}" title="${esc(t('saveEditor') || t('save'))}" aria-label="${esc(t('saveEditor') || t('save'))}"><i data-lucide="save"></i></button>
+      <button type="button" class="community-wiki-solo-rail-tool is-danger" data-wiki-editor-exit data-wiki-name="${esc(name)}" title="${esc(t('cancel'))}" aria-label="${esc(t('cancel'))}"><i data-lucide="x"></i></button>
+    </div>`;
+  }
+
+  function editActivityMarkup(name) {
+    const activity = state.wikiState.get(name)?.editActivity || {};
+    const normalize = (value) => typeof value === 'string'
+      ? { name: value, avatar: '' }
+      : { name: clean(value?.name || value?.nickname || value?.editorName) || '维护端', avatar: clean(value?.avatar || value?.editorAvatar).slice(0, 80) };
+    const participants = (Array.isArray(activity.participants) ? activity.participants : [])
+      .map(normalize)
+      .filter((item, index, list) => item.name && list.findIndex((entry) => entry.name === item.name) === index);
+    const recent = (Array.isArray(activity.recentEditors) ? activity.recentEditors : []).map(normalize).filter((item) => item.name).slice(0, 4);
+    const avatars = recent.length ? recent : participants.slice(0, 4);
+    const avatarMarkup = (editor, large = false) => {
+      const rawAvatar = clean(editor.avatar);
+      const source = /^https?:\/\//iu.test(rawAvatar) || rawAvatar.startsWith('/') ? rawAvatar : (rawAvatar && iconFor(rawAvatar));
+      return source
+        ? `<img class="community-wiki-edit-avatar${large ? ' large' : ''}" src="${esc(source)}" alt="${esc(editor.name)}" loading="lazy">`
+        : `<span class="community-wiki-edit-avatar fallback${large ? ' large' : ''}" aria-hidden="true">${esc(Array.from(editor.name)[0] || '?')}</span>`;
+    };
+    const count = Number.isFinite(Number(activity.participantCount)) ? Number(activity.participantCount) : participants.length;
+    const edits = Number.isFinite(Number(activity.totalEdits)) ? Number(activity.totalEdits) : 0;
+    const list = participants.length
+      ? `<div class="community-wiki-edit-activity-panel"><div class="community-wiki-edit-activity-stats"><strong>${esc(format(t('editParticipants'), count))}</strong><span>${esc(format(t('editRecords'), edits))}</span></div><div class="community-wiki-edit-activity-heading">${esc(t('editAll'))}</div><ul class="community-wiki-edit-activity-list">${participants.map((editor) => `<li>${avatarMarkup(editor, true)}<span>${esc(editor.name)}</span></li>`).join('')}</ul></div>`
+      : `<div class="community-wiki-edit-activity-panel is-empty">${esc(t('editActivityEmpty'))}</div>`;
+    return `<details class="community-wiki-edit-activity community-wiki-edit-activity-rail"><summary title="${esc(t('editActivityHint'))}" aria-label="${esc(t('editActivityHint'))}"><span class="community-wiki-edit-activity-users">${avatars.map((editor) => avatarMarkup(editor)).join('') || `<span class="community-wiki-edit-activity-empty-label">${esc(t('editActivityEmpty'))}</span>`}</span><i class="community-wiki-edit-activity-chevron" data-lucide="chevron-down" aria-hidden="true"></i></summary>${list}</details>`;
+  }
+
+  function wikiEditorHeaderSaveButton() {
+    return `<button type="submit" form="wiki-editor-form" class="community-wiki-editor-header-save" title="${esc(t('save'))}" aria-label="${esc(t('save'))}"><i data-lucide="save"></i><span>${esc(t('save'))}</span></button>`;
   }
 
   function soloComboSaveConfirmModal(name) {
@@ -9649,6 +9997,37 @@
     persistEditorStore();
   }
 
+  function localEditorActivity(name) {
+    const current = state.wikiState.get(name) || {};
+    const activity = current.editActivity && typeof current.editActivity === 'object' ? current.editActivity : {};
+    const profile = wikiEditorProfile();
+    const editor = {
+      name: profile.name || '本地预览用户',
+      ...(profile.avatar ? { avatar: profile.avatar } : {})
+    };
+    const key = profile.email || editor.name;
+    const normalize = (value) => typeof value === 'string' ? { name: value } : {
+      name: clean(value?.name || value?.nickname || value?.editorName) || '维护端',
+      ...(clean(value?.avatar || value?.editorAvatar) ? { avatar: clean(value.avatar || value.editorAvatar).slice(0, 80) } : {})
+    };
+    const participants = (Array.isArray(activity.participants) ? activity.participants : []).map(normalize);
+    const index = participants.findIndex((item) => item.name === editor.name || item.email === key);
+    if (index >= 0) participants[index] = { ...participants[index], ...editor };
+    else participants.unshift(editor);
+    const recent = [editor, ...(Array.isArray(activity.recentEditors) ? activity.recentEditors : []).map(normalize)]
+      .filter((item, index, list) => item.name && list.findIndex((candidate) => candidate.name === item.name) === index)
+      .slice(0, 3);
+    state.wikiState.set(name, {
+      ...current,
+      editActivity: {
+        totalEdits: Number(activity.totalEdits || 0) + 1,
+        participantCount: Math.max(Number(activity.participantCount || 0), participants.length),
+        recentEditors: recent,
+        participants: participants.slice(0, 200)
+      }
+    });
+  }
+
   function applyWikiLocks(value) {
     const locks = Array.isArray(value?.locks) ? value.locks : [];
     for (const item of locks) {
@@ -9670,6 +10049,16 @@
 
   async function saveWikiModel(name, model) {
     if (isLocalWikiPreview()) {
+      const current = state.wikiState.get(name) || {};
+      const formId = formStorageId(name, currentFormId(name));
+      applyWikiState(name, {
+        ...current,
+        models: { ...(current.models || {}), [formId]: copyModel(model) },
+        updatedAt: Date.now(),
+        updatedBy: wikiEditorProfile().email || 'preview',
+        lock: current.lock || { locked: false }
+      });
+      localEditorActivity(name);
       state.wikiSaveStatus = 'saved';
       return;
     }
@@ -10068,6 +10457,7 @@
   }
 
   function beginSoloCombo(name) {
+    if (state.editing) discardSoloEditorState(name || state.selected || state.homeMenuName);
     state.homeMenuName = name || state.homeMenuName;
     state.soloComboOpen = true;
     state.soloComboTab = 'solo';
@@ -10091,6 +10481,10 @@
   }
 
   function startSoloComboDraft(name) {
+    discardSoloEditorState(name);
+    state.editing = false;
+    state.editorCreateMode = false;
+    state.selectedNode = '';
     state.soloComboEditing = true;
     state.soloComboAnnotating = false;
     state.soloComboNoteAnchor = -1;
@@ -10358,6 +10752,7 @@
     state.soloComboDraft = null;
     clearSoloComboSelection();
     state.soloComboSaveConfirm = false;
+    state.editorCreateMode = false;
     renderCurrentWikiSurface(name);
   }
 
@@ -13124,17 +13519,17 @@
     viewport.scrollLeft = scrollLeft;
     viewport.scrollTop = scrollTop;
     syncSoloComboEditorViewport(viewport);
-    window.lucide?.createIcons({ root: viewport.querySelector('[data-wiki-graph-frame]') || viewport });
   }
 
-  function mountHomeNodeModal(name, nodeId) {
+  function mountHomeNodeModal(name, nodeId, forceEditing = false) {
     const graph = WIKI_ROOT.querySelector('[data-wiki-graph]');
     const node = currentModel(name)?.nodes?.find((entry) => entry.id === nodeId);
     if (!graph || !node) return false;
+    const editing = Boolean(forceEditing && state.editing && canEditWiki(name));
     WIKI_ROOT.querySelectorAll('.community-wiki-floating').forEach((element) => element.remove());
     const shell = document.createElement('div');
     shell.className = 'community-wiki-floating';
-    shell.innerHTML = `<div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-node-modal" role="dialog" aria-modal="true"><header><div><i data-lucide="git-branch"></i><strong>${esc(t('selectedNode'))}</strong></div><button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><div class="community-wiki-node-panel-inner">${nodeDetail(node, name, viewModelFor(name))}</div></section>`;
+    shell.innerHTML = `<div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-node-modal" role="dialog" aria-modal="true"><header><div><i data-lucide="${editing ? 'pencil' : 'git-branch'}"></i><strong>${esc(editing ? t('editorTitle') : t('selectedNode'))}</strong></div><div class="community-wiki-editor-header-actions">${editing ? wikiEditorHeaderSaveButton() : ''}<button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></div></header><div class="community-wiki-node-panel-inner">${editing ? editorForm(node, currentModel(name), name) : nodeDetail(node, name, viewModelFor(name))}</div></section>`;
     WIKI_ROOT.querySelector('.community-wiki-inner')?.appendChild(shell);
     shell.querySelectorAll('[data-wiki-overlay-close]').forEach((element) => element.addEventListener('click', (event) => {
       event.preventDefault();
@@ -13142,6 +13537,24 @@
       state.selectedNode = '';
       state.profileOpen = false;
       shell.remove();
+    }));
+    shell.querySelector('[data-wiki-editor-form]')?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      saveEditorForm(new FormData(event.currentTarget), name);
+    });
+    shell.querySelectorAll('[data-wiki-input-route-add]').forEach((button) => button.addEventListener('click', () => {
+      const list = button.closest('[data-wiki-editor-form]')?.querySelector('[data-wiki-input-route-list]');
+      const template = list?.querySelector('[data-wiki-input-route-row]');
+      if (!list || !template) return;
+      const index = list.querySelectorAll('[data-wiki-input-route-row]').length;
+      const row = template.cloneNode(true);
+      row.querySelectorAll('[name]').forEach((field) => { field.name = field.name.replace(/\d+$/u, String(index)); field.value = ''; });
+      list.appendChild(row);
+      window.lucide?.createIcons({ root: row });
+    }));
+    shell.querySelectorAll('[data-wiki-input-route-list]').forEach((list) => list.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-wiki-input-route-remove]');
+      if (button && list.querySelectorAll('[data-wiki-input-route-row]').length > 1) button.closest('[data-wiki-input-route-row]')?.remove();
     }));
     window.lucide?.createIcons({ root: shell });
     return true;
@@ -13272,19 +13685,19 @@
     return `<span class="community-wiki-detail-type" style="--wiki-element:${esc(colorFor(state.characters.find((entry) => entry.name === name)?.element))}">${esc(categoryLabel(node.category))}</span>${chainLabel}<h2>${airborne}${esc(node.title)}</h2>${summary}${field(t('inputClass'), node.input, 'input')}${routeDetail}${field(t('inputCondition'), inputConditions)}${field(t('prerequisites'), [...list(node.prerequisites), ...incoming.map((value) => `${t('connect')} · ${value}`)])}${field(t('effects'), node.effects, 'effects')}${field(t('notes'), node.notes)}${changesBlock}${field(t('raw'), node.raw ? [node.raw] : [])}`;
   }
 
-  function editorForm(node, model) {
-    const current = node || { id: 'new', title: '', slang: '', category: state.editorDraftCategory || 'normal', tone: 'input', input: [], inputCondition: '', inputRoutes: [], airborneTag: '', prerequisites: [], effects: [], notes: [], resonanceLevel: 0, modeId: '', formId: currentFormId(state.selected) };
+  function editorForm(node, model, name = state.selected || state.homeMenuName) {
+    const current = node || { id: 'new', title: '', slang: '', category: state.editorDraftCategory || 'normal', tone: 'input', input: [], inputCondition: '', inputRoutes: [], airborneTag: '', prerequisites: [], effects: [], notes: [], resonanceLevel: 0, modeId: '', formId: currentFormId(name) };
     const related = new Set((model.edges || []).flatMap((edge) => edge.from === current.id ? [edge.to] : edge.to === current.id ? [edge.from] : []));
     const options = model.nodes.filter((entry) => entry.id !== current.id).map((entry) => `<option value="${esc(entry.id)}" ${related.has(entry.id) ? 'selected' : ''}>${esc(categoryLabel(entry.category))} · ${esc(entry.title)}</option>`).join('');
     const selectedChain = Number(current.resonanceLevel || 0);
     const chainOptions = [0, 1, 2, 3, 4, 5, 6].map((level) => `<option value="${level}" ${selectedChain === level ? 'selected' : ''}>${level ? esc(format(t('chainLevel'), level)) : esc(t('baseChain'))}</option>`).join('');
-    const modes = specialModesFor(state.selected);
+    const modes = specialModesFor(name);
     const transitionValue = current.transitionKind === 'enter' ? 'transform' : current.transitionKind;
     const transitionOptions = [['', t('transitionNone')], ['switch', t('transitionSwitch')], ['transform', t('transitionTransform')], ['exit', t('transitionExit')]].map(([value, label]) => `<option value="${value}" ${transitionValue === value ? 'selected' : ''}>${esc(label)}</option>`).join('');
     const transitionField = `<label class="community-wiki-editor-transition"><span>${esc(t('transition'))}</span><select name="transitionKind">${transitionOptions}</select></label>`;
     const modeOptions = (modes.length && current.category === 'buff' ? `<label class="community-wiki-editor-mode"><span>${esc(t('mode'))}</span><select name="modeId"><option value="" ${!current.modeId ? 'selected' : ''}>${esc(t('modeAll'))}</option>${modes.map((mode) => `<option value="${esc(mode.id)}" ${current.modeId === mode.id ? 'selected' : ''}>${esc(mode.label)}</option>`).join('')}</select></label>` : '') + transitionField;
-    const forms = specialFormsFor(state.selected);
-    const selectedForm = current.formId || currentFormId(state.selected);
+    const forms = specialFormsFor(name);
+    const selectedForm = current.formId || currentFormId(name);
     const formOptions = forms.length > 1 ? `<label class="community-wiki-editor-form-field"><span>${esc(t('form'))}</span><select name="formId"><option value="shared" ${selectedForm === 'shared' ? 'selected' : ''}>${esc(t('formShared'))}</option>${forms.map((form) => `<option value="${esc(form.id)}" ${selectedForm === form.id ? 'selected' : ''}>${esc(form.label)}</option>`).join('')}</select></label>` : '';
     const textarea = (key, label, values) => `<label><span>${esc(label)}</span><textarea name="${key}" rows="2">${esc(values.join('\n'))}</textarea></label>`;
     const allowSpecial = allowsSpecialTrigger([current.title, current.inputCondition, ...current.prerequisites, ...current.effects, ...current.notes].join(' '));
@@ -13300,10 +13713,10 @@
     const seriesCandidates = current.id !== 'new' && current.category !== 'buff'
       ? model.nodes.filter((entry) => entry.category !== 'buff' && entry.category === current.category && (entry.modeId || '') === (current.modeId || '') && (entry.formId || '') === (current.formId || '') && Number(entry.resonanceLevel || 0) === Number(current.resonanceLevel || 0)).sort((left, right) => model.nodes.indexOf(left) - model.nodes.indexOf(right))
       : [];
-    const seriesEditor = seriesCandidates.length > 1 ? `<fieldset class="community-wiki-editor-series"><legend><i data-lucide="layers-2"></i>${esc(t('seriesSettings'))}</legend><input type="hidden" name="seriesEditor" value="1"><label><span>${esc(t('seriesName'))}</span><input name="seriesName" value="${esc(series?.baseTitle || '')}" placeholder="${esc(current.title)}"></label><label><span>${esc(t('seriesMembers'))}</span><select name="seriesNodeIds" multiple size="${Math.min(7, Math.max(3, seriesCandidates.length))}">${seriesCandidates.map((entry) => `<option value="${esc(entry.id)}" ${(series?.memberIds || []).includes(entry.id) ? 'selected' : ''}>${esc(entry.title)}</option>`).join('')}</select></label><small>${esc(t('seriesHint'))}</small><div class="community-wiki-editor-series-actions"><button type="submit" class="primary"><i data-lucide="layers"></i>${esc(t('seriesSave'))}</button>${series ? `<button type="button" data-wiki-editor-action="remove-series" data-wiki-node="${esc(current.id)}"><i data-lucide="layers-2"></i>${esc(t('seriesRemove'))}</button>` : ''}</div></fieldset>` : '';
+    const seriesEditor = seriesCandidates.length > 1 ? `<fieldset class="community-wiki-editor-series"><legend><i data-lucide="layers-2"></i>${esc(t('seriesSettings'))}</legend><input type="hidden" name="seriesEditor" value="1"><label><span>${esc(t('seriesName'))}</span><input name="seriesName" value="${esc(series?.baseTitle || '')}" placeholder="${esc(current.title)}"></label><label><span>${esc(t('seriesMembers'))}</span><select name="seriesNodeIds" multiple size="${Math.min(7, Math.max(3, seriesCandidates.length))}">${seriesCandidates.map((entry) => `<option value="${esc(entry.id)}" ${(series?.memberIds || []).includes(entry.id) ? 'selected' : ''}>${esc(entry.title)}</option>`).join('')}</select></label><small>${esc(t('seriesHint'))}</small></fieldset>` : '';
     const airborneOptions = [['', t('airborneNone')], ['only', t('airborneOnly')], ['available', t('airborneAvailable')], ['ascend', t('airborneAscend')]].map(([value, label]) => `<option value="${value}" ${current.airborneTag === value ? 'selected' : ''}>${esc(label)}</option>`).join('');
-    const presetSlang = defaultSlangForCharacter(state.selected)[current.id] || '';
-      return `<form class="community-wiki-editor-form" data-wiki-editor-form><input type="hidden" name="nodeId" value="${esc(current.id)}"><label><span>${esc(t('name'))}</span><input name="title" value="${esc(current.title)}" required></label><label class="community-wiki-editor-slang"><span>${esc(t('slangName'))}</span><input name="slangName" value="${esc(current.slang || '')}" placeholder="${esc(presetSlang ? `${t('slangPreset')}：${presetSlang}` : t('slangPreset'))}"></label><label><span>${esc(t('category'))}</span><select name="category">${CATEGORY_ORDER.map((category) => `<option value="${category}" ${current.category === category ? 'selected' : ''}>${esc(categoryLabel(category))}</option>`).join('')}</select></label><label class="community-wiki-editor-chain"><span>${esc(t('chain'))}</span><select name="resonanceLevel">${chainOptions}</select></label>${formOptions}${modeOptions}<label class="community-wiki-editor-airborne"><span>${esc(t('airborne'))}</span><select name="airborneTag">${airborneOptions}</select></label><label><span>${esc(t('connect'))}</span><select name="relatedIds" multiple size="5">${options}</select></label>${current.category === 'buff' ? '' : `<label><span>${esc(t('inputClass'))}</span><select name="input" multiple size="5">${INPUT_FIELD_ORDER.filter((kind) => kind !== 'special' || allowSpecial).map((kind) => `<option value="${esc(inputFieldLabel(kind))}" ${current.input.some((value) => inputFieldKind(value) === kind) ? 'selected' : ''}>${esc(inputFieldLabel(kind))}</option>`).join('')}</select></label><label><span>${esc(t('inputCondition'))}</span><textarea name="inputCondition" rows="2">${esc(current.inputCondition || '')}</textarea><small>${esc(t('inputConditionHint'))}</small></label>`}${routeField}${textarea('prerequisites', t('prerequisites'), current.prerequisites)}${textarea('effects', t('effects'), current.effects)}${textarea('notes', t('notes'), current.notes)}${seriesEditor}<div class="community-wiki-editor-actions"><button class="primary" type="submit"><i data-lucide="save"></i>${esc(t('save'))}</button><button type="button" data-wiki-editor-action="cancel"><i data-lucide="x"></i>${esc(t('cancel'))}</button>${current.id !== 'new' ? `<button class="danger" type="button" data-wiki-editor-action="delete" data-wiki-node="${esc(current.id)}"><i data-lucide="trash-2"></i>${esc(t('delete'))}</button>` : ''}</div></form>`;
+    const presetSlang = defaultSlangForCharacter(name)[current.id] || '';
+      return `<form id="wiki-editor-form" class="community-wiki-editor-form" data-wiki-editor-form data-wiki-name="${esc(name)}"><input type="hidden" name="nodeId" value="${esc(current.id)}"><label><span>${esc(t('name'))}</span><input name="title" value="${esc(current.title)}" required></label><label class="community-wiki-editor-slang"><span>${esc(t('slangName'))}</span><input name="slangName" value="${esc(current.slang || '')}" placeholder="${esc(presetSlang ? `${t('slangPreset')}：${presetSlang}` : t('slangPreset'))}"></label><label><span>${esc(t('category'))}</span><select name="category">${CATEGORY_ORDER.map((category) => `<option value="${category}" ${current.category === category ? 'selected' : ''}>${esc(categoryLabel(category))}</option>`).join('')}</select></label><label class="community-wiki-editor-chain"><span>${esc(t('chain'))}</span><select name="resonanceLevel">${chainOptions}</select></label>${formOptions}${modeOptions}<label class="community-wiki-editor-airborne"><span>${esc(t('airborne'))}</span><select name="airborneTag">${airborneOptions}</select></label><label><span>${esc(t('connect'))}</span><select name="relatedIds" multiple size="5">${options}</select></label>${current.category === 'buff' ? '' : `<label><span>${esc(t('inputClass'))}</span><select name="input" multiple size="5">${INPUT_FIELD_ORDER.filter((kind) => kind !== 'special' || allowSpecial).map((kind) => `<option value="${esc(inputFieldLabel(kind))}" ${current.input.some((value) => inputFieldKind(value) === kind) ? 'selected' : ''}>${esc(inputFieldLabel(kind))}</option>`).join('')}</select></label><label><span>${esc(t('inputCondition'))}</span><textarea name="inputCondition" rows="2">${esc(current.inputCondition || '')}</textarea><small>${esc(t('inputConditionHint'))}</small></label>`}${routeField}${textarea('prerequisites', t('prerequisites'), current.prerequisites)}${textarea('effects', t('effects'), current.effects)}${textarea('notes', t('notes'), current.notes)}${seriesEditor}</form>`;
   }
 
   function currentFormId(name = state.selected) {
@@ -13343,8 +13756,10 @@
     state.editorFuture = [];
     writeStoredModel(name, currentFormId(name), model);
     persistEditorStore(options.deferPersist === true);
-    queueWikiSave(name, model);
-    if (!options.preserveGraph) renderDetail(name);
+    // Editing is a local draft. The rail Save action is the only place that
+    // commits the draft to the Wiki API; this also makes Exit a real discard.
+    if (!state.editing && options.persistRemote !== false) queueWikiSave(name, model);
+    if (!options.preserveGraph) renderActiveWikiSurface(name);
     if (Number.isFinite(options.scrollLeft) || Number.isFinite(options.scrollTop)) {
       const viewport = WIKI_ROOT.querySelector('[data-wiki-graph-scroll]');
       if (viewport) {
@@ -13359,9 +13774,9 @@
     }
   }
 
-  function saveEditorForm(formData) {
-    if (!canEditWiki()) return;
-    const name = state.selected, model = currentModel(name), id = String(formData.get('nodeId') || '');
+  function saveEditorForm(formData, name = state.selected || state.homeMenuName) {
+    if (!name || !canEditWiki(name)) return;
+    const model = currentModel(name), id = String(formData.get('nodeId') || '');
     const resonanceLevel = Number(formData.get('resonanceLevel') || 0);
     const availableModes = specialModesFor(name).map((mode) => mode.id);
     const category = String(formData.get('category') || 'normal');
@@ -13414,12 +13829,13 @@
       next.seriesGroups = existingGroups;
     }
     state.editing = true;
+    state.selectedNode = '';
     commitModel(name, next);
   }
 
   function removeEditorSeries(nodeId) {
     if (!nodeId) return;
-    const name = state.selected, model = currentModel(name), series = graphSeriesForNode(model, nodeId);
+    const name = state.selected || state.homeMenuName, model = currentModel(name), series = graphSeriesForNode(model, nodeId);
     if (!series) return;
     const next = copyModel(model);
     next.seriesGroups = (Array.isArray(next.seriesGroups) ? next.seriesGroups : []).filter((group) => !Array.isArray(group?.nodeIds) || !group.nodeIds.includes(nodeId));
@@ -13429,10 +13845,11 @@
   }
 
   function openContextMenu(x, y, nodeId) {
-    if (!state.editing || !canEditWiki()) return;
+    const name = state.selected || state.homeMenuName;
+    if (!state.editing || !canEditWiki(name)) return;
     state.contextMenu = { x, y, nodeId };
-    const model = currentModel(state.selected);
-    const base = baseModelFor(state.selected, state.info.get(state.selected) || {}, currentFormId(state.selected));
+    const model = currentModel(name);
+    const base = baseModelFor(name, state.info.get(name) || {}, currentFormId(name));
     const hiddenNodes = base.nodes.filter((node) => !model.nodes.some((entry) => entry.id === node.id));
     const contextNode = model.nodes.find((node) => node.id === nodeId);
     const canConfigureSeries = Boolean(contextNode && contextNode.category !== 'buff' && model.nodes.some((node) => node.id !== nodeId && node.category === contextNode.category && (node.modeId || '') === (contextNode.modeId || '') && (node.formId || '') === (contextNode.formId || '') && Number(node.resonanceLevel || 0) === Number(contextNode.resonanceLevel || 0)));
@@ -13440,7 +13857,7 @@
     menu.className = 'community-wiki-context-menu';
     menu.style.left = `${Math.min(x, window.innerWidth - 238)}px`;
     menu.style.top = `${Math.min(y, window.innerHeight - 330)}px`;
-    menu.innerHTML = `<strong>${esc(nodeId ? contextNode?.title || t('selectedNode') : t('skills'))}</strong><button data-wiki-editor-action="new">＋ ${esc(t('newAction'))}</button><button data-wiki-editor-action="new-buff">◇ ${esc(t('newBuff'))}</button><button data-wiki-editor-action="set-series" data-wiki-node="${esc(nodeId || '')}" ${canConfigureSeries ? '' : 'disabled'}>▱ ${esc(t('seriesSettings'))}</button><button data-wiki-editor-action="copy" ${nodeId ? '' : 'disabled'}>⧉ ${esc(t('copy'))}</button><button data-wiki-editor-action="paste" ${state.clipboard ? '' : 'disabled'}>⧉ ${esc(t('paste'))}</button><button data-wiki-editor-action="cut" ${nodeId ? '' : 'disabled'}>✂ ${esc(t('cut'))}</button><button data-wiki-editor-action="delete" data-wiki-node="${esc(nodeId || '')}" ${nodeId ? '' : 'disabled'}>× ${esc(t('delete'))}</button><hr><button data-wiki-editor-action="undo" ${state.editorHistory.length ? '' : 'disabled'}>↶ ${esc(t('undo'))}</button><button data-wiki-editor-action="redo" ${state.editorFuture.length ? '' : 'disabled'}>↷ ${esc(t('redo'))}</button><button data-wiki-editor-action="layout">⌗ ${esc(t('resetLayout'))}</button>${hiddenNodes.length ? `<hr><small class="community-wiki-context-subheading">${esc(t('restore'))}</small>${hiddenNodes.slice(0, 6).map((node) => `<button data-wiki-editor-action="restore" data-wiki-node="${esc(node.id)}">↶ ${esc(node.title)}</button>`).join('')}` : ''}<button data-wiki-close-menu>× ${esc(t('close'))}</button>`;
+    menu.innerHTML = `<strong>${esc(nodeId ? contextNode?.title || t('selectedNode') : t('skills'))}</strong><button data-wiki-editor-action="create-mode">＋ ${esc(t('add'))}</button><button data-wiki-editor-action="set-series" data-wiki-node="${esc(nodeId || '')}" ${canConfigureSeries ? '' : 'disabled'}>▱ ${esc(t('seriesSettings'))}</button><button data-wiki-editor-action="copy" ${nodeId ? '' : 'disabled'}>⧉ ${esc(t('copy'))}</button><button data-wiki-editor-action="paste" ${state.clipboard ? '' : 'disabled'}>⧉ ${esc(t('paste'))}</button><button data-wiki-editor-action="cut" ${nodeId ? '' : 'disabled'}>✂ ${esc(t('cut'))}</button><button data-wiki-editor-action="delete" data-wiki-node="${esc(nodeId || '')}" ${nodeId ? '' : 'disabled'}>× ${esc(t('delete'))}</button><hr><button data-wiki-editor-action="undo" ${state.editorHistory.length ? '' : 'disabled'}>↶ ${esc(t('undo'))}</button><button data-wiki-editor-action="redo" ${state.editorFuture.length ? '' : 'disabled'}>↷ ${esc(t('redo'))}</button>${hiddenNodes.length ? `<hr><small class="community-wiki-context-subheading">${esc(t('restore'))}</small>${hiddenNodes.slice(0, 6).map((node) => `<button data-wiki-editor-action="restore" data-wiki-node="${esc(node.id)}">↶ ${esc(node.title)}</button>`).join('')}` : ''}<button data-wiki-close-menu>× ${esc(t('close'))}</button>`;
     WIKI_ROOT.appendChild(menu);
     menu.querySelectorAll('[data-wiki-editor-action]').forEach((element) => element.addEventListener('click', () => handleEditorAction(element.dataset.wikiEditorAction || '', element.dataset.wikiNode || nodeId || '')));
     menu.querySelector('[data-wiki-close-menu]')?.addEventListener('click', closeContextMenu);
@@ -13486,10 +13903,21 @@
   function handleEditorAction(action, nodeId) {
     closeContextMenu();
     if (!state.editing || !canEditWiki()) return;
-    const name = state.selected, model = currentModel(name);
-    if (action === 'new' || action === 'new-buff') { state.selectedNode = 'new'; state.editorDraftCategory = action === 'new-buff' ? 'buff' : 'normal'; state.editing = true; renderDetail(name); return; }
-    if (action === 'set-series') { state.selectedNode = nodeId; state.editing = true; renderDetail(name); return; }
-    if (action === 'cancel') { state.selectedNode = ''; renderDetail(name); return; }
+    const name = state.selected || state.homeMenuName, model = currentModel(name);
+    if (action === 'create-mode') {
+      state.editorCreateMode = !state.editorCreateMode;
+      syncWikiCreateGhost();
+      WIKI_ROOT.querySelectorAll('[data-wiki-editor-create-toggle]').forEach((button) => button.classList.toggle('active', state.editorCreateMode));
+      return;
+    }
+    if (action === 'new' || action === 'new-buff') {
+      state.editorCreateMode = true;
+      state.selectedNode = '';
+      WIKI_ROOT.querySelectorAll('[data-wiki-editor-create-toggle]').forEach((button) => button.classList.add('active'));
+      return;
+    }
+    if (action === 'set-series') { state.selectedNode = nodeId; state.editing = true; renderActiveWikiSurface(name); return; }
+    if (action === 'cancel') { state.selectedNode = ''; renderActiveWikiSurface(name); return; }
     if (action === 'copy' || action === 'cut') {
       const node = model.nodes.find((entry) => entry.id === nodeId);
       if (!node) return;
@@ -13507,12 +13935,11 @@
     if (action === 'delete') { deleteEditorNode(nodeId); return; }
     if (action === 'remove-series') { removeEditorSeries(nodeId); return; }
     if (action === 'undo' && state.editorHistory.length) {
-      const next = state.editorHistory.pop(); state.editorFuture.push(copyModel(model)); writeStoredModel(name, currentFormId(name), next); persistEditorStore(); renderDetail(name); queueWikiSave(name, next); return;
+      const next = state.editorHistory.pop(); state.editorFuture.push(copyModel(model)); writeStoredModel(name, currentFormId(name), next); persistEditorStore(); renderActiveWikiSurface(name); return;
     }
     if (action === 'redo' && state.editorFuture.length) {
-      const next = state.editorFuture.pop(); state.editorHistory.push(copyModel(model)); writeStoredModel(name, currentFormId(name), next); persistEditorStore(); renderDetail(name); queueWikiSave(name, next); return;
+      const next = state.editorFuture.pop(); state.editorHistory.push(copyModel(model)); writeStoredModel(name, currentFormId(name), next); persistEditorStore(); renderActiveWikiSurface(name); return;
     }
-    if (action === 'layout') { const next = copyModel(model); next.positions = {}; commitModel(name, next); return; }
     if (action === 'restore') { restoreEditorNode(nodeId); return; }
   }
 
@@ -13530,16 +13957,17 @@
 
   function deleteEditorNode(nodeId) {
     if (!nodeId) return;
-    const model = currentModel(state.selected), next = copyModel(model);
+    const name = state.selected || state.homeMenuName;
+    const model = currentModel(name), next = copyModel(model);
     next.nodes = next.nodes.filter((node) => node.id !== nodeId);
     next.edges = next.edges.filter((edge) => edge.from !== nodeId && edge.to !== nodeId);
     next.seriesGroups = (Array.isArray(next.seriesGroups) ? next.seriesGroups : []).map((group) => ({ ...group, nodeIds: (Array.isArray(group.nodeIds) ? group.nodeIds : []).filter((id) => id !== nodeId) })).filter((group) => group.disabled === true ? group.nodeIds.length : group.nodeIds.length >= 2);
     delete next.positions?.[nodeId];
-    state.selectedNode = ''; commitModel(state.selected, next);
+    state.selectedNode = ''; commitModel(name, next);
   }
 
-  function bindNodeDrag(element, seriesGroups = []) {
-    if (!state.editing || !canEditWiki()) return;
+  function bindNodeDrag(element, seriesGroups = [], name = state.selected || state.homeMenuName) {
+    if (!state.editing || !canEditWiki(name)) return;
     if (element.dataset.wikiDragBound === 'true') return;
     element.dataset.wikiDragBound = 'true';
     let drag = null;
@@ -13681,12 +14109,12 @@
       try { element.releasePointerCapture?.(event.pointerId); } catch {}
       document.body.classList.remove('wiki-node-dragging');
       if (!moved || !dragState.primaryId) return;
-      const model = currentModel(state.selected), next = copyModel(model);
+      const model = currentModel(name), next = copyModel(model);
       next.positions = { ...(next.positions || {}) };
       dragState.starts.forEach((start) => {
         next.positions[start.id] = { x: Math.max(8, start.x + dragState.currentDx), y: Math.max(8, start.y + dragState.currentDy) };
       });
-      commitModel(state.selected, next, { preserveGraph: true, deferPersist: true });
+      commitModel(name, next, { preserveGraph: true, deferPersist: true });
     };
     const onGlobalPointerMove = (event) => {
       if (!drag || event.pointerId !== drag.pointerId) return;
@@ -13704,7 +14132,7 @@
     const onGlobalPointerUp = (event) => finishDrag(event);
     const onGlobalPointerCancel = (event) => finishDrag(event);
     element.addEventListener('pointerdown', (event) => {
-      if (!state.editing || !canEditWiki()) return;
+      if (!state.editing || !canEditWiki(name)) return;
       if (event.button !== 0) return;
       // Input-route icons are interactive controls inside the card. In edit
       // mode they must switch the route before the card-level drag handler
@@ -13713,7 +14141,7 @@
       const graph = element.closest('[data-wiki-graph]');
       const viewport = graph?.closest('[data-wiki-graph-scroll]');
       const seriesKey = element.dataset.wikiSeries || '';
-      const model = currentModel(state.selected);
+      const model = currentModel(name);
       const series = seriesKey ? seriesGroups.find((group) => group.key === seriesKey) : null;
       const graphRect = graph.getBoundingClientRect();
       const canvasZoom = Math.max(.01, graph.offsetWidth ? graphRect.width / graph.offsetWidth : Number(state.graphCanvasZoom || state.graphZoom) || 1);
@@ -13810,17 +14238,18 @@
     const modeSelector = modes.length === 2
       ? `<div class="community-wiki-mode-toggle" style="--wiki-element:${esc(colorFor(entry.element))}" role="group" aria-label="${esc(t('mode'))}"><i data-lucide="waypoints" aria-hidden="true"></i><span>${esc(t('mode'))}</span><div class="community-wiki-mode-toggle-buttons">${modes.map((mode) => `<button type="button" value="${esc(mode.id)}" data-wiki-mode class="${mode.id === activeMode ? 'active' : ''}" aria-pressed="${mode.id === activeMode}" title="${esc(mode.description || mode.label)}"><i data-lucide="${modeIcon(mode)}" aria-hidden="true"></i><b>${esc(mode.label)}</b></button>`).join('')}</div></div>`
       : modes.length ? `<label class="community-wiki-mode-select" style="--wiki-element:${esc(colorFor(entry.element))}"><i data-lucide="waypoints" aria-hidden="true"></i><span>${esc(t('mode'))}</span><select data-wiki-mode aria-label="${esc(t('mode'))}">${modes.map((mode) => `<option value="${esc(mode.id)}" ${mode.id === activeMode ? 'selected' : ''}>${esc(mode.label)}</option>`).join('')}</select></label>` : '';
-    const newComboButton = `<button class="community-wiki-new-combo" type="button" data-solo-action="new" data-wiki-name="${esc(name)}" title="${esc(t('newCombo'))}"><i data-lucide="plus" aria-hidden="true"></i><span>${esc(t('newCombo'))}</span></button>`;
-    const editorButton = canEditWiki()
+    const creatingCombo = Boolean(state.soloComboOpen && state.soloComboEditing);
+    const newComboButton = `<button class="community-wiki-new-combo ${creatingCombo ? 'active' : ''}" type="button" data-solo-action="new" data-wiki-name="${esc(name)}" title="${esc(creatingCombo ? '退出创建' : t('newCombo'))}"><i data-lucide="${creatingCombo ? 'x' : 'plus'}" aria-hidden="true"></i><span>${esc(creatingCombo ? '创建中' : t('newCombo'))}</span></button>`;
+    const editorButton = canEditWiki(name)
       ? `<button class="community-wiki-editor-toggle ${state.editing ? 'active' : ''}" type="button" data-wiki-editor-toggle><i data-lucide="pencil"></i>${esc(state.editing ? t('editing') : t('edit'))}<small>${esc(isLocalWikiPreview() ? t('localEdit') : state.wikiSaveStatus === 'saving' ? t('saving') : state.wikiSaveStatus === 'error' ? t('saveFailed') : state.wikiSaveStatus === 'saved' ? t('saved') : t('readonly'))}</small></button>`
       : isWikiLocked(name)
         ? `<button class="community-wiki-editor-feedback" type="button" data-wiki-feedback data-wiki-character="${esc(name)}"><i data-lucide="message-square-warning"></i>${esc(t('requestEdit'))}</button>`
         : `<span class="community-wiki-readonly"><i data-lucide="log-in"></i>${esc(isWikiAccountAuthenticated() ? t('readonly') : t('loginToEdit'))}</span>`;
-    const panel = state.editing && canEditWiki() && state.selectedNode === 'new' ? `<div class="community-wiki-node-panel-inner"><div class="community-wiki-panel-title"><i data-lucide="pencil"></i><strong>${esc(state.editorDraftCategory === 'buff' ? t('newBuff') : t('newAction'))}</strong></div>${editorForm(null, model)}</div>` : state.editing && canEditWiki() && selected ? `<div class="community-wiki-node-panel-inner"><div class="community-wiki-panel-title"><i data-lucide="pencil"></i><strong>${esc(t('editorTitle'))}</strong></div>${editorForm(selected, model)}</div>` : `<div class="community-wiki-node-panel-inner"><div class="community-wiki-panel-title"><i data-lucide="circle-dot"></i><strong>${esc(t('selectedNode'))}</strong></div>${nodeDetail(selected, name, visibleModel)}</div>`;
+    const panel = state.editing && canEditWiki(name) && state.selectedNode === 'new' ? `<div class="community-wiki-node-panel-inner"><div class="community-wiki-panel-title"><i data-lucide="pencil"></i><strong>${esc(state.editorDraftCategory === 'buff' ? t('newBuff') : t('newAction'))}</strong></div>${editorForm(null, model, name)}</div>` : state.editing && canEditWiki(name) && selected ? `<div class="community-wiki-node-panel-inner"><div class="community-wiki-panel-title"><i data-lucide="pencil"></i><strong>${esc(t('editorTitle'))}</strong></div>${editorForm(selected, model, name)}</div>` : `<div class="community-wiki-node-panel-inner"><div class="community-wiki-panel-title"><i data-lucide="circle-dot"></i><strong>${esc(t('selectedNode'))}</strong></div>${nodeDetail(selected, name, visibleModel)}</div>`;
     const profileModal = state.profileOpen ? `<div class="community-wiki-floating"><div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-profile-modal" role="dialog" aria-modal="true"><header><div>${avatar(name)}<div><p class="community-wiki-eyebrow">${esc(t('base'))}</p><h2>${esc(name)}</h2></div></div><button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><div class="community-wiki-floating-body"><dl><div><dt>${esc(t('star'))}</dt><dd>${'★'.repeat(Math.max(1, Math.min(5, entry.star)))}</dd></div><div><dt>${esc(t('element'))}</dt><dd style="color:${colorFor(entry.element)}">${esc(displayValue(entry.element || '—'))}</dd></div><div><dt>${esc(t('weapon'))}</dt><dd>${esc(displayValue(entry.weaponType || '—'))}</dd></div><div><dt>HP</dt><dd>${esc(stats.hp || '—')}</dd></div><div><dt>ATK</dt><dd>${esc(stats.atk || '—')}</dd></div><div><dt>DEF</dt><dd>${esc(stats.def || '—')}</dd></div></dl></div></section></div>` : '';
-    const nodeModal = !state.profileOpen && (selected || state.selectedNode === 'new') ? `<div class="community-wiki-floating"><div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-node-modal" role="dialog" aria-modal="true"><header><div><i data-lucide="git-branch"></i><strong>${esc(state.editing && canEditWiki() ? t('editorTitle') : t('selectedNode'))}</strong></div><button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header>${panel}</section></div>` : '';
+    const nodeModal = !state.profileOpen && (selected || state.selectedNode === 'new') ? `<div class="community-wiki-floating"><div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-node-modal" role="dialog" aria-modal="true"><header><div><i data-lucide="${state.editing && canEditWiki(name) ? 'pencil' : 'git-branch'}"></i><strong>${esc(state.editing && canEditWiki(name) ? t('editorTitle') : t('selectedNode'))}</strong></div><div class="community-wiki-editor-header-actions">${state.editing && canEditWiki(name) ? wikiEditorHeaderSaveButton() : ''}<button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></div></header>${panel}</section></div>` : '';
     const formTabs = forms.length > 1 ? `<div class="community-wiki-form-tabs" role="tablist" aria-label="${esc(t('forms'))}">${forms.map((form) => `<button type="button" role="tab" aria-selected="${form.id === activeForm}" class="${form.id === activeForm ? 'active' : ''}" data-wiki-form="${esc(form.id)}" title="${esc(form.description || '')}"><i data-lucide="${form.id === 'blazing' || form.id === 'absolution' ? 'flame' : form.id === 'lion' || form.id === 'mech' ? 'sparkles' : 'circle-dot'}"></i><span>${esc(form.label)}</span></button>`).join('')}</div>` : '';
-      renderShell(`<div class="community-wiki-detail-layout community-wiki-tree-layout"><section class="community-wiki-tree"><div class="community-wiki-section-heading community-wiki-tree-toolbar"><div class="community-wiki-tree-actions">${newComboButton}${editorButton}<span class="community-wiki-tree-toolbar-spacer" aria-hidden="true"></span>${chainSelector}${modeSelector}${formTabs}</div></div><div class="community-wiki-tree-scroll" data-wiki-graph-scroll data-wiki-lock-six-lanes>${renderGraph(visibleModel, colorFor(entry.element), name)}${soloComboEditorOverlay(name)}</div></section></div>${profileModal}${nodeModal}${state.soloComboEditing ? '' : soloComboModal(name)}${soloComboSaveConfirmModal(name)}`, true);
+      renderShell(`<div class="community-wiki-detail-layout community-wiki-tree-layout"><section class="community-wiki-tree"><div class="community-wiki-section-heading community-wiki-tree-toolbar"><div class="community-wiki-tree-actions">${newComboButton}${editorButton}${state.editing ? editActivityMarkup(name) : ''}<span class="community-wiki-tree-toolbar-spacer" aria-hidden="true"></span>${chainSelector}${modeSelector}${formTabs}</div></div><div class="community-wiki-tree-scroll" data-wiki-graph-scroll data-wiki-lock-six-lanes>${renderGraph(visibleModel, colorFor(entry.element), name)}${soloComboEditorOverlay(name)}</div></section></div>${profileModal}${nodeModal}${state.soloComboEditing ? '' : soloComboModal(name)}${soloComboSaveConfirmModal(name)}`, true);
   }
 
   function openSkill(key) {

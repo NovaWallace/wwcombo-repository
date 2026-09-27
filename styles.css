@@ -1266,6 +1266,9 @@ html[data-theme='day'] body.wiki-route .community-wiki-resonance-change-list p {
 .community-wiki-floating-panel > header strong, .community-wiki-floating-panel > header h2 { margin: 0; font-size: 18px; }
 .community-wiki-floating-panel > header button { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 4px; background: var(--surface-raised); color: var(--muted); cursor: pointer; }
 .community-wiki-floating-panel > header button:hover { border-color: var(--gold); color: var(--gold); }
+.community-wiki-floating-panel > header .community-wiki-editor-header-actions { display: inline-flex; align-items: center; gap: 6px; }
+.community-wiki-floating-panel > header .community-wiki-editor-header-save { width: auto; min-width: 74px; padding: 0 10px; border-color: var(--gold); color: var(--gold); font-size: 10px; font-weight: 800; }
+.community-wiki-floating-panel > header .community-wiki-editor-header-save svg { width: 15px; height: 15px; }
 .community-wiki-node-modal .community-wiki-node-panel-inner { min-height: 0; }
 .community-wiki-node-modal .community-wiki-panel-title { display: none; }
 .community-wiki-profile-modal { width: min(390px, 100%); }
@@ -2379,6 +2382,17 @@ html[data-theme='day'] body.wiki-route .community-wiki-graph-node.is-series-mast
 html:not([data-theme='day']) body.wiki-route .community-wiki-edit-activity-panel { background: #293236; border-color: #455258; }
 html:not([data-theme='day']) body.wiki-route .community-wiki-edit-activity-list li { background: #344146; color: #e3ebeb; }
 
+/* Edit-mode creation feedback stays attached to the pointer and never opens
+   a separate fullscreen surface. */
+.community-wiki-create-ghost { position: fixed; z-index: 1600; display: inline-flex; align-items: center; gap: 6px; min-width: 112px; min-height: 42px; padding: 7px 10px; border: 1px dashed var(--accent, var(--gold)); border-radius: 4px; background: color-mix(in srgb, var(--surface-raised) 86%, transparent); box-shadow: 0 8px 22px rgba(0,0,0,.2); color: var(--text); font-size: 10px; font-weight: 800; pointer-events: none; opacity: .92; transform: translateZ(0); }
+.community-wiki-create-ghost svg { width: 18px; height: 18px; color: var(--accent, var(--gold)); }
+.community-wiki-create-ghost.is-buff { border-color: #6ca7b7; }
+.community-wiki-edit-activity-rail { flex: 0 0 auto; }
+.community-wiki-edit-activity-rail .community-wiki-edit-activity-panel { right: auto; left: 0; }
+.community-wiki-tree-actions > .community-wiki-edit-activity,
+.community-wiki-home-tree-tools > .community-wiki-edit-activity { margin-left: 2px; }
+html[data-theme='day'] body.wiki-route .community-wiki-create-ghost { background: rgba(255,255,255,.94); color: #273438; }
+
 @media (max-width: 780px) {
   .community-wiki-home-hero { min-height: 310px; }
   .community-wiki-home-hero-inner { width: calc(100% - 28px); min-height: 310px; align-items: flex-end; padding: 32px 0 70px; }
@@ -3258,8 +3272,7 @@ html:not([data-theme='day']) .leaderboard-metric-headers small { color: #aeb8ba;
   .leaderboard-metric-headers small { font-size: 8px; }
 }
 
-/* Wiki tool icons must follow the surface contrast. Some tree/editor controls
-   set a light icon color locally, which becomes unreadable on the day rail. */
+/* Wiki tool icons must follow the surface contrast. */
 html[data-theme='day'] body.wiki-route {
   --wiki-tool-ink: #172126;
 }
