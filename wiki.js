@@ -12240,13 +12240,14 @@
       && cached.stored === storedSource
       && cached.formId === formId
       && cached.modeId === modeId
-      && cached.chainId === chainId) return cached.model;
+      && cached.chainId === chainId
+      && cached.locale === locale()) return cached.model;
     const base = normalizeModelCategories(stripPersistentAuxiliaryNodes(baseModelFor(name, info, formId)));
     const stored = normalizeModelCategories(stripPersistentAuxiliaryNodes(storedModelFor(name, formId)));
     let result;
     if (!stored || !Array.isArray(stored.nodes)) {
       result = filterModes(filterResonanceChains(resolveAirborneTags(base), name), name);
-      state.modelCache.set(name, { info, stored: storedSource, formId, modeId, chainId, model: result });
+      state.modelCache.set(name, { info, stored: storedSource, formId, modeId, chainId, locale: locale(), model: result });
       return result;
     }
     const legacyFlatApi = stored.nodes.some((node) => /^api:\d+$/.test(String(node?.id || '')));
@@ -12254,7 +12255,7 @@
       // Older previews stored one page per form or one node per skill. Rebase
       // matching edits onto the complete graph and retain custom additions.
       result = filterModes(filterResonanceChains(resolveAirborneTags(rebaseStoredModel(name, base, stored)), name), name);
-      state.modelCache.set(name, { info, stored: storedSource, formId, modeId, chainId, model: result });
+      state.modelCache.set(name, { info, stored: storedSource, formId, modeId, chainId, locale: locale(), model: result });
       return result;
     }
     const activeMode = currentModeId(name);
@@ -12269,7 +12270,7 @@
     const storedEdges = Array.isArray(stored.edges) ? stored.edges : base.edges;
     const mergedEdges = [...storedEdges, ...base.edges.filter((edge) => mergedIds.has(edge.from) && mergedIds.has(edge.to) && !storedEdges.some((item) => item.from === edge.from && item.to === edge.to))];
     result = filterModes(filterResonanceChains(resolveAirborneTags({ ...base, ...stored, nodes: mergedNodes, edges: mergedEdges, positions: stored.positions && typeof stored.positions === 'object' ? stored.positions : {} }), name), name);
-    state.modelCache.set(name, { info, stored: storedSource, formId, modeId, chainId, model: result });
+    state.modelCache.set(name, { info, stored: storedSource, formId, modeId, chainId, locale: locale(), model: result });
     return result;
   }
 
@@ -13826,13 +13827,15 @@
 
   function mountHomeNodeModal(name, nodeId, forceEditing = false) {
     const graph = WIKI_ROOT.querySelector('[data-wiki-graph]');
-    const node = currentModel(name)?.nodes?.find((entry) => entry.id === nodeId);
-    if (!graph || !node) return false;
     const editing = Boolean(forceEditing && state.editing && canEditWiki(name));
+    const sourceModel = currentModel(name);
+    const displayModel = viewModelFor(name);
+    const node = (editing ? sourceModel : displayModel)?.nodes?.find((entry) => entry.id === nodeId);
+    if (!graph || !node) return false;
     WIKI_ROOT.querySelectorAll('.community-wiki-floating').forEach((element) => element.remove());
     const shell = document.createElement('div');
     shell.className = 'community-wiki-floating';
-    shell.innerHTML = `<div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-node-modal" role="dialog" aria-modal="true"><header><div><i data-lucide="${editing ? 'pencil' : 'git-branch'}"></i><strong>${esc(editing ? t('editorTitle') : t('selectedNode'))}</strong></div><div class="community-wiki-editor-header-actions">${editing ? wikiEditorHeaderSaveButton() : ''}<button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></div></header><div class="community-wiki-node-panel-inner">${editing ? editorForm(node, currentModel(name), name) : nodeDetail(node, name, viewModelFor(name))}</div></section>`;
+    shell.innerHTML = `<div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-node-modal" role="dialog" aria-modal="true"><header><div><i data-lucide="${editing ? 'pencil' : 'git-branch'}"></i><strong>${esc(editing ? t('editorTitle') : t('selectedNode'))}</strong></div><div class="community-wiki-editor-header-actions">${editing ? wikiEditorHeaderSaveButton() : ''}<button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></div></header><div class="community-wiki-node-panel-inner">${editing ? editorForm(node, sourceModel, name) : nodeDetail(node, name, displayModel)}</div></section>`;
     WIKI_ROOT.querySelector('.community-wiki-inner')?.appendChild(shell);
     shell.querySelectorAll('[data-wiki-overlay-close]').forEach((element) => element.addEventListener('click', (event) => {
       event.preventDefault();
