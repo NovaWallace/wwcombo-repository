@@ -71,7 +71,7 @@
         document.write('<link rel="stylesheet" href="assets/vendor/spine-player-4.1.23/spine-player.css" />');
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260927-wiki-editor-build-v1" />
+    <link rel="stylesheet" href="styles.css?v=20260926-leaderboard-rules-v1" />
   </head>
   <body>
     <div class="wiki-boot-screen" role="status" aria-live="polite" aria-label="加载中">
@@ -337,7 +337,7 @@
         <form class="account-form" id="profileForm">
           <label><span data-i18n="profile.username">用户名</span><input id="profileUsernameInput" maxlength="40" autocomplete="nickname" required /></label>
           <label><span data-i18n="profile.email">邮箱</span><input id="profileEmailInput" type="email" maxlength="254" autocomplete="email" required /></label>
-          <label><span>创作者主页 <small>可选，支持 B 站或抖音</small></span><input id="profileHomepageInput" type="url" maxlength="300" placeholder="https://space.bilibili.com/..." autocomplete="url" /></label>
+          <label><span><span data-i18n="profile.homepage">创作者主页</span> <small data-i18n="profile.homepageHint">可选，支持 B 站或抖音</small></span><input id="profileHomepageInput" type="url" maxlength="300" placeholder="https://space.bilibili.com/..." autocomplete="url" /></label>
           <div class="profile-avatar-picker">
             <div class="profile-avatar-picker-head"><span data-i18n="profile.avatar">头像</span><strong id="profileAvatarChoice" data-i18n="profile.avatarNone">未选择</strong></div>
             <div class="profile-avatar-grid" id="profileAvatarGrid"></div>
@@ -700,6 +700,6 @@
     </script>
     <script src="assets/input-icons.js?v=20260801-1"></script>
     <script>window.WWComboInputIcons = WWComboInputIcons;</script>
-    <script type="module" src="assets/wiki-runtime.min.js?v=20260927-wiki-input-route-fix-v1"></script>
+    <script type="module" src="assets/wiki-runtime.min.js?v=20260922-solo-combo-notes-v5"></script>
   </body>
 </html>

@@ -200,6 +200,10 @@
   Object.assign(catalogs['en-US'], { 'sponsor.note': 'Please add your community nickname in the payment note so we can thank you properly.' });
   Object.assign(catalogs['ja-JP'], { 'sponsor.note': 'お支払いの際はコミュニティのニックネームを備考に記入してください。私たちから感謝をお伝えできます。' });
   Object.assign(catalogs['ko-KR'], { 'sponsor.note': '후원할 때 커뮤니티 닉네임을 메모에 남겨 주세요. 저희가 감사의 마음을 전할 수 있습니다.' });
+  Object.assign(catalogs['zh-CN'], { 'profile.homepage': '创作者主页', 'profile.homepageHint': '可选，支持 B 站或抖音' });
+  Object.assign(catalogs['en-US'], { 'profile.homepage': 'Creator homepage', 'profile.homepageHint': 'Optional; Bilibili or Douyin' });
+  Object.assign(catalogs['ja-JP'], { 'profile.homepage': 'クリエイターホーム', 'profile.homepageHint': '任意。Bilibili または Douyin' });
+  Object.assign(catalogs['ko-KR'], { 'profile.homepage': '크리에이터 홈페이지', 'profile.homepageHint': '선택 사항; Bilibili 또는 Douyin' });
 
   const moveLabels = {
     '长按闪避': ['Hold Dodge', '回避長押し', '회피 길게 누르기'], '重击': ['Heavy Attack', '重撃', '강공격'],

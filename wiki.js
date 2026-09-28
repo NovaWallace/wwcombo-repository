@@ -5,6 +5,12 @@
   const APP_RELEASE_FALLBACK_ORIGIN = 'https://Nova.fb520.site';
   const ICON_MANIFEST_URL = './assets/character-icons.json?v=20260903-avatar-name-fix1';
   const TIDE_ICON_MANIFEST_URL = './assets/button-icons/tide/characters/index.json?v=20260919-wiki-rail-icons-v1';
+  // Nanoka keeps one complete character payload per language.  The current
+  // character API is still the canonical graph source; Nanoka is used as a
+  // localized text overlay so custom Wiki nodes and saved edits stay intact.
+  const NANOKA_DATA_ROOT = 'https://static.nanoka.cc/ww/3.7.3';
+  const NANOKA_CHARACTER_INDEX_URL = `${NANOKA_DATA_ROOT}/character.json`;
+  const NANOKA_LANGUAGE_CODES = { 'zh-CN': 'zh', 'en-US': 'en', 'ja-JP': 'ja', 'ko-KR': 'ko' };
   const PORTRAIT_ROOT = './assets/character-portraits/';
   const EMBLEM_ROOT = './assets/wiki-character-emblems-bright/';
   const PORTRAIT_ASSET_VERSION = '20260905-halfbody1';
@@ -58,7 +64,7 @@
     selectedNode: '', profileOpen: false, editing: false, contextMenu: null, clipboard: null,
     editorStore: {}, editorHistory: [], editorFuture: [], editorSession: null, contextDismiss: null,
     graphZoom: 1, graphCanvasZoom: 1, graphContentZoom: 1, graphPan: { x: 0, y: 0 }, expandedGroups: {}, replacementStates: {}, inputRouteStates: {}, editorDraftCategory: 'normal', tideIcons: new Map(), formId: 'normal', formIds: {}, chainIds: {}, modeIds: {}, wikiSaveTimers: new Map(), wikiSaveChains: new Map(), wikiSaveStatus: '', announcement: null, announcementOpen: false, hoveredCharacter: '',
-    homeMenuName: '', homeSurfaceTab: 'selector', homeContentTab: 'profile', homeSelectorScrollLeft: {}, homeSurfaceLoading: false, homeSurfaceLoadingSequence: 0, homeSurfaceFullscreen: false, homeCharacterPickerOpen: false, editorCreateMode: false, soloComboOpen: false, soloComboTab: 'solo', soloComboEditing: false, soloComboEditMode: 'combo', soloComboDraft: null, soloComboSelection: -1, soloComboSelections: [], soloComboClipboard: null, soloComboHistory: [], soloComboFuture: [], soloNativeDrag: null, soloComboCommunity: [], soloComboCommunityLoading: false, soloComboCommunityLoaded: false, soloComboPanelRect: null, soloCombosByCharacter: new Map(), soloComboLoadState: new Map(), soloComboSaveState: '', soloComboSaveConfirm: false, soloComboAnnotating: false, soloComboNoteAnchor: -1, homeFlowPreview: null, homeInfoLoadPromises: new Map(), homeInfoLoadState: new Map(), homeWikiLoadPromises: new Map(), homeFlowLoadPromises: new Map(), homeTreeAssetLoadPromises: new Map(), homeCharacterWarmPromises: new Map(), modelCache: new Map()
+    homeMenuName: '', homeSurfaceTab: 'selector', homeContentTab: 'profile', homeSelectorScrollLeft: {}, homeSurfaceLoading: false, homeSurfaceLoadingSequence: 0, homeSurfaceFullscreen: false, homeCharacterPickerOpen: false, editorCreateMode: false, soloComboOpen: false, soloComboTab: 'solo', soloComboEditing: false, soloComboEditMode: 'combo', soloComboDraft: null, soloComboSelection: -1, soloComboSelections: [], soloComboClipboard: null, soloComboHistory: [], soloComboFuture: [], soloNativeDrag: null, soloComboCommunity: [], soloComboCommunityLoading: false, soloComboCommunityLoaded: false, soloComboPanelRect: null, soloCombosByCharacter: new Map(), soloComboLoadState: new Map(), soloComboSaveState: '', soloComboSaveConfirm: false, soloComboAnnotating: false, soloComboNoteAnchor: -1, homeFlowPreview: null, homeInfoLoadPromises: new Map(), homeInfoLoadState: new Map(), homeWikiLoadPromises: new Map(), homeFlowLoadPromises: new Map(), homeTreeAssetLoadPromises: new Map(), homeCharacterWarmPromises: new Map(), infoLocale: new Map(), nanokaCharacterIds: null, nanokaCharacterNames: new Map(), nanokaCharacterIndexPromise: null, modelCache: new Map()
   };
 
   const EDITOR_STORAGE_KEY = 'wwcombo-community-wiki-editor-v1';
@@ -164,10 +170,10 @@
   Object.assign(copy['ja-JP'], { airborne: '空中状態', airborneNone: 'なし', airborneOnly: '空中のみ', airborneAvailable: '空中可', airborneAscend: '上昇', inputRoutes: '複数入力ルート', inputRouteHint: '入力と前提ノードをルートごとに設定します', inputRouteAdd: '入力ルートを追加', inputRouteRemove: 'ルートを削除' });
   Object.assign(copy['ko-KR'], { airborne: '공중 상태', airborneNone: '없음', airborneOnly: '공중 전용', airborneAvailable: '공중 가능', airborneAscend: '상승', inputRoutes: '다중 입력 경로', inputRouteHint: '각 경로의 입력과 선행 노드를 설정합니다', inputRouteAdd: '입력 경로 추가', inputRouteRemove: '경로 삭제' });
   Object.assign(copy['zh-CN'], { loginToEdit: '登录后可编辑', localEdit: '本地编辑', locked: '维护端已锁定', construction: '人工校验中', requestEdit: '反馈 / 申请编辑权', announcement: '最新公告', closeAnnouncement: '关闭公告', noAnnouncement: '暂无公告', saving: '正在保存', saved: '已保存', saveFailed: '保存失败' });
-  Object.assign(copy['zh-CN'], { tree: '树图', combo: '连段', teamFlow: '队伍流程', soloFlow: '单人连段', soloCombo: '单人连段', newCombo: '新建连段', comboName: '连段名称', saveCombo: '保存连段', noSoloCombos: '还没有保存的单人连段', comboEditor: '连段编辑区', comboMode: '连段', buffMode: 'Buff', dropNodes: '点击树图招式加入，或拖入此处', selected: '已选', bindBuff: '绑定 Buff', buffStart: '开始', buffEnd: '结束', buffStacks: '叠层', communityLoading: '正在读取连段社区', noCommunityCombos: '当前还没有可展示的社区连段', slangName: '黑话代号', slangPreset: '留空使用自动预设', copyTool: '复制', cutTool: '剪切', pasteTool: '粘贴', undoTool: '撤销', redoTool: '重做', remove: '移除' });
-  Object.assign(copy['en-US'], { slangName: 'Shorthand', slangPreset: 'Leave blank to use the automatic preset' });
-  Object.assign(copy['ja-JP'], { slangName: '俗称コード', slangPreset: '空欄で自動プリセット' });
-  Object.assign(copy['ko-KR'], { slangName: '통칭 코드', slangPreset: '비워 두면 자동 프리셋 사용' });
+  Object.assign(copy['zh-CN'], { tree: '树图', combo: '连段', teamFlow: '队伍流程', soloFlow: '单人连段', soloCombo: '单人连段', newCombo: '新建连段', creatingCombo: '创建中', exitComboCreation: '退出创建', comboName: '连段名称', saveCombo: '保存连段', noSoloCombos: '还没有保存的单人连段', comboEditor: '连段编辑区', comboMode: '连段', buffMode: 'Buff', dropNodes: '点击树图招式加入，或拖入此处', selected: '已选', bindBuff: '绑定 Buff', buffStart: '开始', buffEnd: '结束', buffStacks: '叠层', communityLoading: '正在读取连段社区', noCommunityCombos: '当前还没有可展示的社区连段', slangName: '黑话代号', slangPreset: '留空使用自动预设', copyTool: '复制', cutTool: '剪切', pasteTool: '粘贴', undoTool: '撤销', redoTool: '重做', remove: '移除' });
+  Object.assign(copy['en-US'], { tree: 'Tree', combo: 'Combo', teamFlow: 'Team flow', soloFlow: 'Solo combo', soloCombo: 'Solo combo', newCombo: 'New combo', creatingCombo: 'Creating', exitComboCreation: 'Exit creation', comboName: 'Combo name', saveCombo: 'Save combo', noSoloCombos: 'No saved solo combos', comboEditor: 'Combo editor', comboMode: 'Combo', buffMode: 'Buff', dropNodes: 'Double-click a tree move to add it, or drag it here', selected: 'Selected', bindBuff: 'Bind Buff', buffStart: 'Start', buffEnd: 'End', buffStacks: 'Stacks', communityLoading: 'Loading combo community', noCommunityCombos: 'No community combos yet', slangName: 'Shorthand', slangPreset: 'Leave blank to use the automatic preset', copyTool: 'Copy', cutTool: 'Cut', pasteTool: 'Paste', undoTool: 'Undo', redoTool: 'Redo', remove: 'Remove' });
+  Object.assign(copy['ja-JP'], { newCombo: 'コンボを作成', creatingCombo: '作成中', exitComboCreation: '作成を終了', comboName: 'コンボ名', saveCombo: 'コンボを保存', comboEditor: 'コンボ編集エリア', soloCombo: 'ソロコンボ', teamFlow: 'チーム手順', soloFlow: 'ソロ手順', slangName: '俗称コード', slangPreset: '空欄で自動プリセット' });
+  Object.assign(copy['ko-KR'], { newCombo: '콤보 만들기', creatingCombo: '생성 중', exitComboCreation: '생성 종료', comboName: '콤보 이름', saveCombo: '콤보 저장', comboEditor: '콤보 편집 영역', soloCombo: '솔로 콤보', teamFlow: '팀 흐름', soloFlow: '솔로 흐름', slangName: '통칭 코드', slangPreset: '비워 두면 자동 프리셋 사용' });
   Object.assign(copy['en-US'], { loginToEdit: 'Sign in to edit', localEdit: 'Local editing', locked: 'Locked by maintenance', construction: 'Under manual review', requestEdit: 'Report / Request access', announcement: 'Latest announcement', closeAnnouncement: 'Close announcement', noAnnouncement: 'No announcement yet', saving: 'Saving', saved: 'Saved', saveFailed: 'Save failed' });
   Object.assign(copy['ja-JP'], { loginToEdit: 'ログインして編集', localEdit: 'ローカル編集', locked: 'メンテナンス側でロック中', construction: '手動検証中', requestEdit: '報告 / 編集権限を申請', announcement: '最新のお知らせ', closeAnnouncement: 'お知らせを閉じる', noAnnouncement: 'お知らせはありません', saving: '保存中', saved: '保存済み', saveFailed: '保存失敗' });
   Object.assign(copy['ko-KR'], { loginToEdit: '로그인 후 편집', localEdit: '로컬 편집', locked: '관리자 잠금', construction: '수동 검증 중', requestEdit: '신고 / 편집 권한 신청', announcement: '최신 공지', closeAnnouncement: '공지 닫기', noAnnouncement: '공지가 없습니다', saving: '저장 중', saved: '저장됨', saveFailed: '저장 실패' });
@@ -286,6 +292,136 @@
       // Cache storage is an optimization; the network response remains valid.
     }
   }
+
+  function nanokaLanguageCode(language = locale()) {
+    return NANOKA_LANGUAGE_CODES[language] || 'zh';
+  }
+
+  async function loadNanokaCharacterIndex() {
+    if (state.nanokaCharacterIds) return state.nanokaCharacterIds;
+    if (state.nanokaCharacterIndexPromise) return state.nanokaCharacterIndexPromise;
+    state.nanokaCharacterIndexPromise = (async () => {
+      try {
+        const payload = await readCachedJsonOrFetch(NANOKA_CHARACTER_INDEX_URL, { mode: 'cors', cache: 'force-cache' }, 12000);
+        const ids = new Map();
+        const names = new Map();
+        Object.entries(payload || {}).forEach(([id, entry]) => {
+          const localizedNames = {
+            'zh-CN': String(entry?.zh || '').trim(),
+            'en-US': String(entry?.en || '').trim(),
+            'ja-JP': String(entry?.ja || '').trim(),
+            'ko-KR': String(entry?.ko || '').trim()
+          };
+          const chineseName = localizedNames['zh-CN'];
+          if (chineseName) {
+            names.set(chineseName, localizedNames);
+            names.set(canonicalCharacterName(chineseName), localizedNames);
+          }
+          ['zh', 'en', 'ja', 'ko'].forEach((key) => {
+            const value = String(entry?.[key] || '').trim();
+            if (value) ids.set(value, String(id));
+          });
+        });
+        state.nanokaCharacterIds = ids;
+        state.nanokaCharacterNames = names;
+      } catch (error) {
+        console.warn('[wiki] Nanoka character index unavailable', error);
+        state.nanokaCharacterIds = new Map();
+        state.nanokaCharacterNames = new Map();
+      } finally {
+        state.nanokaCharacterIndexPromise = null;
+      }
+      return state.nanokaCharacterIds;
+    })();
+    return state.nanokaCharacterIndexPromise;
+  }
+
+  async function nanokaCharacterUrl(name, language = locale()) {
+    const ids = await loadNanokaCharacterIndex();
+    const canonical = canonicalCharacterName(name);
+    const id = ids.get(name) || ids.get(canonical) || ids.get(basePresetAliases[canonical] || '') || '';
+    if (!id) return '';
+    return `${NANOKA_DATA_ROOT}/${nanokaLanguageCode(language)}/character/${encodeURIComponent(id)}.json`;
+  }
+
+  function nanokaParamText(value, params = []) {
+    const source = String(value || '');
+    return source.replace(/\{(\d+)\}/g, (match, index) => {
+      const replacement = Array.isArray(params) ? params[Number(index)] : '';
+      return replacement === undefined || replacement === null || replacement === '' ? match : String(replacement);
+    });
+  }
+
+  function nanokaAuxiliaryType(type = '') {
+    return /(?:固有技能|固有スキル|固有技|고유\s*스킬|inherent\s*skill|passive)/iu.test(String(type));
+  }
+
+  function nanokaLocalizedNodes(payload) {
+    return Object.values(payload?.skill_trees || {}).map((entry) => ({ entry, skill: entry?.skill })).filter(({ entry, skill }) => {
+      if (!skill || !String(skill.name || skill.desc || '').trim()) return false;
+      if (Number(entry?.node_type) === 4) return false;
+      return !nanokaAuxiliaryType(skill.type);
+    });
+  }
+
+  function nanokaLocalizedAuxiliaryNodes(payload) {
+    return Object.values(payload?.skill_trees || {}).map((entry) => ({ entry, skill: entry?.skill })).filter(({ entry, skill }) => {
+      if (!skill || !String(skill.name || skill.desc || '').trim()) return false;
+      return Number(entry?.node_type) === 4 || nanokaAuxiliaryType(skill.type);
+    });
+  }
+
+  function nanokaSkillRecord(source, fallback = {}) {
+    const skill = source?.skill || source || {};
+    const params = Array.isArray(skill.param) ? skill.param : [];
+    return {
+      ...fallback,
+      name: String(skill.name || fallback.name || '').trim(),
+      type: String(skill.type || fallback.type || '').trim(),
+      desc: nanokaParamText(skill.desc || fallback.desc || '', params),
+      simple_desc: nanokaParamText(skill.simple_desc || fallback.simple_desc || '', skill.simple_param || params),
+      icon: fallback.icon || skill.icon || '',
+      values: fallback.values || params,
+      damage: fallback.damage || skill.damage || {}
+    };
+  }
+
+  function localizeNanokaPayload(base, payload) {
+    if (!payload || typeof payload !== 'object') return base;
+    const localizedSkills = nanokaLocalizedNodes(payload).map((source) => nanokaSkillRecord(source));
+    const baseSkills = Array.isArray(base?.skills) ? base.skills : [];
+    const skills = baseSkills.map((skill, index) => localizedSkills[index] ? nanokaSkillRecord(localizedSkills[index], skill) : skill);
+    const localizedAuxiliary = nanokaLocalizedAuxiliaryNodes(payload).map((source) => nanokaSkillRecord(source));
+    const baseStatNodes = Array.isArray(base?.statNodes) ? base.statNodes : [];
+    const statNodes = baseStatNodes.length
+      ? baseStatNodes.map((node, index) => localizedAuxiliary[index] ? nanokaSkillRecord(localizedAuxiliary[index], node) : node)
+      : localizedAuxiliary;
+    const chains = Object.values(payload.chains || {}).map((chain, index) => ({
+      ...(Array.isArray(base?.chains) ? base.chains[index] : {}),
+      name: String(chain?.name || '').trim(),
+      desc: nanokaParamText(chain?.desc || '', chain?.param || []),
+      icon: chain?.icon || (Array.isArray(base?.chains) ? base.chains[index]?.icon : '') || ''
+    }));
+    const tags = Object.values(payload.tag || {}).map((tag) => String(tag?.name || '').trim()).filter(Boolean);
+    const level90 = payload.stats?.['6']?.['90'];
+    const stats = level90 ? {
+      ...(base?.lv90BaseStats || {}),
+      hp: level90.life ?? base?.lv90BaseStats?.hp,
+      atk: level90.atk ?? base?.lv90BaseStats?.atk,
+      def: level90.def ?? base?.lv90BaseStats?.def
+    } : base?.lv90BaseStats;
+    return {
+      ...base,
+      rarity: Number(payload.rarity || base?.rarity || 0) || base?.rarity,
+      tags: tags.length ? tags : base?.tags || [],
+      lv90BaseStats: stats,
+      skills: skills.length ? skills : localizedSkills,
+      statNodes,
+      chains: chains.length ? chains : base?.chains || [],
+      __nanokaLocalized: true
+    };
+  }
+
   async function readCachedJsonOrFetch(url, options = {}, timeoutMs = 12000) {
     const cached = await readCachedJson(url);
     if (cached !== null) {
@@ -535,6 +671,20 @@
   };
   const displayValue = (value) => localizedValues[locale()]?.[value] || value;
 
+  function nanokaCharacterNameRecord(name) {
+    const value = String(name || '').trim();
+    if (!value) return null;
+    return state.nanokaCharacterNames.get(value)
+      || state.nanokaCharacterNames.get(canonicalCharacterName(value))
+      || null;
+  }
+
+  function characterDisplayName(name) {
+    const value = String(name || '').trim();
+    if (!value || locale() === 'zh-CN') return value;
+    return nanokaCharacterNameRecord(value)?.[locale()] || value;
+  }
+
   function updateWikiNavigation(active) {
     const link = document.querySelector('[data-wiki-link]');
     const brandIcon = document.querySelector('.brand-icon');
@@ -606,14 +756,14 @@
   }
 
   const actionTextPatterns = {
-    liberation: /(?:共鸣解放|解放|终结|resonance\s*liberation|ultimate)/iu,
-    skill: /(?:共鸣技能|resonance\s*skill)/iu,
-    basic: /(?:普攻|普通攻击|常态攻击|basic\s*attack|normal\s*attack)/iu,
-    heavy: /(?:重击|heavy\s*attack)/iu,
-    hold: /(?:长按|按住|持续按住|蓄力|保持按住|hold|keep\s+holding)/iu,
-    release: /(?:松开|抬起|释放|release)/iu,
-    tap: /(?:短按|点按|点击|按下|立即按|tap|press)/iu,
-    specialTitle: /(?:闪避反击|空中攻击|下落攻击|空中重击|变奏技能|延奏技能|谐度破坏|出场技能|切入技能|跳跃攻击|dodge\s*counter|aerial\s*attack|plunging\s*attack|intro\s*skill|outro\s*skill|tune\s*break)/iu,
+    liberation: /(?:共鸣解放|解放|终结|resonance\s*liberation|ultimate|共鳴解放|공명\s*해방)/iu,
+    skill: /(?:共鸣技能|resonance\s*skill|共鳴スキル|공명\s*스킬)/iu,
+    basic: /(?:普攻|普通攻击|常态攻击|basic\s*attack|normal\s*attack|通常攻撃|基本攻撃|일반\s*공격|기본\s*공격)/iu,
+    heavy: /(?:重击|heavy\s*attack|重撃|강공격)/iu,
+    hold: /(?:长按|按住|持续按住|蓄力|保持按住|hold|keep\s+holding|長押し|길게\s*누르기)/iu,
+    release: /(?:松开|抬起|释放|release|離す|놓기)/iu,
+    tap: /(?:短按|点按|点击|按下|立即按|tap|press|連続押し|短押し|タップ|짧게\s*누르기)/iu,
+    specialTitle: /(?:闪避反击|空中攻击|下落攻击|空中重击|变奏技能|延奏技能|谐度破坏|出场技能|切入技能|跳跃攻击|dodge\s*counter|aerial\s*attack|plunging\s*attack|intro\s*skill|outro\s*skill|tune\s*break|回避反撃|空中攻撃|落下攻撃|変奏スキル|終奏スキル|協和破壊|회피\s*반격|공중\s*공격|변주\s*스킬|반주\s*스킬|조화도\s*파괴)/iu,
     specialTrigger: /(?:变奏技能|延奏技能|成功闪避后|成功闪避时|成功闪避|切入|出场|跳跃替换|短按跳跃|跳跃攻击|空中攻击|下落攻击|自动(?:施放|触发|进行)|响应同奏|受到攻击|由[^。；;，,]{1,28}(?:触发|引爆)|intro\s*skill|outro\s*skill|switch(?:\s+in|\s+character)|jump(?:\s+attack|\s+replacement)?|automatically\s+(?:cast|trigger|perform)|triggered\s+by)/iu,
     resourceTitle: /(?:获取规则|消耗规则|规则|状态|形态|模态|祝福|领域|印记|层数|点数|能量|资源|效果|效应|增益|架势|增幅|同步率|共鸣率|信条|意念|魂|蕊|阶段|模式|标记|视域|场|state|form|mode|stance|blessing|field|effect|buff|resource)$/iu,
     resourceText: /(?:上限|获取|获得|消耗|回复|恢复|叠加|层数|点数|持续(?:时间)?|进入(?:了)?[^。；;，,]{0,16}(?:状态|形态|模态)|替换(?:为|成)|变为|退出(?:了)?[^。；;，,]{0,16}(?:状态|形态|模态)|解锁|清除|自动消耗|可叠加|stack\s*cap|gain(?:ed)?|restore|recover|consume|lasts?|enter(?:ed)?|exit(?:ed)?|replace(?:d)?|unlock|clear|stacks?)/iu,
@@ -775,10 +925,10 @@
 
   function knownSkillTypeCategory(type) {
     const value = clean(type);
-    if (/常态攻击|普通攻击|basic\s*attack|normal\s*attack/iu.test(value)) return 'normal';
-    if (/共鸣技能|resonance\s*skill/iu.test(value)) return 'skill';
-    if (/共鸣解放|resonance\s*liberation/iu.test(value)) return 'liberation';
-    if (/变奏技能|延奏技能|谐度破坏|intro\s*skill|outro\s*skill|tune\s*break/iu.test(value)) return 'other';
+    if (/常态攻击|普通攻击|通常攻撃|基本攻撃|일반\s*공격|기본\s*공격|basic\s*attack|normal\s*attack/iu.test(value)) return 'normal';
+    if (/共鸣技能|共鳴スキル|공명\s*스킬|resonance\s*skill/iu.test(value)) return 'skill';
+    if (/共鸣解放|共鳴解放|공명\s*해방|resonance\s*liberation/iu.test(value)) return 'liberation';
+    if (/变奏技能|延奏技能|変奏スキル|終奏スキル|변주\s*스킬|반주\s*스킬|谐度破坏|協和破壊|조화도\s*파괴|intro\s*skill|outro\s*skill|tune\s*break/iu.test(value)) return 'other';
     return '';
   }
 
@@ -791,12 +941,12 @@
     const text = clean(value);
     if (!text) return '';
     const token = (pattern) => new RegExp(`(?:^|[·•:：/\\s（(])${pattern}(?=$|[·•:：/\\s）)])`, 'iu').test(text);
-    if (/(?:空中攻击|下落攻击|空中重击|闪避反击|跳跃攻击|强化攻击|声骸技能|重世幻象|aerial\s+attack|plunging\s+attack|dodge\s*counter|jump\s+attack|enhanced\s+attack|echo\s+skill)/iu.test(text)) return 'other';
-    if (/(?:变奏技能|延奏技能|出场技能|切入技能|intro\s*skill|outro\s*skill|switch\s*in)/iu.test(text)) return 'other';
-    if (token('重击|heavy\\s*attack')) return 'heavy';
-    if (token('普攻|普通攻击|常态攻击|basic\\s*attack|normal\\s*attack')) return 'normal';
-    if (token('共鸣技能|resonance\\s*skill')) return 'skill';
-    if (token('共鸣解放|解放|resonance\\s*liberation|ultimate')) return 'liberation';
+    if (/(?:空中攻击|下落攻击|空中重击|闪避反击|跳跃攻击|强化攻击|声骸技能|重世幻象|空中攻撃|落下攻撃|回避反撃|ジャンプ攻撃|強化攻撃|エコー攻撃|공중\s*공격|회피\s*반격|점프\s*공격|강화\s*공격|에코\s*스킬|aerial\s+attack|plunging\s+attack|dodge\s*counter|jump\s+attack|enhanced\s+attack|echo\s+skill)/iu.test(text)) return 'other';
+    if (/(?:变奏技能|延奏技能|出场技能|切入技能|変奏スキル|終奏スキル|入場スキル|변주\s*스킬|반주\s*스킬|intro\s*skill|outro\s*skill|switch\s*in)/iu.test(text)) return 'other';
+    if (token('重击|重撃|강공격|heavy\\s*attack')) return 'heavy';
+    if (token('普攻|普通攻击|常态攻击|通常攻撃|基本攻撃|일반\\s*공격|기본\\s*공격|basic\\s*attack|normal\\s*attack')) return 'normal';
+    if (token('共鸣技能|共鳴スキル|공명\\s*스킬|resonance\\s*skill')) return 'skill';
+    if (token('共鸣解放|共鳴解放|공명\\s*해방|解放|resonance\\s*liberation|ultimate')) return 'liberation';
     return '';
   }
 
@@ -908,25 +1058,25 @@
     const parentCategory = knownSkillTypeCategory(parentText);
     const parentIsStat = actionTextPatterns.statType.test(parentText);
     const parentIsCircuit = actionTextPatterns.circuit.test(parentText);
-    const titleIsAerial = /(?:空中攻击|下落攻击|空中重击|aerial\s*attack|plunging\s*attack)/iu.test(titleText);
-    const titleIsDodge = /(?:闪避反击|dodge\s*counter)/iu.test(titleText);
-    const titleIsIntro = /(?:变奏技能|出场技能|切入技能|intro\s*skill|switch\s*in)/iu.test(identity);
-    const titleIsOutro = /(?:延奏技能|outro\s*skill)/iu.test(identity);
-    const titleIsHeavy = /^(?:重击)(?:\s*[·:：\-]|\s*$)|^heavy\s*attack(?:\s*[:：\-]|\s*$)/iu.test(titleText);
-    const titleIsGenericHeavy = /^(?:重击|heavy\s*attack)$/iu.test(titleText);
-    const titleIsBasic = /^(?:普攻|普通攻击|常态攻击)(?:\s*[·:：\-]|\s*第|\s*$)|^(?:basic|normal)\s*attack(?:\s*[:：\-]|\s*\d|\s*$)/iu.test(titleText);
-    const titleIsGenericBasic = /^(?:普攻|普通攻击|常态攻击)(?:第?[一二三四五六七八九十百0-9]+段)?$|^(?:basic|normal)\s*attack(?:\s*\d+)?$/iu.test(titleText);
-    const titleIsSkill = /^(?:共鸣技能)(?:\s*[·:：\-]|\s*$)|^resonance\s*skill(?:\s*[:：\-]|\s*$)/iu.test(titleText);
-    const titleIsLiberation = /^(?:共鸣解放|解放)(?:\s*[·:：\-]|\s*$)|^(?:resonance\s*liberation|ultimate)(?:\s*[:：\-]|\s*$)/iu.test(titleText);
+    const titleIsAerial = /(?:空中攻击|下落攻击|空中重击|空中攻撃|落下攻撃|공중\s*공격|aerial\s*attack|plunging\s*attack)/iu.test(titleText);
+    const titleIsDodge = /(?:闪避反击|回避反撃|회피\s*반격|dodge\s*counter)/iu.test(titleText);
+    const titleIsIntro = /(?:变奏技能|出场技能|切入技能|変奏スキル|入場スキル|변주\s*스킬|intro\s*skill|switch\s*in)/iu.test(identity);
+    const titleIsOutro = /(?:延奏技能|終奏スキル|반주\s*스킬|outro\s*skill)/iu.test(identity);
+    const titleIsHeavy = /^(?:重击|重撃|강공격)(?:\s*[·:：\-]|\s*$)|^heavy\s*attack(?:\s*[:：\-]|\s*$)/iu.test(titleText);
+    const titleIsGenericHeavy = /^(?:重击|重撃|강공격|heavy\s*attack)$/iu.test(titleText);
+    const titleIsBasic = /^(?:普攻|普通攻击|常态攻击|通常攻撃|基本攻撃|일반\s*공격|기본\s*공격)(?:\s*[·:：\-]|\s*第|\s*$)|^(?:basic|normal)\s*attack(?:\s*[:：\-]|\s*\d|\s*$)/iu.test(titleText);
+    const titleIsGenericBasic = /^(?:普攻|普通攻击|常态攻击|通常攻撃|基本攻撃|일반\s*공격|기본\s*공격)(?:第?[一二三四五六七八九十百0-9]+段)?$|^(?:basic|normal)\s*attack(?:\s*\d+)?$/iu.test(titleText);
+    const titleIsSkill = /^(?:共鸣技能|共鳴スキル|공명\s*스킬)(?:\s*[·:：\-]|\s*$)|^resonance\s*skill(?:\s*[:：\-]|\s*$)/iu.test(titleText);
+    const titleIsLiberation = /^(?:共鸣解放|共鳴解放|공명\s*해방|解放)(?:\s*[·:：\-]|\s*$)|^(?:resonance\s*liberation|ultimate)(?:\s*[:：\-]|\s*$)/iu.test(titleText);
     const titleIsCircuit = actionTextPatterns.circuit.test(titleText);
     const titleIsResource = actionTextPatterns.resourceTitle.test(titleText) || actionTextPatterns.stateTitle.test(titleText);
     const titleIsAutomatic = actionTextPatterns.automatic.test(titleText);
     const titleIsResponse = /(?:响应|response)/iu.test(titleText);
-    const basicButton = '(?:普攻|普通攻击|常态攻击|basic\\s*attack|normal\\s*attack)';
-    const skillButton = '(?:共鸣技能|resonance\\s*skill)';
-    const liberationButton = '(?:共鸣解放|解放|resonance\\s*liberation|ultimate)';
-    const holdWords = '(?:长按|按住|持续按住|蓄力|保持按住|hold|keep\\s+holding)';
-    const tapWords = '(?:短按|点按|点击|按下|立即按|tap|press)';
+    const basicButton = '(?:普攻|普通攻击|常态攻击|通常攻撃|基本攻撃|일반\\s*공격|기본\\s*공격|basic\\s*attack|normal\\s*attack)';
+    const skillButton = '(?:共鸣技能|共鳴スキル|공명\\s*스킬|resonance\\s*skill)';
+    const liberationButton = '(?:共鸣解放|共鳴解放|공명\\s*해방|解放|resonance\\s*liberation|ultimate)';
+    const holdWords = '(?:长按|按住|持续按住|蓄力|保持按住|長押し|길게\\s*누르기|hold|keep\\s+holding)';
+    const tapWords = '(?:短按|点按|点击|按下|立即按|短押し|タップ|짧게\\s*누르기|tap|press)';
     // Keep an input and its button in the same clause. A wide arbitrary
     // window makes phrases such as “短按闪避……此次伤害为普攻伤害” look like
     // a Basic Attack input even though “普攻” there is only damage typing.
@@ -3343,7 +3493,38 @@
     const tapDodge = P('短按闪避', 'Tap Dodge');
     const dodgeBasic = P('成功闪避后短按普攻', 'Tap Basic Attack after a successful dodge');
     const intro = P('协奏能量充满后切入角色', 'Switch in with full Concerto Energy');
-    const basicChain = (prefix, count, titlePrefix = '普攻') => Array.from({ length: count }, (_, index) => n(`${prefix}-basic-${index + 1}`, P(`${titlePrefix}第${index + 1}段`, `${titlePrefix} ${index + 1}`), 'normal', tapBasic, { sourceTitle: titlePrefix, ...(index ? { prerequisites: [P(`${titlePrefix}第${index}段`, `${titlePrefix} ${index}`)] } : {}) }));
+    const localizedBasicPrefix = (value) => {
+      if (locale() === 'zh-CN') return value;
+      const known = {
+        '普攻': 'Basic Attack',
+        '空中攻击': 'Aerial Attack',
+        '普攻·必要性手段': 'Necessity Basic Attack',
+        '普攻·预求身': 'Seeking Basic Attack',
+        '普攻·常世身': 'Evernight Basic Attack',
+        '普攻·溯念留形': 'Remembrance Basic Attack',
+        '普攻·浣尘时': 'Cleansing Basic Attack',
+        '普攻·濯雨时': 'Rainwash Basic Attack',
+        '普攻·黑咩·胡闹': 'Black Lamb: Mischief Basic Attack'
+      };
+      return known[value] || value
+        .replace(/^普攻·/u, 'Basic Attack: ')
+        .replace(/^空中攻击·/u, 'Aerial Attack: ')
+        .replace(/^重击·/u, 'Heavy Attack: ')
+        .replace(/^闪避反击·/u, 'Dodge Counter: ');
+    };
+    const basicChain = (prefix, count, titlePrefix = '普攻') => {
+      const translatedPrefix = localizedBasicPrefix(titlePrefix);
+      return Array.from({ length: count }, (_, index) => n(
+        `${prefix}-basic-${index + 1}`,
+        P(`${titlePrefix}第${index + 1}段`, `${translatedPrefix} ${index + 1}`),
+        'normal',
+        tapBasic,
+        {
+          sourceTitle: P(titlePrefix, translatedPrefix),
+          ...(index ? { prerequisites: [P(`${titlePrefix}第${index}段`, `${translatedPrefix} ${index}`)] } : {})
+        }
+      ));
+    };
     const basicEdges = (prefix, count) => Array.from({ length: Math.max(0, count - 1) }, (_, index) => e(`${prefix}-basic-${index + 1}`, `${prefix}-basic-${index + 2}`));
 
     if (!['散华', '白芷', '凌阳', '折枝', '釉瑚', '珂莱塔', '绯雪', '洛瑟菈', '穗穗', '炽霞', '安可', '长离', '布兰特', '露帕', '嘉贝莉娜', '莫宁', '爱弥斯', '达妮娅', '景燃', '卡卡罗', '吟霖', '渊武', '今汐', '相里要', '奥古斯塔', '卜灵', '守岸人', '丽贝卡', '漂泊者·导电', '忌炎', '鉴心', '漂泊者·衍射', '夏空', '尤诺', '仇远', '西格莉卡', '清宵', '维里奈', '灯灯', '千咲', '琳奈', '陆·赫斯', '露西', '桃祈', '丹瑾', '椿', '漂泊者·湮灭', '洛可可', '坎特蕾拉', '弗洛洛', '秧秧·玄翎'].includes(name)) return null;
@@ -5374,35 +5555,39 @@
     if (name === '爱弥斯') {
       const isMech = formId === 'mech';
       const form = isMech ? 'mech' : 'aemeath';
-      const label = isMech ? '机兵' : '爱弥斯';
+      // Keep the form label bilingual at the model source. Older saved graph
+      // snapshots are overlaid with this model in foreign locales, so a
+      // Chinese-only label here would leak back into otherwise translated
+      // card titles.
+      const label = uiText(isMech ? '机兵' : '爱弥斯', isMech ? 'Mech' : 'Aemeath');
       const basic = Array.from({ length: 4 }, (_, index) => `aemeath-${form}-basic-${index + 1}`);
       const nodes = [
-        ...basic.map((id, index) => n(id, P(`普攻·${label}第${index + 1}段`, `Basic Attack · ${label} ${index + 1}`), 'normal', tapBasic, { sourceTitle: `普攻·${label}`, formId: form, formManual: true, airborneTag: isMech ? 'available' : undefined, prerequisites: index ? [P(`普攻·${label}第${index}段`, `Basic Attack · ${label} ${index}`)] : [] })),
-        n(`aemeath-${form}-heavy-1`, P(`重击·${label}·一段蓄力`, `Heavy Attack · ${label} · Charge 1`), 'heavy', holdBasic, { sourceTitle: `重击·${label}`, formId: form, formManual: true, airborneTag: isMech ? 'available' : undefined, replacementGroup: `aemeath-${form}-heavy-charge`, replacementBase: true, effects: [P('蓄力后松开普攻施放；此次伤害为共鸣解放伤害', 'Release Basic Attack after charging; treated as Resonance Liberation damage')] }),
-        n(`aemeath-${form}-heavy-2`, P(`重击·${label}·二段蓄力`, `Heavy Attack · ${label} · Charge 2`), 'heavy', holdBasic, { sourceTitle: `重击·${label}`, formId: form, formManual: true, airborneTag: isMech ? 'available' : undefined, replacementGroup: `aemeath-${form}-heavy-charge`, replacementSourceIds: [`aemeath-${form}-heavy-1`], prerequisites: [P(`保持按住普攻至二段蓄力`, 'Keep holding Basic Attack for the second charge')], effects: [P('造成更高的热熔伤害；即刻响应状态下可快速完成', 'Deal higher Fusion damage; can be charged quickly during Instant Response')] }),
-        n(`aemeath-${form}-aerial`, P(`空中攻击·${label}`, `Aerial Attack · ${label}`), 'other', tapBasic, { sourceTitle: `空中攻击·${label}`, formId: form, formManual: true, airborneTag: 'only', effects: [P('消耗耐力进行空中下落攻击；之后短按普攻可接第2段', 'Consume Stamina for an aerial plunging attack; tap Basic Attack afterward to enter stage 2')] }),
-        n(`aemeath-${form}-dodge`, P(`闪避反击·${label}`, `Dodge Counter · ${label}`), 'other', dodgeBasic, { sourceTitle: `闪避反击·${label}`, formId: form, formManual: true, airborneTag: isMech ? 'available' : undefined, effects: [P(`之后短按普攻可接${label}第4段`, `Tap Basic Attack afterward to enter ${label} Basic Attack 4`)] }),
-        n('aemeath-switch', P('构型切换', 'Configuration Shift'), 'other', tapSkill, { sourceTitle: '构型切换', formId: 'shared', formManual: true, airborneTag: 'available', effects: [P('在爱弥斯形态与机兵形态间切换；施放后自动进行对应普攻第1段或空中攻击', 'Switch between Aemeath and Mech forms; automatically perform the corresponding Basic Attack 1 or Aerial Attack')] }),
-        n('aemeath-fusion', P('合击·突刺·兵装融合', 'Coordinated Thrust · Armament Fusion'), 'skill', tapSkill, { sourceTitle: '合击·突刺·兵装融合', formId: 'aemeath', formManual: true, prerequisites: [P('爱弥斯形态普攻第2/3/4段、重击或闪避反击后', 'After Aemeath Basic Attack 2/3/4, Heavy Attack, or Dodge Counter')], effects: [P('切换至机兵形态；之后短按普攻接机兵第2段', 'Switch to Mech form; tap Basic Attack afterward for Mech Basic Attack 2')] }),
-        n('aemeath-enlightenment', P('合击·突刺·启明之音', 'Coordinated Thrust · Sound of Dawn'), 'skill', tapSkill, { sourceTitle: '合击·突刺·启明之音', formId: 'mech', formManual: true, prerequisites: [P('机兵形态普攻第2/3/4段、重击或闪避反击后', 'After Mech Basic Attack 2/3/4, Heavy Attack, or Dodge Counter')], effects: [P('切换至爱弥斯形态；之后短按普攻接爱弥斯第2段', 'Switch to Aemeath form; tap Basic Attack afterward for Aemeath Basic Attack 2')], airborneTag: 'available' }),
-        n('aemeath-overload', P('星辉破界而来·过载', 'Starlight Breakthrough · Overload'), 'liberation', tapLiberation, { sourceTitle: '星辉破界而来·过载', formId: 'shared', formManual: true, effects: [P('切换至机兵形态；获得星屑共振与于此释放状态；下一次光翼共奏不消耗轨迹', 'Switch to Mech form; gain Star-Dust Resonance and Release Here states; the next Winged Duet does not consume Tracks')] , airborneTag: 'available' }),
-        n('aemeath-star-dust', P('星屑共振', 'Star-Dust Resonance'), 'buff', P('施放过载时获得，持续30秒；施放2次光翼共奏后移除', 'Granted by Overload for 30s; removed after two Winged Duets'), { sourceTitle: '星屑共振', formId: 'shared', formManual: true, effects: [P('根据当前模态强化光翼共奏', 'Enhance Winged Duet according to the current mode')] }),
-        n('aemeath-release-state', P('星辉破界而来·于此释放', 'Starlight Breakthrough · Release Here'), 'buff', P('过载后获得，持续60秒', 'Granted after Overload for 60s'), { sourceTitle: '星辉破界而来·于此释放', formId: 'shared', formManual: true, effects: [P('将过载替换为终结；共鸣率满时获得即刻响应', 'Replace Overload with Finale; gain Instant Response when Resonance Rate is full')] }),
-        n('aemeath-finale', P('星辉破界而来·终结', 'Starlight Breakthrough · Finale'), 'liberation', [tapSkill, tapLiberation], { sourceTitle: '星辉破界而来·终结', formId: 'shared', formManual: true, airborneTag: 'available', prerequisites: [P('于此释放状态；同步率与共鸣率达到上限', 'Release Here active; Synchrony and Resonance Rate are full')], effects: [P('消耗全部同步率与共鸣率；移除于此释放和光翼共奏之时；切换至爱弥斯形态', 'Consume all Synchrony and Resonance Rate; remove Release Here and Winged Duet states; switch to Aemeath form')], inputRoutes: [{ input: tapSkill, fromIds: ['aemeath-release-state'] }, { input: tapLiberation, fromIds: ['aemeath-release-state'] }] }),
-        n('aemeath-intro', P('以旋律穿越长空', 'Cross the Sky with Melody'), 'other', intro, { sourceTitle: '以旋律穿越长空', formId: 'aemeath', formManual: true, effects: [P('获得流光增幅；之后短按普攻接爱弥斯第3段', 'Gain Radiant Surge; tap Basic Attack afterward for Aemeath Basic Attack 3')] }),
-        n('aemeath-mech-intro', P('携星辉降临于此', 'Descend with Starlight'), 'other', intro, { sourceTitle: '携星辉降临于此', formId: 'mech', formManual: true, effects: [P('获得流光增幅；之后短按普攻接机兵第3段', 'Gain Radiant Surge; tap Basic Attack afterward for Mech Basic Attack 3')] }),
-        n('aemeath-radiant', P('流光增幅', 'Radiant Surge'), 'buff', P('变奏技能获得，持续15秒；过载后移除', 'Granted by Intro Skill for 15s; removed after Overload'), { sourceTitle: '流光增幅', formId: 'shared', formManual: true, effects: [P('过载时额外获得共鸣率', 'Grants additional Resonance Rate when Overload is cast')] }),
-        n('aemeath-wing-state', P('光翼共奏之时', 'Winged Duet State'), 'buff', P('爱弥斯或机兵普攻第4段命中获得，持续5秒', 'Granted by Aemeath or Mech Basic Attack 4 for 5s'), { sourceTitle: '光翼共奏之时', formId: 'shared', formManual: true, effects: [P('同步率不少于100时解锁当前形态的光翼共奏', 'Unlock the current form’s Winged Duet at 100+ Synchrony')] }),
-        n('aemeath-wing-aemeath', P('共鸣技能·光翼共奏·降临', 'Resonance Skill · Winged Duet · Arrival'), 'skill', tapSkill, { sourceTitle: '共鸣技能·光翼共奏·降临', formId: 'aemeath', formManual: true, prerequisites: [P('爱弥斯形态；光翼共奏之时；同步率不少于100', 'Aemeath form; Winged Duet State; 100+ Synchrony')], effects: [P('消耗100点同步率；伤害视为共鸣解放；切换至机兵形态', 'Consume 100 Synchrony; treated as Resonance Liberation damage; switch to Mech form')] , airborneTag: 'available' }),
-        n('aemeath-wing-mech', P('共鸣技能·光翼共奏·登台', 'Resonance Skill · Winged Duet · Debut'), 'skill', tapSkill, { sourceTitle: '共鸣技能·光翼共奏·登台', formId: 'mech', formManual: true, prerequisites: [P('机兵形态；光翼共奏之时；同步率不少于100', 'Mech form; Winged Duet State; 100+ Synchrony')], effects: [P('消耗100点同步率；伤害视为共鸣解放；切换至爱弥斯形态', 'Consume 100 Synchrony; treated as Resonance Liberation damage; switch to Aemeath form')] , airborneTag: 'available' }),
-        n('aemeath-mode', P('共鸣模态', 'Resonance Mode'), 'buff', P('选择震谐或聚爆模态后生效', 'Active in Vibration or Fusion Burst mode'), { sourceTitle: '共鸣模态', formId: 'shared', formManual: true, effects: [P('震谐模态积累震谐轨迹；聚爆模态积累聚爆轨迹并引爆聚爆效应；同时改变光翼共奏效果', 'Vibration mode builds Vibration Tracks; Fusion Burst builds Fusion Burst Tracks and detonates Fusion Burst; also changes Winged Duet effects')] }),
-        n('aemeath-response', P('震谐响应·星爆', 'Vibration Response · Starburst'), 'other', [], { sourceTitle: '震谐响应·星爆', formId: 'shared', formManual: true, autoResult: true, prerequisites: [P('处于震谐模态；响应震谐·干涉', 'Vibration mode; responds to Vibration Interference')], effects: [P('造成热熔伤害，视为震谐伤害', 'Deal Fusion damage treated as Vibration damage')] }),
-        n('aemeath-flight', P('流光突进', 'Radiant Rush'), 'other', P('机兵形态通过探索工具施放', 'Cast with the exploration tool in Mech form'), { sourceTitle: '流光突进', formId: 'mech', formManual: true, effects: [P('飞行并持续消耗流溢辉光', 'Fly while continuously consuming Radiant Brilliance')] }),
-        n('aemeath-synchrony', P('同步率', 'Synchrony'), 'buff', P('上限200；多种攻击、合击和变奏技能命中获得', 'Cap 200; gained from attacks, coordinated thrusts, and Intro Skills'), { sourceTitle: '【同步率】获取规则', formId: 'shared', formManual: true, effects: [P('终结消耗全部同步率；满值后解锁光翼共奏', 'Finale consumes all Synchrony; full value enables Winged Duet')] }),
-        n('aemeath-resonance', P('共鸣率', 'Resonance Rate'), 'buff', P('上限4；光翼共奏和过载获得，流光增幅下过载额外获得', 'Cap 4; gained by Winged Duet and Overload, with an extra gain from Overload during Radiant Surge'), { sourceTitle: '【共鸣率】获取规则', formId: 'shared', formManual: true, effects: [P('满值后在于此释放状态下获得即刻响应', 'At full value, grants Instant Response during Release Here')] }),
-        n('aemeath-brilliance', P('流溢辉光', 'Radiant Brilliance'), 'buff', P('上限600；随时间持续获得', 'Cap 600; gained over time'), { sourceTitle: '【流溢辉光】获取规则', formId: 'shared', formManual: true }),
-        n('aemeath-outro', P('不可见的守候', 'Unseen Watch'), 'other', P('延奏技能 / 切换角色', 'Outro Skill / switch character'), { sourceTitle: '不可见的守候', formId: 'shared', formManual: true, effects: [P('根据震谐或聚爆模态为队伍提供全伤害加深', 'Increase allied damage according to Vibration or Fusion Burst mode')] }),
-        n('aemeath-tune-break', P('尚未落地的旋律', 'Melody Yet to Land'), 'other', P('目标偏谐值满时；谐度破坏后短按普攻', 'When the target Off-Tune gauge is full; tap Basic Attack after Tune Break'), { sourceTitle: '尚未落地的旋律', formId: 'shared', formManual: true, effects: [P('施放谐度破坏后短时间内接普攻第3段', 'Briefly follow Tune Break with Basic Attack 3')] })
+        ...basic.map((id, index) => n(id, P(`普攻·${label}第${index + 1}段`, `Basic Attack · ${label} ${index + 1}`), 'normal', tapBasic, { sourceTitle: P(`普攻·${label}`, `Basic Attack · ${label}`), formId: form, formManual: true, airborneTag: isMech ? 'available' : undefined, prerequisites: index ? [P(`普攻·${label}第${index}段`, `Basic Attack · ${label} ${index}`)] : [] })),
+        n(`aemeath-${form}-heavy-1`, P(`重击·${label}·一段蓄力`, `Heavy Attack · ${label} · Charge 1`), 'heavy', holdBasic, { sourceTitle: P(`重击·${label}`, `Heavy Attack · ${label}`), formId: form, formManual: true, airborneTag: isMech ? 'available' : undefined, replacementGroup: `aemeath-${form}-heavy-charge`, replacementBase: true, effects: [P('蓄力后松开普攻施放；此次伤害为共鸣解放伤害', 'Release Basic Attack after charging; treated as Resonance Liberation damage')] }),
+        n(`aemeath-${form}-heavy-2`, P(`重击·${label}·二段蓄力`, `Heavy Attack · ${label} · Charge 2`), 'heavy', holdBasic, { sourceTitle: P(`重击·${label}`, `Heavy Attack · ${label}`), formId: form, formManual: true, airborneTag: isMech ? 'available' : undefined, replacementGroup: `aemeath-${form}-heavy-charge`, replacementSourceIds: [`aemeath-${form}-heavy-1`], prerequisites: [P(`保持按住普攻至二段蓄力`, 'Keep holding Basic Attack for the second charge')], effects: [P('造成更高的热熔伤害；即刻响应状态下可快速完成', 'Deal higher Fusion damage; can be charged quickly during Instant Response')] }),
+        n(`aemeath-${form}-aerial`, P(`空中攻击·${label}`, `Aerial Attack · ${label}`), 'other', tapBasic, { sourceTitle: P(`空中攻击·${label}`, `Aerial Attack · ${label}`), formId: form, formManual: true, airborneTag: 'only', effects: [P('消耗耐力进行空中下落攻击；之后短按普攻可接第2段', 'Consume Stamina for an aerial plunging attack; tap Basic Attack afterward to enter stage 2')] }),
+        n(`aemeath-${form}-dodge`, P(`闪避反击·${label}`, `Dodge Counter · ${label}`), 'other', dodgeBasic, { sourceTitle: P(`闪避反击·${label}`, `Dodge Counter · ${label}`), formId: form, formManual: true, airborneTag: isMech ? 'available' : undefined, effects: [P(`之后短按普攻可接${label}第4段`, `Tap Basic Attack afterward to enter ${label} Basic Attack 4`)] }),
+        n('aemeath-switch', P('构型切换', 'Configuration Shift'), 'other', tapSkill, { sourceTitle: P('构型切换', 'Configuration Shift'), formId: 'shared', formManual: true, airborneTag: 'available', effects: [P('在爱弥斯形态与机兵形态间切换；施放后自动进行对应普攻第1段或空中攻击', 'Switch between Aemeath and Mech forms; automatically perform the corresponding Basic Attack 1 or Aerial Attack')] }),
+        n('aemeath-fusion', P('合击·突刺·兵装融合', 'Coordinated Thrust · Armament Fusion'), 'skill', tapSkill, { sourceTitle: P('合击·突刺·兵装融合', 'Coordinated Thrust · Armament Fusion'), formId: 'aemeath', formManual: true, prerequisites: [P('爱弥斯形态普攻第2/3/4段、重击或闪避反击后', 'After Aemeath Basic Attack 2/3/4, Heavy Attack, or Dodge Counter')], effects: [P('切换至机兵形态；之后短按普攻接机兵第2段', 'Switch to Mech form; tap Basic Attack afterward for Mech Basic Attack 2')] }),
+        n('aemeath-enlightenment', P('合击·突刺·启明之音', 'Coordinated Thrust · Sound of Dawn'), 'skill', tapSkill, { sourceTitle: P('合击·突刺·启明之音', 'Coordinated Thrust · Sound of Dawn'), formId: 'mech', formManual: true, prerequisites: [P('机兵形态普攻第2/3/4段、重击或闪避反击后', 'After Mech Basic Attack 2/3/4, Heavy Attack, or Dodge Counter')], effects: [P('切换至爱弥斯形态；之后短按普攻接爱弥斯第2段', 'Switch to Aemeath form; tap Basic Attack afterward for Aemeath Basic Attack 2')], airborneTag: 'available' }),
+        n('aemeath-overload', P('星辉破界而来·过载', 'Starlight Breakthrough · Overload'), 'liberation', tapLiberation, { sourceTitle: P('星辉破界而来·过载', 'Starlight Breakthrough · Overload'), formId: 'shared', formManual: true, effects: [P('切换至机兵形态；获得星屑共振与于此释放状态；下一次光翼共奏不消耗轨迹', 'Switch to Mech form; gain Star-Dust Resonance and Release Here states; the next Winged Duet does not consume Tracks')] , airborneTag: 'available' }),
+        n('aemeath-star-dust', P('星屑共振', 'Star-Dust Resonance'), 'buff', P('施放过载时获得，持续30秒；施放2次光翼共奏后移除', 'Granted by Overload for 30s; removed after two Winged Duets'), { sourceTitle: P('星屑共振', 'Star-Dust Resonance'), formId: 'shared', formManual: true, effects: [P('根据当前模态强化光翼共奏', 'Enhance Winged Duet according to the current mode')] }),
+        n('aemeath-release-state', P('星辉破界而来·于此释放', 'Starlight Breakthrough · Release Here'), 'buff', P('过载后获得，持续60秒', 'Granted after Overload for 60s'), { sourceTitle: P('星辉破界而来·于此释放', 'Starlight Breakthrough · Release Here'), formId: 'shared', formManual: true, effects: [P('将过载替换为终结；共鸣率满时获得即刻响应', 'Replace Overload with Finale; gain Instant Response when Resonance Rate is full')] }),
+        n('aemeath-finale', P('星辉破界而来·终结', 'Starlight Breakthrough · Finale'), 'liberation', [tapSkill, tapLiberation], { sourceTitle: P('星辉破界而来·终结', 'Starlight Breakthrough · Finale'), formId: 'shared', formManual: true, airborneTag: 'available', prerequisites: [P('于此释放状态；同步率与共鸣率达到上限', 'Release Here active; Synchrony and Resonance Rate are full')], effects: [P('消耗全部同步率与共鸣率；移除于此释放和光翼共奏之时；切换至爱弥斯形态', 'Consume all Synchrony and Resonance Rate; remove Release Here and Winged Duet states; switch to Aemeath form')], inputRoutes: [{ input: tapSkill, fromIds: ['aemeath-release-state'] }, { input: tapLiberation, fromIds: ['aemeath-release-state'] }] }),
+        n('aemeath-intro', P('以旋律穿越长空', 'Cross the Sky with Melody'), 'other', intro, { sourceTitle: P('以旋律穿越长空', 'Cross the Sky with Melody'), formId: 'aemeath', formManual: true, effects: [P('获得流光增幅；之后短按普攻接爱弥斯第3段', 'Gain Radiant Surge; tap Basic Attack afterward for Aemeath Basic Attack 3')] }),
+        n('aemeath-mech-intro', P('携星辉降临于此', 'Descend with Starlight'), 'other', intro, { sourceTitle: P('携星辉降临于此', 'Descend with Starlight'), formId: 'mech', formManual: true, effects: [P('获得流光增幅；之后短按普攻接机兵第3段', 'Gain Radiant Surge; tap Basic Attack afterward for Mech Basic Attack 3')] }),
+        n('aemeath-radiant', P('流光增幅', 'Radiant Surge'), 'buff', P('变奏技能获得，持续15秒；过载后移除', 'Granted by Intro Skill for 15s; removed after Overload'), { sourceTitle: P('流光增幅', 'Radiant Surge'), formId: 'shared', formManual: true, effects: [P('过载时额外获得共鸣率', 'Grants additional Resonance Rate when Overload is cast')] }),
+        n('aemeath-wing-state', P('光翼共奏之时', 'Winged Duet State'), 'buff', P('爱弥斯或机兵普攻第4段命中获得，持续5秒', 'Granted by Aemeath or Mech Basic Attack 4 for 5s'), { sourceTitle: P('光翼共奏之时', 'Winged Duet State'), formId: 'shared', formManual: true, effects: [P('同步率不少于100时解锁当前形态的光翼共奏', 'Unlock the current form’s Winged Duet at 100+ Synchrony')] }),
+        n('aemeath-wing-aemeath', P('共鸣技能·光翼共奏·降临', 'Resonance Skill · Winged Duet · Arrival'), 'skill', tapSkill, { sourceTitle: P('共鸣技能·光翼共奏·降临', 'Resonance Skill · Winged Duet · Arrival'), formId: 'aemeath', formManual: true, prerequisites: [P('爱弥斯形态；光翼共奏之时；同步率不少于100', 'Aemeath form; Winged Duet State; 100+ Synchrony')], effects: [P('消耗100点同步率；伤害视为共鸣解放；切换至机兵形态', 'Consume 100 Synchrony; treated as Resonance Liberation damage; switch to Mech form')] , airborneTag: 'available' }),
+        n('aemeath-wing-mech', P('共鸣技能·光翼共奏·登台', 'Resonance Skill · Winged Duet · Debut'), 'skill', tapSkill, { sourceTitle: P('共鸣技能·光翼共奏·登台', 'Resonance Skill · Winged Duet · Debut'), formId: 'mech', formManual: true, prerequisites: [P('机兵形态；光翼共奏之时；同步率不少于100', 'Mech form; Winged Duet State; 100+ Synchrony')], effects: [P('消耗100点同步率；伤害视为共鸣解放；切换至爱弥斯形态', 'Consume 100 Synchrony; treated as Resonance Liberation damage; switch to Aemeath form')] , airborneTag: 'available' }),
+        n('aemeath-mode', P('共鸣模态', 'Resonance Mode'), 'buff', P('选择震谐或聚爆模态后生效', 'Active in Vibration or Fusion Burst mode'), { sourceTitle: P('共鸣模态', 'Resonance Mode'), formId: 'shared', formManual: true, effects: [P('震谐模态积累震谐轨迹；聚爆模态积累聚爆轨迹并引爆聚爆效应；同时改变光翼共奏效果', 'Vibration mode builds Vibration Tracks; Fusion Burst builds Fusion Burst Tracks and detonates Fusion Burst; also changes Winged Duet effects')] }),
+        n('aemeath-response', P('震谐响应·星爆', 'Vibration Response · Starburst'), 'other', [], { sourceTitle: P('震谐响应·星爆', 'Vibration Response · Starburst'), formId: 'shared', formManual: true, autoResult: true, prerequisites: [P('处于震谐模态；响应震谐·干涉', 'Vibration mode; responds to Vibration Interference')], effects: [P('造成热熔伤害，视为震谐伤害', 'Deal Fusion damage treated as Vibration damage')] }),
+        n('aemeath-flight', P('流光突进', 'Radiant Rush'), 'other', P('机兵形态通过探索工具施放', 'Cast with the exploration tool in Mech form'), { sourceTitle: P('流光突进', 'Radiant Rush'), formId: 'mech', formManual: true, effects: [P('飞行并持续消耗流溢辉光', 'Fly while continuously consuming Radiant Brilliance')] }),
+        n('aemeath-synchrony', P('同步率', 'Synchrony'), 'buff', P('上限200；多种攻击、合击和变奏技能命中获得', 'Cap 200; gained from attacks, coordinated thrusts, and Intro Skills'), { sourceTitle: P('【同步率】获取规则', 'Synchrony Acquisition'), formId: 'shared', formManual: true, effects: [P('终结消耗全部同步率；满值后解锁光翼共奏', 'Finale consumes all Synchrony; full value enables Winged Duet')] }),
+        n('aemeath-resonance', P('共鸣率', 'Resonance Rate'), 'buff', P('上限4；光翼共奏和过载获得，流光增幅下过载额外获得', 'Cap 4; gained by Winged Duet and Overload, with an extra gain from Overload during Radiant Surge'), { sourceTitle: P('【共鸣率】获取规则', 'Resonance Rate Acquisition'), formId: 'shared', formManual: true, effects: [P('满值后在于此释放状态下获得即刻响应', 'At full value, grants Instant Response during Release Here')] }),
+        n('aemeath-brilliance', P('流溢辉光', 'Radiant Brilliance'), 'buff', P('上限600；随时间持续获得', 'Cap 600; gained over time'), { sourceTitle: P('【流溢辉光】获取规则', 'Radiant Brilliance Acquisition'), formId: 'shared', formManual: true }),
+        n('aemeath-outro', P('不可见的守候', 'Unseen Watch'), 'other', P('延奏技能 / 切换角色', 'Outro Skill / switch character'), { sourceTitle: P('不可见的守候', 'Unseen Watch'), formId: 'shared', formManual: true, effects: [P('根据震谐或聚爆模态为队伍提供全伤害加深', 'Increase allied damage according to Vibration or Fusion Burst mode')] }),
+        n('aemeath-tune-break', P('尚未落地的旋律', 'Melody Yet to Land'), 'other', P('目标偏谐值满时；谐度破坏后短按普攻', 'When the target Off-Tune gauge is full; tap Basic Attack after Tune Break'), { sourceTitle: P('尚未落地的旋律', 'Melody Yet to Land'), formId: 'shared', formManual: true, effects: [P('施放谐度破坏后短时间内接普攻第3段', 'Briefly follow Tune Break with Basic Attack 3')] })
       ];
       const edges = [
         ...basicEdges(`aemeath-${form}-basic`, basic.length),
@@ -7740,7 +7925,7 @@
 
   function avatar(name, large = false) {
     const src = iconFor(name);
-    return src ? `<img class="community-wiki-avatar${large ? ' large' : ''}" src="${esc(src)}" alt="" loading="lazy">` : `<span class="community-wiki-avatar fallback${large ? ' large' : ''}">${esc(name.slice(0, 1))}</span>`;
+    return src ? `<img class="community-wiki-avatar${large ? ' large' : ''}" src="${esc(src)}" alt="" loading="lazy">` : `<span class="community-wiki-avatar fallback${large ? ' large' : ''}">${esc(characterDisplayName(name).slice(0, 1))}</span>`;
   }
 
   function wikiEditorProfile() {
@@ -7783,7 +7968,7 @@
         .filter((entry) => entry.element === element)
         .sort((left, right) => Number(right.star) - Number(left.star) || wikiNameCollator.compare(left.name, right.name))
     })).filter((group) => group.members.length);
-    return `<div class="community-wiki-home-character-picker" role="dialog" aria-label="角色列表"><div class="community-wiki-home-character-picker-head"><strong>切换角色</strong><button type="button" data-wiki-home-character-picker-close title="关闭角色列表" aria-label="关闭角色列表"><i data-lucide="x"></i></button></div><div class="community-wiki-home-character-picker-body">${groups.map(({ element, members }) => `<section class="community-wiki-home-character-picker-group" style="--wiki-element:${esc(colorFor(element))}"><header><img src="${esc(elementIconFor(element))}" alt="" aria-hidden="true"><strong>${esc(displayValue(element))}</strong></header><div class="community-wiki-home-character-picker-items">${members.map((entry) => `<button type="button" class="community-wiki-home-character-picker-item ${entry.name === activeName ? 'active' : ''}" data-wiki-home-character-choice="${esc(entry.name)}" style="--wiki-rarity:${Number(entry.star) >= 5 ? '#d7ad52' : '#9c76dd'}" title="${esc(entry.name)}"><span class="community-wiki-home-character-picker-avatar">${avatar(entry.name)}</span><span>${esc(entry.name)}</span><small>${Number(entry.star) >= 5 ? '5★' : '4★'}</small></button>`).join('')}</div></section>`).join('')}</div></div>`;
+    return `<div class="community-wiki-home-character-picker" role="dialog" aria-label="角色列表"><div class="community-wiki-home-character-picker-head"><strong>切换角色</strong><button type="button" data-wiki-home-character-picker-close title="关闭角色列表" aria-label="关闭角色列表"><i data-lucide="x"></i></button></div><div class="community-wiki-home-character-picker-body">${groups.map(({ element, members }) => `<section class="community-wiki-home-character-picker-group" style="--wiki-element:${esc(colorFor(element))}"><header><img src="${esc(elementIconFor(element))}" alt="" aria-hidden="true"><strong>${esc(displayValue(element))}</strong></header><div class="community-wiki-home-character-picker-items">${members.map((entry) => { const displayName = characterDisplayName(entry.name); return `<button type="button" class="community-wiki-home-character-picker-item ${entry.name === activeName ? 'active' : ''}" data-wiki-home-character-choice="${esc(entry.name)}" style="--wiki-rarity:${Number(entry.star) >= 5 ? '#d7ad52' : '#9c76dd'}" title="${esc(displayName)}"><span class="community-wiki-home-character-picker-avatar">${avatar(entry.name)}</span><span>${esc(displayName)}</span><small>${Number(entry.star) >= 5 ? '5★' : '4★'}</small></button>`; }).join('')}</div></section>`).join('')}</div></div>`;
   }
 
   function homeSurfaceRailLeading(activeName) {
@@ -8349,15 +8534,15 @@
         portrait.classList.remove('is-fallback');
         portrait.removeAttribute('data-load-failed');
         portrait.src = nextPortraitSource;
-        portrait.alt = name;
+        portrait.alt = characterDisplayName(name);
       };
       applyPortraitSource();
-      if (fallback) fallback.textContent = name.slice(0, 1);
+      if (fallback) fallback.textContent = characterDisplayName(name).slice(0, 1);
       if (showcaseCard && entry) {
         showcaseCard.className = `community-wiki-showcase-main-card ${Number(entry.star) >= 5 ? 'rarity-5' : 'rarity-4'}`;
         showcaseCard.dataset.name = entry.name;
         showcaseCard.dataset.wikiPreviewName = entry.name;
-        showcaseCard.setAttribute('aria-label', entry.name);
+        showcaseCard.setAttribute('aria-label', characterDisplayName(entry.name));
         showcaseCard.style.setProperty('--wiki-element', colorFor(entry.element));
         showcaseStage?.style.setProperty('--wiki-element', colorFor(entry.element));
         const background = elementBackgroundFor(entry.element);
@@ -8367,7 +8552,7 @@
         const nameNode = showcaseCard.querySelector('[data-wiki-showcase-name]');
         const metaNode = showcaseCard.querySelector('[data-wiki-showcase-meta]');
         if (emblem) { emblem.src = emblemFor(entry.name); emblem.alt = ''; }
-        if (nameNode) nameNode.textContent = entry.name;
+        if (nameNode) nameNode.textContent = characterDisplayName(entry.name);
         if (metaNode) {
           metaNode.innerHTML = showcaseMetaMarkup(entry);
           metaNode.setAttribute('aria-label', showcaseMetaLabel(entry));
@@ -9151,13 +9336,14 @@
   }
 
   function renderShowcaseHome(ordered, previewEntry) {
-    const portraitFallback = esc(previewEntry.name.slice(0, 1));
+    const portraitFallback = esc(characterDisplayName(previewEntry.name).slice(0, 1));
     const cardFor = (entry, withRail = false, directChoice = false) => {
       const rarity = Number(entry.star) >= 5 ? 'rarity-5' : 'rarity-4';
-      const card = `<button class="community-wiki-character-card ${rarity}" type="button" ${withRail || directChoice ? `data-wiki-home-choice="${esc(entry.name)}"` : `data-wiki-action="open" data-name="${esc(entry.name)}"`} data-wiki-preview-name="${esc(entry.name)}" style="--wiki-element:${colorFor(entry.element)};--wiki-rarity:${Number(entry.star) >= 5 ? '#d7ad52' : '#9c76dd'}" aria-label="${esc(entry.name)}">
-        <span class="community-wiki-card-art">${avatar(entry.name, true)}${weaponIcon(entry)}<strong class="community-wiki-card-name">${esc(entry.name)}</strong></span>
+      const displayName = characterDisplayName(entry.name);
+      const card = `<button class="community-wiki-character-card ${rarity}" type="button" ${withRail || directChoice ? `data-wiki-home-choice="${esc(entry.name)}"` : `data-wiki-action="open" data-name="${esc(entry.name)}"`} data-wiki-preview-name="${esc(entry.name)}" style="--wiki-element:${colorFor(entry.element)};--wiki-rarity:${Number(entry.star) >= 5 ? '#d7ad52' : '#9c76dd'}" aria-label="${esc(displayName)}">
+        <span class="community-wiki-card-art">${avatar(entry.name, true)}${weaponIcon(entry)}<strong class="community-wiki-card-name">${esc(displayName)}</strong></span>
       </button>`;
-      return withRail ? `<div class="community-wiki-character-choice ${state.homeMenuName === entry.name ? 'is-open' : ''}" style="--wiki-rarity:${Number(entry.star) >= 5 ? '#d7ad52' : '#9c76dd'}">${card}<span class="community-wiki-character-rail" aria-label="${esc(entry.name)} actions"><button type="button" data-wiki-home-rail="tree" data-wiki-name="${esc(entry.name)}" title="${esc(t('tree'))}"><span class="community-wiki-character-rail-icon-emblem-wrap"><img class="community-wiki-character-rail-icon community-wiki-character-rail-icon-emblem" src="${esc(emblemFor(entry.name))}" alt="" aria-hidden="true" loading="lazy"></span><span>${esc(t('tree'))}</span></button><button type="button" data-wiki-home-rail="combo" data-wiki-name="${esc(entry.name)}" title="${esc(t('combo'))}"><img class="community-wiki-character-rail-icon community-wiki-character-rail-icon-basic" src="${esc(basicAttackIconFor(entry.name))}" alt="" aria-hidden="true" loading="lazy"><span>${esc(t('combo'))}</span></button></span></div>` : card;
+      return withRail ? `<div class="community-wiki-character-choice ${state.homeMenuName === entry.name ? 'is-open' : ''}" style="--wiki-rarity:${Number(entry.star) >= 5 ? '#d7ad52' : '#9c76dd'}">${card}<span class="community-wiki-character-rail" aria-label="${esc(displayName)} actions"><button type="button" data-wiki-home-rail="tree" data-wiki-name="${esc(entry.name)}" title="${esc(t('tree'))}"><span class="community-wiki-character-rail-icon-emblem-wrap"><img class="community-wiki-character-rail-icon community-wiki-character-rail-icon-emblem" src="${esc(emblemFor(entry.name))}" alt="" aria-hidden="true" loading="lazy"></span><span>${esc(t('tree'))}</span></button><button type="button" data-wiki-home-rail="combo" data-wiki-name="${esc(entry.name)}" title="${esc(t('combo'))}"><img class="community-wiki-character-rail-icon community-wiki-character-rail-icon-basic" src="${esc(basicAttackIconFor(entry.name))}" alt="" aria-hidden="true" loading="lazy"><span>${esc(t('combo'))}</span></button></span></div>` : card;
     };
     const groupFor = (element) => {
       const members = ordered.filter((entry) => entry.element === element);
@@ -9188,7 +9374,7 @@
     const homeNodeModal = homeNodePanel ? `<div class="community-wiki-floating"><div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-node-modal" role="dialog" aria-modal="true"><header><div><i data-lucide="${homeNodeEditing ? 'pencil' : 'git-branch'}"></i><strong>${esc(homeNodeEditing ? t('editorTitle') : t('selectedNode'))}</strong></div><div class="community-wiki-editor-header-actions">${homeNodeEditing ? wikiEditorHeaderSaveButton() : ''}<button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></div></header>${homeNodePanel}</section></div>` : '';
     const isTreeSurface = surfaceTab === 'tree';
     const railTabs = `<nav class="community-wiki-home-surface-tabs" role="tablist" aria-label="${esc(t('details'))}"><button type="button" data-wiki-home-surface-tab="raw" data-wiki-name="${esc(activeName)}" class="${surfaceTab === 'raw' ? 'active' : ''}" title="${esc(t('homeRaw'))}"><i data-lucide="book-open"></i><span>${esc(t('homeRaw'))}</span></button><button type="button" data-wiki-home-surface-tab="flow" data-wiki-name="${esc(activeName)}" class="${surfaceTab === 'flow' ? 'active' : ''}" title="${esc(t('flow'))}"><i data-lucide="route"></i><span>${esc(t('flow'))}</span></button><button type="button" data-wiki-home-surface-tab="tree" data-wiki-name="${esc(activeName)}" class="${surfaceTab === 'tree' ? 'active' : ''}" title="${esc(t('tree'))}"><i data-lucide="git-branch"></i><span>${esc(t('tree'))}</span></button></nav>`;
-    const contentTabs = HOME_CONTENT_TABS.map(([id, label]) => `<button type="button" class="community-wiki-home-content-tab is-${id} ${surfaceTab === 'raw' && contentTab === id ? 'active' : ''}" data-wiki-home-content-tab="${id}" data-wiki-name="${esc(activeName)}" title="${esc(label)}"><img src="${esc(id === 'profile' ? emblemFor(activeName) : homeSkillIconFor(activeName, id))}" alt="" aria-hidden="true"><span>${esc(label)}</span></button>`).join('');
+    const contentTabs = HOME_CONTENT_TABS.map(([id]) => { const label = homeContentTabLabel(id); return `<button type="button" class="community-wiki-home-content-tab is-${id} ${surfaceTab === 'raw' && contentTab === id ? 'active' : ''}" data-wiki-home-content-tab="${id}" data-wiki-name="${esc(activeName)}" title="${esc(label)}"><img src="${esc(id === 'profile' ? emblemFor(activeName) : homeSkillIconFor(activeName, id))}" alt="" aria-hidden="true"><span>${esc(label)}</span></button>`; }).join('');
     const nonTreeRail = `${railTabs}${surfaceTab === 'raw' ? `<nav class="community-wiki-home-content-tabs" aria-label="角色内容">${contentTabs}</nav>` : ''}`;
     const treeToolbar = `<div class="community-wiki-home-tree-toolbar" role="toolbar" aria-label="树图工具">${homeTreeControls(activeName, activeEntry, activeInfo)}</div>`;
     const surfaceLoadingMarkup = state.homeSurfaceLoading && activeName ? `<div class="community-wiki-home-surface-loading-overlay" role="status" aria-live="polite"><div><img class="community-wiki-surface-loading-gif community-wiki-surface-loading-gif-day" src="./assets/wiki-loading-day.gif?v=20260920-gif-mime" alt="" loading="eager"><img class="community-wiki-surface-loading-gif community-wiki-surface-loading-gif-night" src="./assets/wiki-loading-night.gif?v=20260920-gif-mime" alt="" loading="eager"><span>加载中</span></div></div>` : '';
@@ -9204,9 +9390,10 @@
             : `<aside class="community-wiki-home-rail">${surfaceLeading}${surfaceFullscreenButton}${nonTreeRail}</aside><main class="community-wiki-desktop-surface-content"><div class="community-wiki-desktop-surface-body">${surfaceWaiting ? '<div class="community-wiki-home-surface-loading" aria-hidden="true"></div>' : surfaceTab === 'raw' ? `<div class="community-wiki-home-raw">${homeContentSurface(activeName, contentTab)}</div>` : flowSurface(activeName)}</div></main>`}
         </div>`;
     const mobileHome = window.matchMedia('(max-width: 820px)').matches;
-    const mainCard = mobileHome ? '' : `<button class="community-wiki-showcase-main-card ${Number(previewEntry.star) >= 5 ? 'rarity-5' : 'rarity-4'}" type="button" data-wiki-home-main data-name="${esc(previewEntry.name)}" data-wiki-preview-name="${esc(previewEntry.name)}" style="--wiki-element:${esc(colorFor(previewEntry.element))};--wiki-element-bg:url(&quot;${esc(elementBackgroundFor(previewEntry.element))}&quot;)" aria-label="${esc(previewEntry.name)}">
-      <span class="community-wiki-showcase-main-art"><img class="community-wiki-showcase-main-portrait" data-wiki-showcase-portrait src="${esc(portraitFor(previewEntry.name))}" alt="${esc(previewEntry.name)}" loading="eager"><span class="community-wiki-showcase-main-fallback" data-wiki-showcase-fallback>${portraitFallback}</span></span>
-      <span class="community-wiki-showcase-main-info"><img class="community-wiki-showcase-emblem" data-wiki-showcase-emblem src="${esc(emblemFor(previewEntry.name))}" alt="" aria-hidden="true"><span><strong data-wiki-showcase-name>${esc(previewEntry.name)}</strong><span class="community-wiki-showcase-meta" data-wiki-showcase-meta aria-label="${esc(showcaseMetaLabel(previewEntry))}" title="${esc(showcaseMetaLabel(previewEntry))}">${showcaseMetaMarkup(previewEntry)}</span></span></span>
+    const previewDisplayName = characterDisplayName(previewEntry.name);
+    const mainCard = mobileHome ? '' : `<button class="community-wiki-showcase-main-card ${Number(previewEntry.star) >= 5 ? 'rarity-5' : 'rarity-4'}" type="button" data-wiki-home-main data-name="${esc(previewEntry.name)}" data-wiki-preview-name="${esc(previewEntry.name)}" style="--wiki-element:${esc(colorFor(previewEntry.element))};--wiki-element-bg:url(&quot;${esc(elementBackgroundFor(previewEntry.element))}&quot;)" aria-label="${esc(previewDisplayName)}">
+      <span class="community-wiki-showcase-main-art"><img class="community-wiki-showcase-main-portrait" data-wiki-showcase-portrait src="${esc(portraitFor(previewEntry.name))}" alt="${esc(previewDisplayName)}" loading="eager"><span class="community-wiki-showcase-main-fallback" data-wiki-showcase-fallback>${portraitFallback}</span></span>
+      <span class="community-wiki-showcase-main-info"><img class="community-wiki-showcase-emblem" data-wiki-showcase-emblem src="${esc(emblemFor(previewEntry.name))}" alt="" aria-hidden="true"><span><strong data-wiki-showcase-name>${esc(previewDisplayName)}</strong><span class="community-wiki-showcase-meta" data-wiki-showcase-meta aria-label="${esc(showcaseMetaLabel(previewEntry))}" title="${esc(showcaseMetaLabel(previewEntry))}">${showcaseMetaMarkup(previewEntry)}</span></span></span>
     </button>`;
     const leftElements = ['冷凝', '热熔', '导电'];
     const rightElements = ['气动', '衍射', '湮灭'];
@@ -9283,13 +9470,25 @@
     ['profile', '简介'], ['normal', '普攻'], ['skill', '共鸣技能'], ['circuit', '共鸣回路'],
     ['liberation', '共鸣解放'], ['outro', '延奏技能'], ['chain', '共鸣']
   ];
+  const HOME_CONTENT_TAB_LABELS = {
+    'zh-CN': { profile: '简介', normal: '普攻', skill: '共鸣技能', circuit: '共鸣回路', liberation: '共鸣解放', outro: '延奏技能', chain: '共鸣' },
+    'en-US': { profile: 'Profile', normal: 'Basic Attack', skill: 'Resonance Skill', circuit: 'Forte Circuit', liberation: 'Resonance Liberation', outro: 'Outro Skill', chain: 'Resonance Chain' },
+    'ja-JP': { profile: '概要', normal: '通常攻撃', skill: '共鳴スキル', circuit: '共鳴回路', liberation: '共鳴解放', outro: '終奏スキル', chain: '共鳴チェーン' },
+    'ko-KR': { profile: '소개', normal: '기본 공격', skill: '공명 스킬', circuit: '공명 회로', liberation: '공명 해방', outro: '반주 스킬', chain: '공명 체인' }
+  };
+  function homeContentTabLabel(kind) {
+    return HOME_CONTENT_TAB_LABELS[locale()]?.[kind]
+      || HOME_CONTENT_TAB_LABELS['zh-CN'][kind]
+      || HOME_CONTENT_TABS.find(([id]) => id === kind)?.[1]
+      || kind;
+  }
   const HOME_SKILL_TYPES = {
-    normal: /(?:常态攻击|普攻|普通攻击|basic\s*attack|normal\s*attack)/iu,
-    skill: /(?:共鸣技能|resonance\s*skill)/iu,
-    circuit: /(?:共鸣回路|回路|resonance\s*circuit|forte\s*circuit)/iu,
-    liberation: /(?:共鸣解放|解放|resonance\s*liberation|ultimate)/iu,
-    intro: /(?:变奏技能|出场技能|intro\s*skill)/iu,
-    outro: /(?:延奏技能|outro\s*skill)/iu
+    normal: /(?:常态攻击|普攻|普通攻击|通常攻撃|基本攻撃|일반\s*공격|기본\s*공격|basic\s*attack|normal\s*attack)/iu,
+    skill: /(?:共鸣技能|共鳴スキル|공명\s*스킬|resonance\s*skill)/iu,
+    circuit: /(?:共鸣回路|回路|共鳴回路|공명\s*회로|resonance\s*circuit|forte\s*circuit)/iu,
+    liberation: /(?:共鸣解放|解放|共鳴解放|공명\s*해방|resonance\s*liberation|ultimate)/iu,
+    intro: /(?:变奏技能|出场技能|変奏スキル|入場スキル|변주\s*스킬|intro\s*skill)/iu,
+    outro: /(?:延奏技能|終奏スキル|반주\s*스킬|outro\s*skill)/iu
   };
   const homeSkillIconFor = (name, kind) => {
     const icons = tideIconManifestFor(name) || {};
@@ -9309,9 +9508,17 @@
     if (!info) return `<div class="community-wiki-home-surface-loading"><i data-lucide="loader-circle"></i><span>${esc(t('detailLoading'))}</span></div>`;
     const entry = state.characters.find((item) => item.name === name) || { name, star: info.rarity || info.star || 0, element: info.element || '', weaponType: info.weaponType || '' };
     const stats = info.lv90BaseStats || info.baseStats || {};
-    const statRows = [['HP', stats.hp], ['ATK', stats.atk], ['DEF', stats.def], ['谐度破坏增幅', stats.tuneBreakBoost]].filter(([, value]) => value !== undefined && value !== null && String(value) !== '').map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('');
+    const statLabels = locale() === 'en-US'
+      ? { hp: 'HP', atk: 'ATK', def: 'DEF', tune: 'Tune Break Boost' }
+      : locale() === 'ja-JP'
+        ? { hp: 'HP', atk: '攻撃力', def: '防御力', tune: '協和破壊増幅' }
+        : locale() === 'ko-KR'
+          ? { hp: 'HP', atk: '공격력', def: '방어력', tune: '조화도 파괴 증폭' }
+          : { hp: 'HP', atk: '攻击', def: '防御', tune: '谐度破坏增幅' };
+    const statRows = [[statLabels.hp, stats.hp], [statLabels.atk, stats.atk], [statLabels.def, stats.def], [statLabels.tune, stats.tuneBreakBoost]].filter(([, value]) => value !== undefined && value !== null && String(value) !== '').map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('');
     const tags = Array.isArray(info.combatTags) ? info.combatTags : Array.isArray(info.roles) ? info.roles : Array.isArray(info.tags) ? info.tags : [];
-    return `<div class="community-wiki-home-profile"><section class="community-wiki-home-profile-intro"><img src="${esc(emblemFor(name))}" alt="" aria-hidden="true"><div><p class="community-wiki-eyebrow">${esc(t('base'))}</p><h2>${esc(name)}</h2><p>${esc(t('api'))}</p></div></section><dl class="community-wiki-home-profile-facts"><div><dt>${esc(t('star'))}</dt><dd>${'★'.repeat(Math.max(1, Math.min(5, Number(entry.star) || Number(info.rarity) || 1)))}</dd></div><div><dt>${esc(t('element'))}</dt><dd style="color:${esc(colorFor(entry.element))}">${esc(displayValue(entry.element || '—'))}</dd></div><div><dt>${esc(t('weapon'))}</dt><dd>${esc(displayValue(entry.weaponType || '—'))}</dd></div></dl><section class="community-wiki-home-profile-stats"><h3>${esc(t('stats'))}</h3>${statRows ? `<dl>${statRows}</dl>` : `<p class="community-wiki-muted">${esc(t('noInfo'))}</p>`}</section>${tags.length ? `<section class="community-wiki-home-profile-tags"><h3>战斗标签</h3><div>${tags.map((tag) => `<span>${esc(clean(tag))}</span>`).join('')}</div></section>` : ''}</div>`;
+    const combatTagsLabel = locale() === 'en-US' ? 'Combat roles' : locale() === 'ja-JP' ? '戦闘タグ' : locale() === 'ko-KR' ? '전투 태그' : '战斗标签';
+    return `<div class="community-wiki-home-profile"><section class="community-wiki-home-profile-intro"><img src="${esc(emblemFor(name))}" alt="" aria-hidden="true"><div><p class="community-wiki-eyebrow">${esc(t('base'))}</p><h2>${esc(characterDisplayName(name))}</h2><p>${esc(t('api'))}</p></div></section><dl class="community-wiki-home-profile-facts"><div><dt>${esc(t('star'))}</dt><dd>${'★'.repeat(Math.max(1, Math.min(5, Number(entry.star) || Number(info.rarity) || 1)))}</dd></div><div><dt>${esc(t('element'))}</dt><dd style="color:${esc(colorFor(entry.element))}">${esc(displayValue(entry.element || '—'))}</dd></div><div><dt>${esc(t('weapon'))}</dt><dd>${esc(displayValue(entry.weaponType || '—'))}</dd></div></dl><section class="community-wiki-home-profile-stats"><h3>${esc(t('stats'))}</h3>${statRows ? `<dl>${statRows}</dl>` : `<p class="community-wiki-muted">${esc(t('noInfo'))}</p>`}</section>${tags.length ? `<section class="community-wiki-home-profile-tags"><h3>${esc(combatTagsLabel)}</h3><div>${tags.map((tag) => `<span>${esc(clean(tag))}</span>`).join('')}</div></section>` : ''}</div>`;
   }
 
   function homeSkillSurface(name, kind) {
@@ -9323,7 +9530,7 @@
       .filter((skill) => HOME_SKILL_TYPES[skillKind]?.test(`${skill.type || ''} ${skill.name || ''}`))
       .map((skill) => ({ skill, skillKind })));
     if (!skills.length) return `<div class="community-wiki-home-surface-empty">${esc(t('noInfo'))}</div>`;
-    return `<div class="community-wiki-home-skill-list">${skills.map(({ skill, skillKind }, index) => `<article class="community-wiki-home-raw-skill"><header><span>${esc(skill.type || (skillKind === 'intro' ? '变奏技能' : HOME_CONTENT_TABS.find(([id]) => id === skillKind)?.[1]) || t('skills'))}</span><h3>${esc(clean(skill.name) || `${t('skills')} ${index + 1}`)}</h3></header><div class="community-wiki-home-raw-copy">${renderRawSkillText(skill.desc || skill.description || '')}</div></article>`).join('')}</div>`;
+    return `<div class="community-wiki-home-skill-list">${skills.map(({ skill, skillKind }, index) => `<article class="community-wiki-home-raw-skill"><header><span>${esc(skill.type || homeContentTabLabel(skillKind) || t('skills'))}</span><h3>${esc(clean(skill.name) || `${t('skills')} ${index + 1}`)}</h3></header><div class="community-wiki-home-raw-copy">${renderRawSkillText(skill.desc || skill.description || '')}</div></article>`).join('')}</div>`;
   }
 
   function homeChainSurface(name) {
@@ -9355,7 +9562,7 @@
       ? `<div class="community-wiki-mode-toggle" style="--wiki-element:${esc(colorFor(entry?.element))}" role="group" aria-label="${esc(t('mode'))}"><i data-lucide="waypoints" aria-hidden="true"></i><span>${esc(t('mode'))}</span><div class="community-wiki-mode-toggle-buttons">${modes.map((item) => `<button type="button" value="${esc(item.id)}" data-wiki-mode class="${item.id === activeMode ? 'active' : ''}" aria-pressed="${item.id === activeMode}" title="${esc(item.description || item.label)}"><i data-lucide="${modeIcon(item)}" aria-hidden="true"></i><b>${esc(item.label)}</b></button>`).join('')}</div></div>`
       : modes.length ? `<label class="community-wiki-mode-select" style="--wiki-element:${esc(colorFor(entry?.element))}"><i data-lucide="waypoints" aria-hidden="true"></i><span>${esc(t('mode'))}</span><select data-wiki-mode aria-label="${esc(t('mode'))}">${modes.map((item) => `<option value="${esc(item.id)}" ${item.id === activeMode ? 'selected' : ''}>${esc(item.label)}</option>`).join('')}</select></label>` : '';
     const creatingCombo = Boolean(state.soloComboEditing && state.soloComboOpen);
-    const newCombo = `<button class="community-wiki-new-combo ${creatingCombo ? 'active' : ''}" type="button" data-solo-action="new" data-wiki-name="${esc(name)}" title="${esc(creatingCombo ? '退出创建' : t('newCombo'))}"><i data-lucide="${creatingCombo ? 'x' : 'plus'}" aria-hidden="true"></i><span>${esc(creatingCombo ? '创建中' : t('newCombo'))}</span></button>`;
+    const newCombo = `<button class="community-wiki-new-combo ${creatingCombo ? 'active' : ''}" type="button" data-solo-action="new" data-wiki-name="${esc(name)}" title="${esc(creatingCombo ? t('exitComboCreation') : t('newCombo'))}"><i data-lucide="${creatingCombo ? 'x' : 'plus'}" aria-hidden="true"></i><span>${esc(creatingCombo ? t('creatingCombo') : t('newCombo'))}</span></button>`;
     const editor = canEditWiki(name) ? `<button type="button" class="community-wiki-editor-toggle ${state.editing ? 'active' : ''}" data-wiki-editor-toggle><i data-lucide="pencil"></i>${esc(state.editing ? t('editing') : t('edit'))}</button>` : '';
     return `<div class="community-wiki-home-tree-tools">${newCombo}${editor}${state.editing ? editActivityMarkup(name) : ''}<span class="community-wiki-home-tree-tools-spacer" aria-hidden="true"></span>${chain}${mode}${form}</div>`;
   }
@@ -9631,43 +9838,65 @@
   // state instead of spinning forever.
   function homeInfoReady(name) {
     const info = state.info.get(name);
+    const loadedLocale = state.infoLocale.get(name);
     return Boolean(
       info && (
         (Array.isArray(info.skills) && info.skills.length > 0)
         || state.homeInfoLoadState.get(name) === 'error'
-      )
+      ) && (!loadedLocale || loadedLocale === locale())
     );
   }
 
   const homeInfoUrl = (name) => `${API_BASE}/api/v2/info/character/${encodeURIComponent(name)}`;
   const usableHomeInfo = (payload) => Boolean(payload && Array.isArray(payload.skills) && payload.skills.length);
+  const usableNanokaInfo = (payload) => Boolean(payload && payload.skill_trees && typeof payload.skill_trees === 'object');
 
   async function fetchHomeInfoPayload(name) {
     const url = homeInfoUrl(name);
-    const cached = await readCachedJson(url);
-    if (usableHomeInfo(cached)) {
-      // A cached payload is enough for the first paint. Refresh quietly so the
-      // next visit is current without making this character wait for upstream.
-      void fetchJsonWithTimeout(url, { cache: 'no-cache' }, 12000)
-        .then(async (response) => {
-          if (!response.ok) return;
-          const payload = await response.json();
-          if (!usableHomeInfo(payload)) return;
-          await cacheJsonResponse(url, new Response(JSON.stringify(payload), { headers: { 'content-type': 'application/json' } }));
-          state.info.set(name, payload);
-          state.homeInfoLoadState.set(name, 'ready');
-          if (state.homeSurfaceLoading && state.homeMenuName === name) renderCurrentWikiSurface(name);
-        })
-        .catch(() => {});
-      return cached;
-    }
+    const loadBase = async () => {
+      const cached = await readCachedJson(url);
+      if (usableHomeInfo(cached)) {
+        // The API remains the fallback and graph-shape source. Refresh only its
+        // cache here; the localized overlay is applied after both payloads are
+        // available, so a background refresh cannot replace translated text.
+        void fetchJsonWithTimeout(url, { cache: 'no-cache' }, 12000)
+          .then((response) => cacheJsonResponse(url, response))
+          .catch(() => {});
+        return cached;
+      }
+      const response = await fetchJsonWithTimeout(url, { cache: 'no-store' }, 12000);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      if (!usableHomeInfo(payload)) throw new Error('empty-character-skill-data');
+      await cacheJsonResponse(url, new Response(JSON.stringify(payload), { headers: { 'content-type': 'application/json' } }));
+      return payload;
+    };
 
-    const response = await fetchJsonWithTimeout(url, { cache: 'no-store' }, 12000);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload = await response.json();
-    if (!usableHomeInfo(payload)) throw new Error('empty-character-skill-data');
-    await cacheJsonResponse(url, new Response(JSON.stringify(payload), { headers: { 'content-type': 'application/json' } }));
-    return payload;
+    const language = locale();
+    const base = await loadBase();
+    // Keep the existing Chinese response untouched for compatibility with the
+    // current Wiki graph. Foreign locales use Nanoka's matching language file.
+    if (language === 'zh-CN') return base;
+    const sourceUrl = await nanokaCharacterUrl(name, language);
+    if (!sourceUrl) return base;
+    try {
+      const cached = await readCachedJson(sourceUrl);
+      if (usableNanokaInfo(cached)) {
+        void fetchJsonWithTimeout(sourceUrl, { cache: 'no-cache', mode: 'cors' }, 12000)
+          .then((response) => cacheJsonResponse(sourceUrl, response))
+          .catch(() => {});
+        return localizeNanokaPayload(base, cached);
+      }
+      const response = await fetchJsonWithTimeout(sourceUrl, { cache: 'no-store', mode: 'cors' }, 12000);
+      if (!response.ok) throw new Error(`Nanoka HTTP ${response.status}`);
+      const payload = await response.json();
+      if (!usableNanokaInfo(payload)) throw new Error('empty-Nanoka-character-data');
+      await cacheJsonResponse(sourceUrl, new Response(JSON.stringify(payload), { headers: { 'content-type': 'application/json' } }));
+      return localizeNanokaPayload(base, payload);
+    } catch (error) {
+      console.warn('[wiki] localized Nanoka payload unavailable, using API fallback', name, language, error);
+      return base;
+    }
   }
 
   function ensureHomeInfo(name) {
@@ -9678,10 +9907,12 @@
       try {
         const payload = await fetchHomeInfoPayload(name);
         state.info.set(name, payload);
+        state.infoLocale.set(name, locale());
         state.homeInfoLoadState.set(name, 'ready');
         return payload;
       } catch (error) {
         state.info.set(name, { skills: [], __loadError: String(error?.message || error) });
+        state.infoLocale.set(name, locale());
         state.homeInfoLoadState.set(name, 'error');
         return state.info.get(name);
       } finally {
@@ -9843,7 +10074,7 @@
     const panelRect = state.soloComboEditing && state.soloComboPanelRect ? state.soloComboPanelRect : null;
     const panelStyle = panelRect ? ` style="left:${Number(panelRect.x) || 8}px;top:${Number(panelRect.y) || 8}px;right:auto;bottom:auto;width:${Number(panelRect.width) || 720}px;height:${Number(panelRect.height) || 286}px"` : '';
     const resizeHandle = state.soloComboEditing ? '<span class="community-wiki-solo-panel-resize" data-solo-panel-resize role="separator" aria-label="调整编辑区大小" title="调整编辑区大小"></span>' : '';
-    return `<div class="community-wiki-floating community-wiki-solo-floating ${state.soloComboEditing ? 'is-editing' : ''}"><div class="community-wiki-floating-backdrop" data-solo-action="close"></div><section class="community-wiki-floating-panel community-wiki-solo-panel"${panelStyle} role="dialog" aria-modal="true" aria-labelledby="wikiSoloTitle"><header data-solo-panel-drag><div>${avatar(name)}<div><p class="community-wiki-eyebrow">${esc(t('soloCombo'))}</p><h2 id="wikiSoloTitle">${esc(name)}</h2></div></div><button type="button" data-solo-action="close" title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><nav class="community-wiki-solo-tabs" role="tablist"><button type="button" data-solo-tab="team" class="${activeTab === 'team' ? 'active' : ''}">${esc(t('teamFlow'))}</button><button type="button" data-solo-tab="solo" class="${activeTab === 'solo' ? 'active' : ''}">${esc(t('soloFlow'))}</button></nav><div class="community-wiki-solo-body">${activeTab === 'team' ? teamContent : editContent}</div>${resizeHandle}</section></div>`;
+    return `<div class="community-wiki-floating community-wiki-solo-floating ${state.soloComboEditing ? 'is-editing' : ''}"><div class="community-wiki-floating-backdrop" data-solo-action="close"></div><section class="community-wiki-floating-panel community-wiki-solo-panel"${panelStyle} role="dialog" aria-modal="true" aria-labelledby="wikiSoloTitle"><header data-solo-panel-drag><div>${avatar(name)}<div><p class="community-wiki-eyebrow">${esc(t('soloCombo'))}</p><h2 id="wikiSoloTitle">${esc(characterDisplayName(name))}</h2></div></div><button type="button" data-solo-action="close" title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><nav class="community-wiki-solo-tabs" role="tablist"><button type="button" data-solo-tab="team" class="${activeTab === 'team' ? 'active' : ''}">${esc(t('teamFlow'))}</button><button type="button" data-solo-tab="solo" class="${activeTab === 'solo' ? 'active' : ''}">${esc(t('soloFlow'))}</button></nav><div class="community-wiki-solo-body">${activeTab === 'team' ? teamContent : editContent}</div>${resizeHandle}</section></div>`;
   }
 
   function soloComboInline(name) {
@@ -10390,7 +10621,41 @@
       roleAliases[node.id] = alias;
       if (node.title) roleAliases[node.title] = alias;
     });
-    return { ...preset, ...legacyResolved, ...roleAliases };
+    const result = { ...preset, ...legacyResolved, ...roleAliases };
+    if (locale() === 'zh-CN') return result;
+    return Object.fromEntries(Object.entries(result).map(([key, value]) => [key, displaySlangValue(value)]));
+  }
+
+  function displaySlangValue(value) {
+    const text = clean(value);
+    if (!text || locale() === 'zh-CN') return text;
+    const labels = {
+      '变奏': 'Intro',
+      '强化变奏': 'Enhanced Intro',
+      '延奏': 'Outro',
+      '处决': 'Tune Break',
+      '闪': 'Dodge',
+      '跳': 'Jump',
+      '下落a': 'Plunge',
+      '切': 'Switch',
+      '工具': 'Utility Tool'
+    };
+    if (labels[text]) return labels[text];
+    // Automatic shorthand is useful in Chinese as compact controller
+    // notation, but the foreign Wiki should not expose untranslated
+    // single-letter aliases as if they were prose on the card.
+    const basic = text.match(/^[aA](\d+)$/u);
+    if (basic) return `Basic ${basic[1]}`;
+    const skill = text.match(/^[eE](\d+)$/u);
+    if (skill) return `Skill ${skill[1]}`;
+    if (text === 'z' || text === 'Z') return 'Heavy';
+    if (text === 'r') return 'Liberation';
+    if (text === 'R') return 'Echo';
+    const aerial = text.match(/^空a(\d+)$/u);
+    if (aerial) return `Aerial ${aerial[1]}`;
+    const held = text.match(/^长(.+)$/u);
+    if (held && labels[held[1]]) return `Hold ${labels[held[1]]}`;
+    return text;
   }
 
   function soloComboNodeSnapshot(name, nodeId, routeIndex = null) {
@@ -11042,17 +11307,17 @@
     if (node.category === 'buff') return '';
     const input = Array.isArray(node.input) ? node.input.join(' ') : String(node.input || '');
     const text = input || `${node.title} ${node.raw || ''}`;
-    const hold = /长按|按住|松开|hold|keep\s+holding|release/iu.test(text);
-    if (/延奏|outro/iu.test(text)) return 'outro';
-    if (/变奏|出场|intro|switch\s*in/iu.test(text)) return 'intro';
-    if (/解放|resonance\s*liberation|ultimate/iu.test(text)) return hold ? 'liberation_hold' : 'liberation';
-    if (/跳跃|jump/iu.test(text)) return hold ? 'jump_hold' : 'jump';
-    if (/闪避|dodge/iu.test(text)) return hold ? 'dodge_hold' : 'dodge';
-    if (hold && /普攻|basic\s*attack|normal\s*attack/iu.test(text)) return 'heavy_attack';
-    if (/重击|heavy\s*attack/iu.test(text)) return 'heavy_attack';
-    if (/短按普攻|连续短按普攻|普攻|常态攻击|普通攻击|basic\s*attack|normal\s*attack/iu.test(text)) return 'basic_attack';
-    if (/共鸣回路|回路|resonance\s*circuit|circuit/iu.test(text)) return hold ? 'echo_hold' : 'echo';
-    if (/共鸣技能|技能|resonance\s*skill/iu.test(text)) return hold ? 'skill_hold' : 'skill';
+    const hold = /长按|按住|松开|長押し|離す|길게\s*누르기|놓기|hold|keep\s+holding|release/iu.test(text);
+    if (/延奏|終奏|반주|outro/iu.test(text)) return 'outro';
+    if (/变奏|出场|切入|変奏|入場|변주|intro|switch\s*in/iu.test(text)) return 'intro';
+    if (/解放|共鳴解放|공명\s*해방|resonance\s*liberation|ultimate/iu.test(text)) return hold ? 'liberation_hold' : 'liberation';
+    if (/跳跃|ジャンプ|점프|jump/iu.test(text)) return hold ? 'jump_hold' : 'jump';
+    if (/闪避|回避|회피|dodge/iu.test(text)) return hold ? 'dodge_hold' : 'dodge';
+    if (hold && /普攻|通常攻撃|基本攻撃|일반\s*공격|기본\s*공격|basic\s*attack|normal\s*attack/iu.test(text)) return 'heavy_attack';
+    if (/重击|重撃|강공격|heavy\s*attack/iu.test(text)) return 'heavy_attack';
+    if (/短按普攻|连续短按普攻|普攻|常态攻击|普通攻击|通常攻撃|基本攻撃|일반\s*공격|기본\s*공격|basic\s*attack|normal\s*attack/iu.test(text)) return 'basic_attack';
+    if (/共鸣回路|共鳴回路|공명\s*회로|回路|resonance\s*circuit|circuit/iu.test(text)) return hold ? 'echo_hold' : 'echo';
+    if (/共鸣技能|共鳴スキル|공명\s*스킬|技能|resonance\s*skill/iu.test(text)) return hold ? 'skill_hold' : 'skill';
     return '';
   }
 
@@ -13763,20 +14028,60 @@
 
   function currentModel(name) { return modelFor(name, state.info.get(name) || {}, currentFormId(name)); }
 
+  function localizedGraphModel(name, model, base = null) {
+    if (!model || !Array.isArray(model.nodes) || locale() === 'zh-CN') return model;
+    // Editor snapshots intentionally keep their original language so IDs,
+    // saved positions, notes, and combo references remain stable. The graph
+    // gets a display-only overlay from the freshly localized base model.
+    const translatedBase = base || baseModelFor(name, state.info.get(name) || {}, currentFormId(name));
+    if (!translatedBase || !Array.isArray(translatedBase.nodes)) return model;
+    const baseById = new Map(translatedBase.nodes.map((node) => [node.id, node]));
+    const baseBySource = new Map();
+    translatedBase.nodes.forEach((node) => {
+      const key = [node.sourceSkillIndex, node.sourceChainIndex, node.category].join('|');
+      if ((node.sourceSkillIndex !== undefined || node.sourceChainIndex !== undefined) && !baseBySource.has(key)) baseBySource.set(key, node);
+    });
+    const displayFields = [
+      'title', 'sourceTitle', 'raw', 'summary', 'inputCondition',
+      'prerequisites', 'effects', 'notes', 'input', 'inputRoutes',
+      'resonanceChanges', 'sourceContext', 'iconAction'
+    ];
+    const localizedNode = (node) => {
+      const exact = baseById.get(node.id);
+      const sourceKey = [node.sourceSkillIndex, node.sourceChainIndex, node.category].join('|');
+      const fallback = baseBySource.get(sourceKey);
+      const translated = exact || fallback;
+      if (!translated) return node;
+      const overlay = {};
+      displayFields.forEach((field) => {
+        if (Object.prototype.hasOwnProperty.call(translated, field)) overlay[field] = translated[field];
+      });
+      return { ...node, ...overlay };
+    };
+    return { ...model, nodes: model.nodes.map(localizedNode) };
+  }
+
   function viewModelFor(name) {
     const model = currentModel(name);
     const forms = specialFormsFor(name);
-    if (forms.length < 2) return model;
-    if (isSharedFormCharacter(name)) return model;
-    const base = baseModelFor(name, state.info.get(name) || {}, currentFormId(name));
-    const baseForms = new Map((base?.nodes || []).map((node) => [node.id, node.formId || '']));
-    const activeForm = currentFormId(name);
-    const nodes = (model?.nodes || []).map((node) => ({
-      ...node,
-      formId: inferredFormId(name, node) || node.formId || baseForms.get(node.id) || ''
-    })).filter((node) => nodeBelongsToForm(node, activeForm));
-    const ids = new Set(nodes.map((node) => node.id));
-    return { ...model, nodes, edges: (model?.edges || []).filter((edge) => ids.has(edge.from) && ids.has(edge.to)) };
+    let base = null;
+    let visible = model;
+    if (forms.length >= 2 && !isSharedFormCharacter(name)) {
+      base = baseModelFor(name, state.info.get(name) || {}, currentFormId(name));
+      const baseForms = new Map((base?.nodes || []).map((node) => [node.id, node.formId || '']));
+      const activeForm = currentFormId(name);
+      const nodes = (model?.nodes || []).map((node) => ({
+        ...node,
+        formId: inferredFormId(name, node) || node.formId || baseForms.get(node.id) || ''
+      })).filter((node) => nodeBelongsToForm(node, activeForm));
+      const ids = new Set(nodes.map((node) => node.id));
+      visible = { ...model, nodes, edges: (model?.edges || []).filter((edge) => ids.has(edge.from) && ids.has(edge.to)) };
+    }
+    if (locale() !== 'zh-CN') {
+      base ||= baseModelFor(name, state.info.get(name) || {}, currentFormId(name));
+      visible = localizedGraphModel(name, visible, base);
+    }
+    return visible;
   }
 
   function writeStoredModel(name, formId, model) {
@@ -14277,14 +14582,14 @@
       ? `<div class="community-wiki-mode-toggle" style="--wiki-element:${esc(colorFor(entry.element))}" role="group" aria-label="${esc(t('mode'))}"><i data-lucide="waypoints" aria-hidden="true"></i><span>${esc(t('mode'))}</span><div class="community-wiki-mode-toggle-buttons">${modes.map((mode) => `<button type="button" value="${esc(mode.id)}" data-wiki-mode class="${mode.id === activeMode ? 'active' : ''}" aria-pressed="${mode.id === activeMode}" title="${esc(mode.description || mode.label)}"><i data-lucide="${modeIcon(mode)}" aria-hidden="true"></i><b>${esc(mode.label)}</b></button>`).join('')}</div></div>`
       : modes.length ? `<label class="community-wiki-mode-select" style="--wiki-element:${esc(colorFor(entry.element))}"><i data-lucide="waypoints" aria-hidden="true"></i><span>${esc(t('mode'))}</span><select data-wiki-mode aria-label="${esc(t('mode'))}">${modes.map((mode) => `<option value="${esc(mode.id)}" ${mode.id === activeMode ? 'selected' : ''}>${esc(mode.label)}</option>`).join('')}</select></label>` : '';
     const creatingCombo = Boolean(state.soloComboOpen && state.soloComboEditing);
-    const newComboButton = `<button class="community-wiki-new-combo ${creatingCombo ? 'active' : ''}" type="button" data-solo-action="new" data-wiki-name="${esc(name)}" title="${esc(creatingCombo ? '退出创建' : t('newCombo'))}"><i data-lucide="${creatingCombo ? 'x' : 'plus'}" aria-hidden="true"></i><span>${esc(creatingCombo ? '创建中' : t('newCombo'))}</span></button>`;
+    const newComboButton = `<button class="community-wiki-new-combo ${creatingCombo ? 'active' : ''}" type="button" data-solo-action="new" data-wiki-name="${esc(name)}" title="${esc(creatingCombo ? t('exitComboCreation') : t('newCombo'))}"><i data-lucide="${creatingCombo ? 'x' : 'plus'}" aria-hidden="true"></i><span>${esc(creatingCombo ? t('creatingCombo') : t('newCombo'))}</span></button>`;
     const editorButton = canEditWiki(name)
       ? `<button class="community-wiki-editor-toggle ${state.editing ? 'active' : ''}" type="button" data-wiki-editor-toggle><i data-lucide="pencil"></i>${esc(state.editing ? t('editing') : t('edit'))}<small>${esc(isLocalWikiPreview() ? t('localEdit') : state.wikiSaveStatus === 'saving' ? t('saving') : state.wikiSaveStatus === 'error' ? t('saveFailed') : state.wikiSaveStatus === 'saved' ? t('saved') : t('readonly'))}</small></button>`
       : isWikiLocked(name)
         ? `<button class="community-wiki-editor-feedback" type="button" data-wiki-feedback data-wiki-character="${esc(name)}"><i data-lucide="message-square-warning"></i>${esc(t('requestEdit'))}</button>`
         : `<span class="community-wiki-readonly"><i data-lucide="log-in"></i>${esc(isWikiAccountAuthenticated() ? t('readonly') : t('loginToEdit'))}</span>`;
     const panel = state.editing && canEditWiki(name) && state.selectedNode === 'new' ? `<div class="community-wiki-node-panel-inner"><div class="community-wiki-panel-title"><i data-lucide="pencil"></i><strong>${esc(state.editorDraftCategory === 'buff' ? t('newBuff') : t('newAction'))}</strong></div>${editorForm(null, model, name)}</div>` : state.editing && canEditWiki(name) && selected ? `<div class="community-wiki-node-panel-inner"><div class="community-wiki-panel-title"><i data-lucide="pencil"></i><strong>${esc(t('editorTitle'))}</strong></div>${editorForm(selected, model, name)}</div>` : `<div class="community-wiki-node-panel-inner"><div class="community-wiki-panel-title"><i data-lucide="circle-dot"></i><strong>${esc(t('selectedNode'))}</strong></div>${nodeDetail(selected, name, visibleModel)}</div>`;
-    const profileModal = state.profileOpen ? `<div class="community-wiki-floating"><div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-profile-modal" role="dialog" aria-modal="true"><header><div>${avatar(name)}<div><p class="community-wiki-eyebrow">${esc(t('base'))}</p><h2>${esc(name)}</h2></div></div><button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><div class="community-wiki-floating-body"><dl><div><dt>${esc(t('star'))}</dt><dd>${'★'.repeat(Math.max(1, Math.min(5, entry.star)))}</dd></div><div><dt>${esc(t('element'))}</dt><dd style="color:${colorFor(entry.element)}">${esc(displayValue(entry.element || '—'))}</dd></div><div><dt>${esc(t('weapon'))}</dt><dd>${esc(displayValue(entry.weaponType || '—'))}</dd></div><div><dt>HP</dt><dd>${esc(stats.hp || '—')}</dd></div><div><dt>ATK</dt><dd>${esc(stats.atk || '—')}</dd></div><div><dt>DEF</dt><dd>${esc(stats.def || '—')}</dd></div></dl></div></section></div>` : '';
+    const profileModal = state.profileOpen ? `<div class="community-wiki-floating"><div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-profile-modal" role="dialog" aria-modal="true"><header><div>${avatar(name)}<div><p class="community-wiki-eyebrow">${esc(t('base'))}</p><h2>${esc(characterDisplayName(name))}</h2></div></div><button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></header><div class="community-wiki-floating-body"><dl><div><dt>${esc(t('star'))}</dt><dd>${'★'.repeat(Math.max(1, Math.min(5, entry.star)))}</dd></div><div><dt>${esc(t('element'))}</dt><dd style="color:${colorFor(entry.element)}">${esc(displayValue(entry.element || '—'))}</dd></div><div><dt>${esc(t('weapon'))}</dt><dd>${esc(displayValue(entry.weaponType || '—'))}</dd></div><div><dt>HP</dt><dd>${esc(stats.hp || '—')}</dd></div><div><dt>ATK</dt><dd>${esc(stats.atk || '—')}</dd></div><div><dt>DEF</dt><dd>${esc(stats.def || '—')}</dd></div></dl></div></section></div>` : '';
     const nodeModal = !state.profileOpen && (selected || state.selectedNode === 'new') ? `<div class="community-wiki-floating"><div class="community-wiki-floating-backdrop" data-wiki-overlay-close></div><section class="community-wiki-floating-panel community-wiki-node-modal" role="dialog" aria-modal="true"><header><div><i data-lucide="${state.editing && canEditWiki(name) ? 'pencil' : 'git-branch'}"></i><strong>${esc(state.editing && canEditWiki(name) ? t('editorTitle') : t('selectedNode'))}</strong></div><div class="community-wiki-editor-header-actions">${state.editing && canEditWiki(name) ? wikiEditorHeaderSaveButton() : ''}<button type="button" data-wiki-overlay-close title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><i data-lucide="x"></i></button></div></header>${panel}</section></div>` : '';
     const formTabs = forms.length > 1 ? `<div class="community-wiki-form-tabs" role="tablist" aria-label="${esc(t('forms'))}">${forms.map((form) => `<button type="button" role="tab" aria-selected="${form.id === activeForm}" class="${form.id === activeForm ? 'active' : ''}" data-wiki-form="${esc(form.id)}" title="${esc(form.description || '')}"><i data-lucide="${form.id === 'blazing' || form.id === 'absolution' ? 'flame' : form.id === 'lion' || form.id === 'mech' ? 'sparkles' : 'circle-dot'}"></i><span>${esc(form.label)}</span></button>`).join('')}</div>` : '';
       renderShell(`<div class="community-wiki-detail-layout community-wiki-tree-layout"><section class="community-wiki-tree"><div class="community-wiki-section-heading community-wiki-tree-toolbar"><div class="community-wiki-tree-actions">${newComboButton}${editorButton}${state.editing ? editActivityMarkup(name) : ''}<span class="community-wiki-tree-toolbar-spacer" aria-hidden="true"></span>${chainSelector}${modeSelector}${formTabs}</div></div><div class="community-wiki-tree-scroll" data-wiki-graph-scroll data-wiki-lock-six-lanes>${renderGraph(visibleModel, colorFor(entry.element), name)}${soloComboEditorOverlay(name)}</div></section></div>${profileModal}${nodeModal}${state.soloComboEditing ? '' : soloComboModal(name)}${soloComboSaveConfirmModal(name)}`, true);
@@ -14383,6 +14688,11 @@
       void loadCharacterBasePresets().catch((error) => console.warn('[wiki] background base preset warm-up failed', error));
       // Skill text is independent from the tree/flow payloads. Warm it in the
       // background so opening a second character can use the cache instantly.
+      if (locale() !== 'zh-CN') {
+        void loadNanokaCharacterIndex().then(() => {
+          if (sequence === characterLoadSequence && !state.selected) renderHome();
+        });
+      }
       warmHomeInfoCache(sequence);
       warmHomeDetailData(sequence);
       void hydrateCharacterSupportData(sequence).catch((error) => console.warn('[wiki] support data unavailable', error));
@@ -14429,6 +14739,7 @@
     renderDetail(name);
     try {
       state.info.set(name, await fetchHomeInfoPayload(name));
+      state.infoLocale.set(name, locale());
       state.homeInfoLoadState.set(name, 'ready');
       try {
         const wikiResponse = await fetch(`/api/community/wiki/${encodeURIComponent(name)}`, { cache: 'no-store', credentials: 'include', headers: wikiAuthHeaders() });
@@ -14436,7 +14747,7 @@
       } catch (error) {
         state.wikiState.set(name, { lock: { locked: false }, error: String(error?.message || error) });
       }
-    } catch (error) { state.detailError = String(error?.message || error); state.info.set(name, { skills: [] }); }
+    } catch (error) { state.detailError = String(error?.message || error); state.info.set(name, { skills: [] }); state.infoLocale.set(name, locale()); }
     state.detailLoading = false;
     try {
       renderDetail(name);
@@ -14490,7 +14801,25 @@
       state.selected = next === 'home' ? '' : next;
       if (state.selected) void loadDetail(state.selected); else renderHome();
     });
-    window.addEventListener('wwcombo-languagechange', () => { updateWikiNavigation(true); renderCurrentWikiSurface(state.selected); });
+    window.addEventListener('wwcombo-languagechange', () => {
+      updateWikiNavigation(true);
+      const activeName = state.selected || state.homeMenuName;
+      if (locale() !== 'zh-CN') {
+        void loadNanokaCharacterIndex().then(() => {
+          if (!state.selected) renderHome();
+        });
+      }
+      if (!activeName) { renderCurrentWikiSurface(state.selected); return; }
+      state.infoLocale.delete(activeName);
+      state.info.delete(activeName);
+      if (state.selected) void loadDetail(activeName, true);
+      else {
+        renderCurrentWikiSurface(activeName);
+        void ensureHomeInfo(activeName).then(() => {
+          if (!state.selected && state.homeMenuName === activeName) renderCurrentWikiSurface(activeName);
+        });
+      }
+    });
     window.addEventListener('keydown', (event) => {
       if (!state.soloComboOpen || !state.soloComboEditing || !state.soloComboDraft) return;
       const target = event.target;
