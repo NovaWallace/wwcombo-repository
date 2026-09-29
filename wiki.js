@@ -8627,7 +8627,10 @@
     // this in the binding pass so rerendering, zooming, and route switching
     // all use the same card markup without a separate display mode.
     const graphName = state.selected || state.homeMenuName;
-    const model = currentModel(graphName), slang = slangForCharacter(graphName);
+    // The graph is rendered from the localized view model. Use that same
+    // model for DOM interactions so translated stage names still resolve to
+    // the series and route data represented by the cards.
+    const model = viewModelFor(graphName) || currentModel(graphName), slang = slangForCharacter(graphName);
     const seriesGroups = model ? graphSeriesGroups(model) : [];
     WIKI_ROOT.querySelectorAll('[data-wiki-graph] [data-wiki-node]').forEach((element) => {
       const copy = element.querySelector('.community-wiki-graph-node-copy');
@@ -8659,7 +8662,7 @@
         event.preventDefault();
         event.stopPropagation();
         const key = element.dataset.wikiReplacementKey || '';
-        const model = currentModel(state.selected);
+        const model = viewModelFor(state.selected) || currentModel(state.selected);
         const group = graphReplacementGroups(model).find((entry) => entry.key === key);
         if (!group) return;
         const nextIndex = (graphReplacementActiveIndex(group) + 1) % group.members.length;
@@ -8674,7 +8677,7 @@
           replacementNode.classList.toggle('is-replacement-hidden', !active);
           replacementNode.dataset.wikiReplacementActive = active ? 'true' : 'false';
           replacementNode.querySelector('.community-wiki-graph-node-icon')?.replaceChildren();
-          const node = currentModel(state.selected)?.nodes?.find((entry) => entry.id === replacementNode.dataset.wikiNode);
+          const node = (viewModelFor(state.selected) || currentModel(state.selected))?.nodes?.find((entry) => entry.id === replacementNode.dataset.wikiNode);
           const icon = replacementNode.querySelector('.community-wiki-graph-node-icon');
           if (icon && node) icon.innerHTML = graphNodeIcon(state.selected, node);
         });
@@ -8696,7 +8699,7 @@
         const nodeId = nodeElement?.dataset.wikiNode || '';
         const clickedIndex = Number(element.dataset.wikiInputIndex);
         if (!nodeId || !Number.isInteger(clickedIndex)) return;
-        const node = currentModel(graphName)?.nodes?.find((entry) => entry.id === nodeId);
+        const node = (viewModelFor(graphName) || currentModel(graphName))?.nodes?.find((entry) => entry.id === nodeId);
         const routes = inputRoutesForNode(node);
         if (routes.length < 2) return;
         const key = inputRouteKey(graphName, { id: nodeId });
@@ -8808,7 +8811,7 @@
         // snapshot to the editor lane. It must not open the normal node
         // detail modal; the source node remains reusable in the graph.
         if (state.soloComboOpen && state.soloComboEditing) {
-          const routeIndex = activeInputRouteIndex(graphName, currentModel(graphName)?.nodes?.find((entry) => entry.id === nodeId));
+          const routeIndex = activeInputRouteIndex(graphName, (viewModelFor(graphName) || currentModel(graphName))?.nodes?.find((entry) => entry.id === nodeId));
           addSoloComboNode(graphName, nodeId, routeIndex);
           return;
         }
@@ -8880,7 +8883,7 @@
           element.dataset.dragged = 'true';
           event.preventDefault();
           event.stopPropagation();
-          const routeIndex = activeInputRouteIndex(graphName, currentModel(graphName)?.nodes?.find((entry) => entry.id === nodeId));
+          const routeIndex = activeInputRouteIndex(graphName, (viewModelFor(graphName) || currentModel(graphName))?.nodes?.find((entry) => entry.id === nodeId));
           addSoloComboNode(graphName, nodeId, routeIndex);
         };
         element.addEventListener('pointerup', finishSoloPointerDrag);
@@ -8936,7 +8939,7 @@
 
   function toggleGraphSeriesInDom(name, seriesKey, graph) {
     if (!graph) return;
-    const model = currentModel(name);
+    const model = viewModelFor(name) || currentModel(name);
     const series = graphSeriesGroups(model).find((entry) => entry.key === seriesKey);
     if (!series) return;
     const layout = graphLayout(model, name);
@@ -9090,7 +9093,7 @@
     }
     state.editing = true;
     graph.dataset.wikiEditing = 'true';
-    const groups = graphSeriesGroups(currentModel(name));
+    const groups = graphSeriesGroups(viewModelFor(name) || currentModel(name));
     graph.querySelectorAll('[data-wiki-node]').forEach((element) => {
       if (!element.querySelector('.community-wiki-graph-node-grip')) {
         const grip = document.createElement('i');
@@ -12450,7 +12453,7 @@
       });
       return;
     }
-    const model = currentModel(name);
+    const model = viewModelFor(name) || currentModel(name);
     if (!model) return;
     const levels = relatedNodeLevels(model, nodeId, name);
     const triggerBuffs = directTriggerBuffIds(model, nodeId);
