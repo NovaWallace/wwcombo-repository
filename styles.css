@@ -3807,6 +3807,11 @@ html[data-theme='day'] body.wiki-route .community-wiki-home-surface-character { 
    stacking context and clipping would otherwise crop the fixed panel at the
    announcement bar. Let the panel own the viewport while it is active. */
 @media (min-width: 821px) {
+  /* Node details are mounted beside the fullscreen surface. Keep them above
+     the new fullscreen shell so double-clicking a move remains visible. */
+  body.wiki-home-surface-fullscreen .community-wiki-floating {
+    z-index: 1300;
+  }
   body.wiki-home-surface-fullscreen .community-wiki-showcase-stage {
     overflow: visible;
     isolation: auto;
